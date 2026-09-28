@@ -1,0 +1,25 @@
+{
+  "name": "@yatri/mobile-auth",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Shared phone+OTP authentication client (API client, secure token storage, AuthContext, accessible phone/OTP inputs) for the passenger and driver Expo apps.",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@yatri/shared": "workspace:*",
+    "@yatri/types": "workspace:*",
+    "expo-secure-store": "~57.0.4"
+  },
+  "peerDependencies": {
+    "react": "19.2.3",
+    "react-native": "0.86.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/react": "~19.2.2",
+    "typescript": "~5.7.2"
+  }
+}

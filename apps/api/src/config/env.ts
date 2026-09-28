@@ -1,16 +1,86 @@
-import 'dotenv/config';
+import { config as loadDotenv } from 'dotenv';
+import path from 'node:path';
 import { z } from 'zod';
 
-const envSchema = z.object({
-  NODE_ENV: z.enum(['development', 'test', 'staging', 'production']).default('development'),
-  PORT: z.coerce.number().int().positive().default(4000),
-  DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
-  REDIS_URL: z.string().min(1).default('redis://localhost:6379'),
-  CORS_ORIGINS: z
-    .string()
-    .default('http://localhost:3000')
-    .transform((value) => value.split(',').map((origin) => origin.trim())),
+// NODE_ENV=test loads .env.test instead of .env, so the suite runs against a
+// dedicated test database/config without touching local dev settings.
+loadDotenv({
+  path: path.resolve(__dirname, '../..', process.env.NODE_ENV === 'test' ? '.env.test' : '.env'),
 });
+
+function boolFromEnv(defaultValue: boolean) {
+  return z
+    .enum(['true', 'false'])
+    .optional()
+    .transform((v) => (v === undefined ? defaultValue : v === 'true'));
+}
+
+const envSchema = z
+  .object({
+    NODE_ENV: z.enum(['development', 'test', 'staging', 'production']).default('development'),
+    PORT: z.coerce.number().int().positive().default(4000),
+    DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
+    REDIS_URL: z.string().min(1).default('redis://localhost:6379'),
+    CORS_ORIGINS: z
+      .string()
+      .default('http://localhost:3000')
+      .transform((value) => value.split(',').map((origin) => origin.trim())),
+
+    // --- Auth / sessions ---
+    JWT_ACCESS_SECRET: z
+      .string()
+      .min(32, 'JWT_ACCESS_SECRET must be at least 32 characters')
+      .refine(
+        (val) => !/^(dev|test|change[-_]?me|secret)/i.test(val),
+        'JWT_ACCESS_SECRET looks like a placeholder value',
+      ),
+    ACCESS_TOKEN_TTL_MINUTES: z.coerce.number().int().positive().default(15),
+    REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().default(30),
+
+    // --- OTP ---
+    OTP_LENGTH: z.coerce.number().int().min(4).max(8).default(6),
+    OTP_TTL_MINUTES: z.coerce.number().int().positive().default(5),
+    OTP_MAX_ATTEMPTS: z.coerce.number().int().positive().default(5),
+    OTP_RESEND_COOLDOWN_SECONDS: z.coerce.number().int().positive().default(60),
+    OTP_REQUEST_MAX_PER_WINDOW: z.coerce.number().int().positive().default(5),
+    OTP_REQUEST_WINDOW_MINUTES: z.coerce.number().int().positive().default(15),
+    OTP_IP_REQUEST_MAX_PER_WINDOW: z.coerce.number().int().positive().default(20),
+
+    // Development-only OTP bypass. Must never be true in production — enforced below.
+    OTP_DEV_MODE: boolFromEnv(false),
+
+    // --- SMS provider ---
+    SMS_PROVIDER: z.enum(['console', 'http']).default('console'),
+    SMS_HTTP_ENDPOINT: z.preprocess((v) => (v === '' ? undefined : v), z.string().url().optional()),
+    SMS_HTTP_API_KEY: z.preprocess((v) => (v === '' ? undefined : v), z.string().optional()),
+
+    // --- Admin seed (development only; never a hard-coded default) ---
+    ADMIN_SEED_EMAIL: z.string().email().optional(),
+    ADMIN_SEED_PASSWORD: z.string().min(12).optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.NODE_ENV === 'production' && data.OTP_DEV_MODE) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['OTP_DEV_MODE'],
+        message: 'OTP_DEV_MODE must never be true when NODE_ENV=production',
+      });
+    }
+    if (data.SMS_PROVIDER === 'http' && !data.SMS_HTTP_ENDPOINT) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['SMS_HTTP_ENDPOINT'],
+        message: 'SMS_HTTP_ENDPOINT is required when SMS_PROVIDER=http',
+      });
+    }
+    if (data.NODE_ENV === 'production' && data.SMS_PROVIDER === 'console') {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['SMS_PROVIDER'],
+        message: 'SMS_PROVIDER must not be "console" in production (OTPs would only be logged)',
+      });
+    }
+  });
 
 function loadEnv() {
   const parsed = envSchema.safeParse(process.env);
@@ -23,3 +93,4 @@ function loadEnv() {
 
 export const env = loadEnv();
 export type Env = typeof env;
+export const isProduction = env.NODE_ENV === 'production';

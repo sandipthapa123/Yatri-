@@ -1,4 +1,5 @@
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useAuth } from '@yatri/mobile-auth';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { APP_TAGLINE } from '@yatri/shared';
 
@@ -13,7 +14,9 @@ function greeting(hour: number): string {
 
 export function HomeScreen() {
   const theme = useTheme();
+  const { user, logout } = useAuth();
   const timeGreeting = greeting(new Date().getHours());
+  const name = user?.fullName?.trim();
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
@@ -24,7 +27,7 @@ export function HomeScreen() {
             style={[styles.greeting, { color: theme.colors.textPrimary }]}
             accessibilityRole="text"
           >
-            {timeGreeting}
+            {name ? `${timeGreeting}, ${name}` : timeGreeting}
           </Text>
           <Text style={[styles.tagline, { color: theme.colors.textSecondary }]}>{APP_TAGLINE}</Text>
         </View>
@@ -51,6 +54,17 @@ export function HomeScreen() {
             Ride booking is coming soon.
           </Text>
         </View>
+
+        <Pressable
+          onPress={() => {
+            void logout();
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Sign out"
+          style={[styles.signOutButton, { minHeight: theme.minTouchTarget }]}
+        >
+          <Text style={[styles.signOutText, { color: theme.colors.textSecondary }]}>Sign out</Text>
+        </Pressable>
       </ScrollView>
     </SafeAreaView>
   );
@@ -96,5 +110,14 @@ const styles = StyleSheet.create({
   },
   comingSoon: {
     fontSize: 13,
+  },
+  signOutButton: {
+    alignSelf: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+  },
+  signOutText: {
+    fontSize: 15,
+    fontWeight: '600',
   },
 });

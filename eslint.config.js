@@ -4,7 +4,11 @@ const reactHooks = require('eslint-plugin-react-hooks');
 const reactNative = require('eslint-plugin-react-native');
 const globals = require('globals');
 
-const reactNativeApps = ['apps/passenger/**/*.{ts,tsx}', 'apps/driver/**/*.{ts,tsx}'];
+const reactNativeApps = [
+  'apps/passenger/**/*.{ts,tsx}',
+  'apps/driver/**/*.{ts,tsx}',
+  'packages/mobile-auth/**/*.{ts,tsx}',
+];
 const webApps = ['apps/admin/**/*.{ts,tsx}'];
 
 module.exports = [
@@ -21,7 +25,12 @@ module.exports = [
   ...base,
   {
     // CommonJS tooling config files (babel/metro/eslint config, shared config package).
-    files: ['**/*.config.js', 'eslint.config.js', 'packages/config/**/*.js'],
+    files: [
+      '**/*.config.js',
+      'eslint.config.js',
+      'packages/config/**/*.js',
+      'apps/api/migrations/**/*.js',
+    ],
     languageOptions: {
       sourceType: 'commonjs',
       globals: { ...globals.node },

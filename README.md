@@ -5,20 +5,22 @@ Yatri (यात्री — "traveller" in Nepali) is a ride-sharing platform 
 This repository is a TypeScript monorepo containing the passenger app, driver app, admin
 dashboard, and backend API that make up the Yatri platform.
 
-> **Status: Phase 1 — foundation.** The project structure, tooling, and the passenger app's
-> entry point/navigation/branding are in place. Ride booking and the driver/admin
-> feature sets land in later phases.
+> **Status: Phase 2 — authentication & accounts.** Phone+OTP auth (passenger/driver),
+> email+password auth (admin), sessions, and role-based access control are implemented and
+> tested end-to-end. Ride booking and the rest of each app's features land in later phases.
+> See [`docs/PHASE_2.md`](docs/PHASE_2.md) and [`docs/AUTHENTICATION.md`](docs/AUTHENTICATION.md).
 
 ## Tech stack
 
-| Layer                   | Technology                                        |
-| ----------------------- | ------------------------------------------------- |
-| Passenger & Driver apps | React Native + Expo, TypeScript                   |
-| Admin dashboard         | Next.js (App Router), TypeScript                  |
-| Backend API             | Node.js + Express, TypeScript                     |
-| Database                | PostgreSQL                                        |
-| Realtime (future)       | Redis-ready architecture (no live dependency yet) |
-| Tooling                 | pnpm workspaces, ESLint, Prettier                 |
+| Layer                    | Technology                                                                          |
+| ------------------------ | ----------------------------------------------------------------------------------- |
+| Passenger & Driver apps  | React Native + Expo, TypeScript                                                     |
+| Admin dashboard          | Next.js (App Router), TypeScript                                                    |
+| Backend API              | Node.js + Express, TypeScript                                                       |
+| Database                 | PostgreSQL (`node-pg-migrate` migrations)                                           |
+| Auth / sessions          | Phone+OTP (passenger/driver), email+password (admin), JWT + rotating refresh tokens |
+| Realtime / rate limiting | Redis                                                                               |
+| Tooling                  | pnpm workspaces, ESLint, Prettier, Vitest                                           |
 
 The backend is a **modular monolith**: each domain (health today; users, trips, and payments
 later) is its own module under `apps/api/src/modules`, mounted on a single Express app. No
@@ -36,6 +38,8 @@ yatri/
 ├── packages/
 │   ├── shared/      # Brand tokens (colors, spacing, typography) + small cross-platform utils
 │   ├── types/       # Shared TypeScript contracts (API envelope, user, geo primitives)
+│   ├── mobile-auth/ # Shared RN auth client: API client, secure token storage, AuthContext,
+│   │                # accessible phone/OTP inputs (used by passenger + driver)
 │   └── config/      # Shared TypeScript & ESLint base configuration
 ├── docs/            # Architecture notes and phase plans
 └── .github/         # CI workflow, PR template
@@ -45,7 +49,7 @@ yatri/
 
 - Node.js 20+ (see `.nvmrc`)
 - [pnpm](https://pnpm.io) 9+ — `corepack enable` will pick up the pinned version automatically
-- PostgreSQL 15+ (for `apps/api`)
+- PostgreSQL 15+ and Redis 6+ (for `apps/api` — Redis backs OTP rate limiting/cooldowns)
 - For mobile apps: the [Expo Go](https://expo.dev/go) app, or Xcode/Android Studio for a
   simulator
 
@@ -55,27 +59,45 @@ yatri/
 # 1. Install all workspace dependencies
 pnpm install
 
-# 2. Configure the API
+# 2. Configure and migrate the database
 cp apps/api/.env.example apps/api/.env
-# edit apps/api/.env with your local Postgres connection string
+# edit apps/api/.env — set DATABASE_URL/REDIS_URL for your local instances, and
+# generate a JWT_ACCESS_SECRET:
+#   node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
+pnpm --filter @yatri/api migrate:up
 
-# 3. Run an app
+# 3. (Optional) seed a development admin account
+#    edit ADMIN_SEED_EMAIL/ADMIN_SEED_PASSWORD in apps/api/.env first
+pnpm --filter @yatri/api seed:admin
+
+# 4. Configure the admin app (must share the API's JWT_ACCESS_SECRET)
+cp apps/admin/.env.example apps/admin/.env.local
+# edit apps/admin/.env.local
+
+# 5. Run an app
 pnpm dev:passenger   # starts Expo for the passenger app
 pnpm dev:driver      # starts Expo for the driver app
 pnpm dev:admin       # starts the Next.js admin dashboard
 pnpm dev:api         # starts the backend API with hot reload
 ```
 
+With `OTP_DEV_MODE=true` (the `.env.example` default), `request-otp` returns the generated
+code directly in its response — no real SMS provider needed for local development. See
+[`docs/AUTHENTICATION.md`](docs/AUTHENTICATION.md#local-testing) for the full auth setup,
+including running the automated test suite against a real database.
+
 ## Scripts
 
 Run from the repository root; each fans out to every workspace package via pnpm.
 
-| Command          | Description                         |
-| ---------------- | ----------------------------------- |
-| `pnpm build`     | Build every app/package             |
-| `pnpm lint`      | Lint the whole repository           |
-| `pnpm typecheck` | Type-check every app/package        |
-| `pnpm format`    | Format the repository with Prettier |
+| Command                               | Description                            |
+| ------------------------------------- | -------------------------------------- |
+| `pnpm build`                          | Build every app/package                |
+| `pnpm lint`                           | Lint the whole repository              |
+| `pnpm typecheck`                      | Type-check every app/package           |
+| `pnpm format`                         | Format the repository with Prettier    |
+| `pnpm --filter @yatri/api test`       | Run the backend's automated test suite |
+| `pnpm --filter @yatri/api migrate:up` | Apply pending database migrations      |
 
 ## Architecture notes
 
@@ -86,11 +108,19 @@ Run from the repository root; each fans out to every workspace package via pnpm.
   passenger and driver apps render a consistent, accessible Yatri look without copy-pasting
   a palette. Colors are chosen to meet WCAG 2.1 AA contrast — see the comments in
   `packages/shared/src/theme.ts` before changing one.
-- **Accessibility is part of the foundation, not an add-on.** The passenger app's loading and
-  error states use proper `accessibilityRole`s, announce state changes to screen readers, and
-  keep every tappable control at a 44pt minimum hit target.
-- See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and [`docs/PHASE_1.md`](docs/PHASE_1.md)
-  for more detail.
+- **Accessibility is part of the foundation, not an add-on.** Every auth screen uses proper
+  `accessibilityRole`s/ARIA, announces state changes to screen readers, associates validation
+  errors with their fields, and keeps every tappable control at a 44pt minimum hit target —
+  including a single (not segmented) OTP field, since segmented "box per digit" widgets are a
+  well-known screen-reader pain point.
+- **`packages/mobile-auth`** is the shared auth client for the two Expo apps: API calls,
+  secure on-device token storage, the `AuthContext`/`useAuth()` state machine, and the
+  accessible phone/OTP input components. The passenger and driver apps compose it into their
+  own screens/navigation rather than duplicating auth logic.
+- See [`docs/AUTHENTICATION.md`](docs/AUTHENTICATION.md) for the full authentication
+  architecture, [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the system overview, and
+  [`docs/PHASE_1.md`](docs/PHASE_1.md)/[`docs/PHASE_2.md`](docs/PHASE_2.md) for what shipped
+  in each phase.
 
 ## License
 

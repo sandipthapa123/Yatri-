@@ -12,11 +12,14 @@
   "dependencies": {
     "@yatri/shared": "workspace:*",
     "@yatri/types": "workspace:*",
+    "jsonwebtoken": "^9.0.3",
     "next": "^16.3.6",
     "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "react-dom": "19.2.3",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^22.10.2",
     "@types/react": "~19.2.2",
     "@types/react-dom": "~19.2.2",

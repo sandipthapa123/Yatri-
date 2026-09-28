@@ -11,7 +11,8 @@ config.resolver.nodeModulesPaths = [
   path.resolve(projectRoot, 'node_modules'),
   path.resolve(workspaceRoot, 'node_modules'),
 ];
-config.resolver.disableHierarchicalLookup = true;
 config.resolver.unstable_enableSymlinks = true;
+// NOTE: hierarchical lookup must stay enabled (the default) for a pnpm
+// monorepo — see apps/passenger/metro.config.js for why.
 
 module.exports = config;

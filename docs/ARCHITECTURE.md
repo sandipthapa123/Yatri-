@@ -7,13 +7,15 @@ Yatri is a pnpm-workspaces monorepo split into `apps/` (deployable applications)
 
 ```
 apps/passenger  ─┐
-apps/driver     ─┼─► packages/shared, packages/types
-apps/admin      ─┘
-apps/api        ───► packages/types
+apps/driver     ─┼─► packages/mobile-auth ─► packages/shared, packages/types
+apps/admin      ─────────────────────────► packages/shared, packages/types
+apps/api        ─────────────────────────► packages/types
 ```
 
-Only `packages/types` and `packages/shared` are shared across the client apps and the API —
-this keeps the dependency graph a strict DAG with no app depending on another app.
+Only `packages/types` and `packages/shared` are shared across every app; `packages/mobile-auth`
+is scoped to the two Expo apps only (it depends on `expo-secure-store`, which has no web
+equivalent — mixing it into `packages/shared` would break the admin app's build). This keeps
+the dependency graph a strict DAG with no app depending on another app.
 
 ## Backend: modular monolith
 
@@ -24,6 +26,11 @@ this keeps the dependency graph a strict DAG with no app depending on another ap
 src/modules/health/
 ├── health.controller.ts
 └── health.routes.ts
+
+src/modules/auth/            # OTP, sessions, admin login — see docs/AUTHENTICATION.md
+src/modules/users/           # GET/PATCH /users/me (any authenticated role)
+src/modules/drivers/         # GET/PATCH /drivers/me (DRIVER only)
+src/modules/admin/           # GET /admin/me (ADMIN only)
 ```
 
 `src/routes/index.ts` mounts every module's router under `/api/v1`. Adding a capability means
@@ -37,19 +44,24 @@ by default.
 - **PostgreSQL** is the system of record, accessed via a single pooled `pg.Pool`
   (`src/config/database.ts`). The pool connects lazily — no query, no connection — so the API
   can boot and pass health checks even before a schema exists.
-- **Redis** is wired for future realtime features (driver presence, live location fanout,
-  pub/sub) via `src/config/redis.ts`, but nothing holds an open connection today. Phase 1 has
-  no realtime feature, so nothing should pay for one.
+- **Redis** (`src/config/redis.ts`, lazily connecting) now backs OTP resend cooldowns and
+  request-rate limiting (`src/lib/rate-limit.ts`) — its first real job, ahead of the presence/
+  location-fanout use cases it was originally reserved for. Still nothing holds an open
+  connection until a rate-limit check or cooldown actually runs.
 
 ## Client apps
 
 - **Passenger & driver** are Expo-managed React Native apps sharing `packages/shared`'s brand
-  tokens and `packages/types`'s contracts. Metro is configured for the pnpm workspace
-  (`metro.config.js` watches the repo root and enables symlink resolution) so workspace
-  packages resolve without hoisting hacks.
-- **Admin** is a Next.js App Router project. It shares the same `packages/types` contracts as
-  the mobile apps so a future admin API client and the mobile apps agree on shapes by
-  construction, not by convention.
+  tokens, `packages/types`'s contracts, and `packages/mobile-auth`'s auth client (API calls,
+  secure token storage, `AuthContext`, accessible phone/OTP inputs). Metro is configured for
+  the pnpm workspace (`metro.config.js` watches the repo root and enables symlink resolution)
+  so workspace packages resolve without hoisting hacks.
+- **Admin** is a Next.js App Router project. It shares `packages/types`'s contracts with the
+  mobile apps, and verifies its own access-token JWTs locally in `src/proxy.ts` (Next's
+  middleware/proxy convention) using the same `JWT_ACCESS_SECRET` as the API — no network
+  round trip on every navigation, with a silent-refresh fallback when the access token has
+  expired but a valid refresh cookie remains. See `docs/AUTHENTICATION.md` for why the
+  dashboard page still makes one authoritative API call server-side before rendering.
 
 ## Why these choices
 

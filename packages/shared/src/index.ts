@@ -3,6 +3,8 @@ export * from './constants';
 export type {
   AppUser,
   UserRole,
+  AccountStatus,
+  DriverStatus,
   LatLng,
   ApiResponse,
   ApiErrorShape,

@@ -6,14 +6,18 @@
  * domain types land in a later phase alongside that feature.
  */
 
-export type UserRole = 'passenger' | 'driver' | 'admin';
+export type UserRole = 'PASSENGER' | 'DRIVER' | 'ADMIN';
+export type AccountStatus = 'ACTIVE' | 'SUSPENDED' | 'DEACTIVATED';
+export type DriverStatus = 'PENDING_VERIFICATION' | 'VERIFIED' | 'SUSPENDED' | 'REJECTED';
 
+/** Matches the API's PublicProfile response shape (GET/PATCH /users/me). */
 export interface AppUser {
   id: string;
   role: UserRole;
-  fullName: string;
-  phoneNumber: string;
-  email?: string;
+  status: AccountStatus;
+  fullName: string | null;
+  phoneNumber: string | null;
+  profilePictureUrl: string | null;
   createdAt: string;
 }
 

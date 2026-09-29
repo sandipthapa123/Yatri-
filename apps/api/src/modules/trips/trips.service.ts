@@ -1,4 +1,4 @@
-import type { TripEventName, TripStatus } from '@yatri/types';
+import { ACTIVE_TRIP_STATUSES, type TripEventName, type TripStatus } from '@yatri/types';
 
 import { HttpError } from '../../middleware/errorHandler';
 import { query } from '../../lib/db';
@@ -89,7 +89,7 @@ const RULES: Record<
   start: { from: ['DRIVER_ARRIVED'], to: 'IN_PROGRESS', event: 'TRIP_STARTED', who: 'driver' },
   complete: { from: ['IN_PROGRESS'], to: 'COMPLETED', event: 'TRIP_COMPLETED', who: 'driver' },
   cancel: {
-    from: ['DRIVER_EN_ROUTE', 'DRIVER_ARRIVED', 'IN_PROGRESS'],
+    from: [...ACTIVE_TRIP_STATUSES],
     to: 'CANCELLED',
     event: 'TRIP_CANCELLED',
     who: 'either',

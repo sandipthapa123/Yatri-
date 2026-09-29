@@ -172,7 +172,9 @@ Errors: `NOT_ELIGIBLE` (403 + reasons), `WEAK_GPS_ACCURACY` / `STALE_LOCATION` /
 
 ## Environment variables
 
-`DRIVER_LOCATION_FRESH_SECONDS` (30), `DRIVER_STALE_TIMEOUT_SECONDS` (180),
+Freshness is defined once (`modules/tracking/tracking.config.ts`, from env) and shared by availability, trip tracking and the admin list; clients receive thresholds from the API. See the Single Source of Truth section in `docs/ARCHITECTURE.md`.
+
+`DRIVER_LOCATION_FRESH_SECONDS` (30), `DRIVER_LOCATION_LOST_SECONDS` (60), `DRIVER_STALE_TIMEOUT_SECONDS` (180),
 `DRIVER_UPDATE_INTERVAL_IDLE_MS` (10000), `DRIVER_UPDATE_INTERVAL_EN_ROUTE_MS` (3000),
 `DRIVER_UPDATE_INTERVAL_ON_TRIP_MS` (3000), `DRIVER_ONLINE_MAX_ACCURACY_METERS` (100),
 `DRIVER_LOCATION_PERSIST_SECONDS` (20), `DRIVER_TRANSITION_TIMEOUT_SECONDS` (30),

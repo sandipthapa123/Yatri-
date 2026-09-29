@@ -63,12 +63,6 @@ export function LiveTripView({
         ? {
             ...p,
             ageSeconds: p.ageSeconds + extra,
-            freshness:
-              p.ageSeconds + extra > 60
-                ? ('lost' as const)
-                : p.ageSeconds + extra > 15
-                  ? ('stale' as const)
-                  : p.freshness,
           }
         : p;
     return { ...snapshot, driver: bump(snapshot.driver), passenger: bump(snapshot.passenger) };

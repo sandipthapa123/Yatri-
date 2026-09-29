@@ -1,7 +1,8 @@
-import type {
-  DriverAvailabilityStatus,
+import {
+  haversineMeters,
+  type DriverAvailabilityStatus,
   DriverLocationSample,
-  ServerRealtimeMessage,
+  type ServerRealtimeMessage,
 } from '@yatri/types';
 
 import type { ConnectionState, PresenceSample } from './realtimeClient';
@@ -75,7 +76,10 @@ export interface PresenceOptions {
   acquireRetryMs?: number;
 }
 
-const DEFAULT_INTERVAL_MS = 10_000;
+// Fallbacks used ONLY until the first availability status arrives; the server's configured
+// values (DriverAvailabilityStatus.updateIntervalsMs / onlineMaxAccuracyMeters) always win.
+const FALLBACK_INTERVAL_MS = 10_000;
+const FALLBACK_MAX_ACCURACY_METERS = 100;
 const WATCHDOG_MS = 2_500;
 
 const REASON_TEXT: Record<string, string> = {
@@ -107,7 +111,7 @@ export class DriverPresenceController {
     placeName: null,
     problem: null,
     announcement: null,
-    intervalMs: DEFAULT_INTERVAL_MS,
+    intervalMs: FALLBACK_INTERVAL_MS,
     serverStatus: null,
   };
   private listeners = new Set<() => void>();
@@ -210,8 +214,16 @@ export class DriverPresenceController {
     );
   }
 
+  private maxAccuracy(): number {
+    return (
+      this.state.serverStatus?.onlineMaxAccuracyMeters ??
+      this.opts.maxAccuracyMeters ??
+      FALLBACK_MAX_ACCURACY_METERS
+    );
+  }
+
   private async acquireAccurateFix(): Promise<GpsFix | null> {
-    const max = this.opts.maxAccuracyMeters ?? 100;
+    const max = this.maxAccuracy();
     const attempts = this.opts.acquireAttempts ?? 3;
     let last: GpsFix | null = null;
     for (let i = 0; i < attempts; i++) {
@@ -286,7 +298,7 @@ export class DriverPresenceController {
 
   private onFix(fix: GpsFix) {
     if (this.state.phase !== 'online') return;
-    const max = this.opts.maxAccuracyMeters ?? 100;
+    const max = this.maxAccuracy();
     this.set({
       lastFixAt: this.now(),
       accuracyMeters: fix.accuracyMeters,
@@ -299,7 +311,7 @@ export class DriverPresenceController {
   private async refreshPlace(fix: GpsFix) {
     if (!this.opts.reverseGeocode) return;
     const last = this.lastPlace;
-    const moved = last ? distanceMeters(last, fix) : Infinity;
+    const moved = last ? haversineMeters(last, fix) : Infinity;
     // Reverse geocoding costs money: only after real movement and a pause.
     if (last && (moved < 150 || this.now() - last.atMs < 60_000)) return;
     this.lastPlace = { latitude: fix.latitude, longitude: fix.longitude, atMs: this.now() };
@@ -485,18 +497,4 @@ function toSample(fix: GpsFix): DriverLocationSample {
     deviceTimeMs: fix.timestampMs,
     ...(fix.mocked ? { mockLocation: true } : {}),
   };
-}
-
-function distanceMeters(
-  a: { latitude: number; longitude: number },
-  b: { latitude: number; longitude: number },
-): number {
-  const R = 6_371_000;
-  const rad = (d: number) => (d * Math.PI) / 180;
-  const dLat = rad(b.latitude - a.latitude);
-  const dLon = rad(b.longitude - a.longitude);
-  const h =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(rad(a.latitude)) * Math.cos(rad(b.latitude)) * Math.sin(dLon / 2) ** 2;
-  return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
 }

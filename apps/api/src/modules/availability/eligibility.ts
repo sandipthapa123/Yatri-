@@ -1,6 +1,7 @@
 import type { EligibilitySummary } from '@yatri/types';
 
 import { query } from '../../lib/db';
+import { ACTIVE_SQL } from '../trips/trips.repository';
 import { checkVerificationEligibility } from '../drivers/onboarding.service';
 
 /**
@@ -38,7 +39,7 @@ export async function evaluateDriverEligibility(driverId: string): Promise<Eligi
   // Availability and trips are separate axes, but a driver mid-trip must not open a second shift.
   const active = await query<{ n: string }>(
     `SELECT count(*)::text AS n FROM trips
-     WHERE driver_id = $1 AND status IN ('DRIVER_EN_ROUTE', 'DRIVER_ARRIVED', 'IN_PROGRESS')`,
+     WHERE driver_id = $1 AND status IN ${ACTIVE_SQL}`,
     [driverId],
   );
   if (Number(active.rows[0]?.n ?? 0) > 0) {

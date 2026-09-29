@@ -1,6 +1,8 @@
 import type { DriverAvailabilityState } from '@yatri/types';
 
 import { query } from '../../lib/db';
+import { sqlIn } from '../../lib/sql';
+import { TRANSITIONAL_STATES } from './availability.machine';
 
 export interface AvailabilityRow {
   driver_id: string;
@@ -87,7 +89,7 @@ export async function recordAvailabilityEvent(input: {
 export async function listStuckTransitions(olderThanSeconds: number) {
   const res = await query<{ driver_id: string; state: DriverAvailabilityState }>(
     `SELECT driver_id, state FROM driver_availability
-     WHERE state IN ('GOING_ONLINE', 'GOING_OFFLINE')
+     WHERE state IN ${sqlIn(TRANSITIONAL_STATES)}
        AND state_changed_at < now() - ($1::int * interval '1 second')`,
     [olderThanSeconds],
   );

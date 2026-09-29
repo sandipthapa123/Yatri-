@@ -101,3 +101,46 @@ by default.
 - **Shared `packages/types`**: the backend and every client import the same request/response
   shapes, so an API change that breaks a client is a type error at build time, not a bug
   report from Nepal.
+
+## Single Source of Truth (SSOT) — a non-negotiable rule
+
+**One definition → one source → used everywhere.** Every piece of data, business rule,
+configuration value, type, validation rule, permission, constant and system behaviour is
+defined **once**. Everything else imports or derives from it. If it must change, the
+authoritative source changes and every consumer follows. No duplicates, no conflicting
+versions, no parallel sources of truth. The backend stays authoritative for business-critical
+rules and data; clients present results and never re-derive them.
+
+### Who owns what
+
+| Concern                                                                      | The one source                                                                                                                                 | Everyone else                                                                                                    |
+| ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Shared types, status/state lists, pure shared rules (haversine, null-island) | `packages/types` (`TRIP_STATUSES`, `ACTIVE_TRIP_STATUSES`, `DRIVER_AVAILABILITY_STATES`, `DRIVER_STATUSES`, `haversineMeters`, `isNullIsland`) | import it; derive zod enums / SQL lists / UI maps from the constants                                             |
+| Brand tokens, theme                                                          | `packages/shared`                                                                                                                              | apps read via their `useTheme`                                                                                   |
+| Coordinate validation                                                        | `apps/api/src/modules/location/coordinates.ts` (`coordinateSchema`, `latitudeSchema`, `notNullIsland`)                                         | every validator composes these; clients never validate authoritatively                                           |
+| Distance                                                                     | `haversineMeters` (`@yatri/types`); road distance/ETA via `RouteProvider`                                                                      | API and mobile import the same function                                                                          |
+| GPS freshness & tracking thresholds                                          | `modules/tracking/tracking.config.ts` (from env)                                                                                               | availability, trip tracking and admin all call it; clients receive the values from the API                       |
+| Availability state machine                                                   | `modules/availability/availability.machine.ts`                                                                                                 | service, SQL (`sqlIn(TRANSITIONAL_STATES)`), validators derive from it                                           |
+| Go-online eligibility                                                        | `availability/eligibility.ts` (+ phase-3 `checkVerificationEligibility`)                                                                       | clients display the server's reasons                                                                             |
+| Trip status rules                                                            | `TRIP_STATUSES` + `trips.service` `RULES`                                                                                                      | SQL uses `sqlIn(ACTIVE_TRIP_STATUSES)` (`ACTIVE_SQL`)                                                            |
+| Map/geocoder/router choice                                                   | `modules/location/providers/index.ts` (config only)                                                                                            | business code uses the interfaces                                                                                |
+| Configuration                                                                | `apps/api/src/config/env.ts` + `.env.example`                                                                                                  | thresholds reach clients through API responses (e.g. `updateIntervalsMs`, `onlineMaxAccuracyMeters`), not copies |
+| Spoken/UI wording                                                            | `mobile-location` `tripText.ts`, `driverPresenceText.ts`                                                                                       | screens render, never restate                                                                                    |
+| API calls from apps                                                          | `mobile-location/locationApi.ts`, `mobile-auth/apiClient.ts`                                                                                   | screens never `fetch` directly                                                                                   |
+| SQL literals for enums                                                       | generated with `lib/sql.ts` `sqlIn(...)` from the constants above                                                                              | migrations are historical snapshots and may keep literals                                                        |
+
+### Known duplication (recorded, not silently left)
+
+- The realtime protocol exists twice: TypeScript unions in `packages/types/src/tracking.ts`
+  and zod schemas in `modules/realtime/gateway.ts`. Both are exercised by the realtime tests;
+  the goal is to generate the TS types from shared zod schemas.
+- Admin `STATE_TEXT` labels vs the driver app's presence wording (different audiences).
+- `MAX_PLAUSIBLE_SPEED_MPS` (flag, 70) vs `trackingConfig.maxSpeedMps` (reject, 55): distinct
+  by design, both named and documented.
+- Migration literals (historical by nature).
+
+### Shared runtime code
+
+`@yatri/types` now contains runtime values (constants, tiny pure functions). It is compiled to
+`dist/` (`pnpm --filter @yatri/types build`) for Node — the API's `predev`/`prestart` run it —
+while Metro and TypeScript use `src/` (see its `exports`). Tests alias the source.

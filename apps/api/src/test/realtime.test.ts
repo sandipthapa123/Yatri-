@@ -290,9 +290,9 @@ describe('realtime: reconnect, staleness and GPS loss', () => {
     const meta = (await loadMeta(w.tripId))!;
     const t0 = Date.now();
     expect((await buildSnapshot(meta, 'PASSENGER', t0 + 5_000)).driver?.freshness).toBe('live');
-    const stale = await buildSnapshot(meta, 'PASSENGER', t0 + 30_000);
+    const stale = await buildSnapshot(meta, 'PASSENGER', t0 + 45_000);
     expect(stale.driver?.freshness).toBe('stale');
-    expect(stale.driver?.ageSeconds).toBeGreaterThanOrEqual(29);
+    expect(stale.driver?.ageSeconds).toBeGreaterThanOrEqual(44);
     const lost = await buildSnapshot(meta, 'PASSENGER', t0 + 90_000);
     expect(lost.driver?.freshness).toBe('lost');
     expect(lost.driver?.updatedAt).toEqual(expect.any(String)); // timestamp of last update stays available

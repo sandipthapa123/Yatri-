@@ -120,6 +120,8 @@ const envSchema = z
     // --- Driver availability ---
     // A location no older than this counts as fresh (usable for matching).
     DRIVER_LOCATION_FRESH_SECONDS: z.coerce.number().int().positive().default(30),
+    // Past this a silent driver reads as 'lost' (trip UI); availability stale timeout is separate below.
+    DRIVER_LOCATION_LOST_SECONDS: z.coerce.number().int().positive().default(60),
     // Online but silent for this long -> the server moves the driver to UNAVAILABLE.
     DRIVER_STALE_TIMEOUT_SECONDS: z.coerce.number().int().positive().default(180),
     // Cadence the client is told to use, per driver situation (battery vs. freshness).

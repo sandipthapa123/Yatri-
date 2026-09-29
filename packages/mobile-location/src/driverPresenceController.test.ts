@@ -23,6 +23,7 @@ const status = (over: Partial<DriverAvailabilityStatus> = {}): DriverAvailabilit
   eligibility: { eligible: true, reasons: [] },
   updateIntervalsMs: { idle: 10_000, enRoute: 3000, onTrip: 3000 },
   freshWithinSeconds: 30,
+  onlineMaxAccuracyMeters: 100,
   ...over,
 });
 const gps = (over: Partial<GpsFix> = {}): GpsFix => ({

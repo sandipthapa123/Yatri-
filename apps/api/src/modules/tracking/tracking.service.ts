@@ -15,8 +15,8 @@ import { reverseGeocode } from '../location/location.service';
 import { getRouteProvider } from '../location/providers';
 import { publishTripChange } from '../realtime/bus';
 import { computeEta, estimateEta } from './eta';
+import { trackingConfig } from './tracking.config';
 import {
-  DEFAULT_TRACKING_CONFIG,
   evaluateFix,
   freshnessOf,
   shouldRefreshPlaceName,
@@ -34,11 +34,6 @@ const STATE_TTL_SECONDS = 6 * 60 * 60;
 const TERMINAL_META_TTL_SECONDS = 10 * 60;
 const ETA_ROUTE_REFRESH_MS = 30_000;
 const ETA_ROUTE_REFRESH_MOVE_M = 150;
-
-const trackingConfig = () => ({
-  ...DEFAULT_TRACKING_CONFIG,
-  minIntervalMs: env.TRACKING_MIN_INTERVAL_MS,
-});
 
 export type Party = 'driver' | 'passenger';
 
@@ -177,7 +172,9 @@ export async function applyLocationUpdate(input: {
   return serialize(`${tripId}:${party}`, async () => {
     const prevState = await getJson<PartyState>(k.party(tripId, party));
     const before = prevState?.fix ?? null;
-    const wasLost = before ? freshnessOf(before.receivedAtMs, nowMs) === 'lost' : false;
+    const wasLost = before
+      ? freshnessOf(before.receivedAtMs, nowMs, trackingConfig()) === 'lost'
+      : false;
     const decision = evaluateFix(before, fix, nowMs, trackingConfig());
 
     if (!decision.accept) {
@@ -284,7 +281,7 @@ function toParty(
 ): LiveParty | null {
   if (!state) return null;
   const age = Math.max(0, nowMs - state.fix.receivedAtMs);
-  const freshness: Freshness = freshnessOf(state.fix.receivedAtMs, nowMs);
+  const freshness: Freshness = freshnessOf(state.fix.receivedAtMs, nowMs, trackingConfig());
   return {
     latitude: state.fix.latitude,
     longitude: state.fix.longitude,
@@ -376,7 +373,7 @@ function etaFor(
 /** Freshness of the driver's feed right now — used by the staleness sweeper. */
 export async function driverFreshness(tripId: string, nowMs = Date.now()): Promise<Freshness> {
   const state = await getJson<PartyState>(k.party(tripId, 'driver'));
-  return freshnessOf(state?.fix.receivedAtMs ?? null, nowMs, DEFAULT_TRACKING_CONFIG);
+  return freshnessOf(state?.fix.receivedAtMs ?? null, nowMs, trackingConfig());
 }
 
 export async function passengerStopsSharing(tripId: string): Promise<void> {

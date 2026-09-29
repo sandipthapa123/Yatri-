@@ -1,6 +1,12 @@
-import type { TripPlace, TripStatus, TripSummary } from '@yatri/types';
+import {
+  ACTIVE_TRIP_STATUSES,
+  type TripPlace,
+  type TripStatus,
+  type TripSummary,
+} from '@yatri/types';
 
 import { pool } from '../../config/database';
+import { sqlIn } from '../../lib/sql';
 import { query } from '../../lib/db';
 import { insertLocation, type LocationFields } from '../location/locations.repository';
 
@@ -34,7 +40,7 @@ const SELECT = `
   JOIN locations pl ON pl.id = t.pickup_location_id
   JOIN locations dl ON dl.id = t.destination_location_id`;
 
-export const ACTIVE_SQL = "('DRIVER_EN_ROUTE', 'DRIVER_ARRIVED', 'IN_PROGRESS')";
+export const ACTIVE_SQL = sqlIn(ACTIVE_TRIP_STATUSES);
 
 export async function getTrip(id: string): Promise<TripRow | null> {
   const r = await query<TripRow>(`${SELECT} WHERE t.id = $1`, [id]);

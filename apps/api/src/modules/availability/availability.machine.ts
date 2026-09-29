@@ -1,4 +1,10 @@
-import type { DriverAvailabilityState, LocationFreshness } from '@yatri/types';
+import {
+  DRIVER_AVAILABILITY_STATES,
+  type DriverAvailabilityState,
+  type LocationFreshness,
+} from '@yatri/types';
+
+import { freshnessOf } from '../tracking/tracking.rules';
 
 /**
  * Driver availability state machine (pure).
@@ -17,13 +23,12 @@ import type { DriverAvailabilityState, LocationFreshness } from '@yatri/types';
  * phase adds as an extra column (`online_substate`) — the persisted machine below
  * and every query that means "is this driver reachable?" keep working unchanged.
  */
-export const ALL_STATES: readonly DriverAvailabilityState[] = [
-  'OFFLINE',
+export const ALL_STATES = DRIVER_AVAILABILITY_STATES;
+
+/** Mid-change states; a change that never completes is rolled back by the sweeper. */
+export const TRANSITIONAL_STATES: readonly DriverAvailabilityState[] = [
   'GOING_ONLINE',
-  'ONLINE',
   'GOING_OFFLINE',
-  'SUSPENDED',
-  'UNAVAILABLE',
 ];
 
 const TRANSITIONS: Record<DriverAvailabilityState, readonly DriverAvailabilityState[]> = {
@@ -59,11 +64,19 @@ export function isMatchable(state: DriverAvailabilityState, freshness: LocationF
   return state === 'ONLINE' && freshness === 'fresh';
 }
 
+/**
+ * Availability's "fresh / stale / none" is the tracking rules' single freshness function
+ * with the same configured threshold; only the vocabulary differs (live → fresh, and both
+ * "stale" and "lost" read as stale here — being reachable is binary).
+ */
 export function locationFreshness(
   lastReceivedAtMs: number | null,
   nowMs: number,
   freshWithinSeconds: number,
 ): LocationFreshness {
-  if (lastReceivedAtMs === null) return 'none';
-  return nowMs - lastReceivedAtMs <= freshWithinSeconds * 1000 ? 'fresh' : 'stale';
+  const f = freshnessOf(lastReceivedAtMs, nowMs, {
+    liveWithinMs: freshWithinSeconds * 1000,
+    staleWithinMs: Number.POSITIVE_INFINITY,
+  });
+  return f === 'live' ? 'fresh' : f === 'none' ? 'none' : 'stale';
 }

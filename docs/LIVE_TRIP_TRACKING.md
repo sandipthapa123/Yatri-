@@ -71,7 +71,7 @@ fix), `duplicate`, `out_of_order`, `too_frequent`, or `impossible_jump` (faster 
 55 m/s plus accuracy radii). A rejected jump is remembered as a candidate: if the device
 keeps reporting from the new place (3 consistent fixes) the earlier fix was the bad one
 and the new position is accepted; scattered wild fixes never take over. Freshness of the
-feed is judged by the **server** clock: `live` ≤ 15 s, `stale` ≤ 60 s, else `lost`
+feed is judged by the **server** clock using the shared config (`DRIVER_LOCATION_FRESH_SECONDS`, default 30 s; `DRIVER_LOCATION_LOST_SECONDS`, default 60 s): `live`, then `stale`, else `lost`
 (a sweeper broadcasts the change, so GPS loss is noticed even when nothing arrives).
 
 ## Distance, ETA, waiting time — never conflated

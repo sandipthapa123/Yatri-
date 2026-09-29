@@ -16,7 +16,9 @@
     "migrate:test:up": "node-pg-migrate --envPath .env.test up",
     "seed:admin": "tsx scripts/seed-admin.ts",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "predev": "pnpm --filter @yatri/types build",
+    "prestart": "pnpm --filter @yatri/types build"
   },
   "dependencies": {
     "@yatri/types": "workspace:*",

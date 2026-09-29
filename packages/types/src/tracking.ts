@@ -6,8 +6,14 @@
 
 import type { DriverAvailabilityStatus, LocationFreshness } from './availability';
 
-export type TripStatus =
-  'DRIVER_EN_ROUTE' | 'DRIVER_ARRIVED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+export const TRIP_STATUSES = [
+  'DRIVER_EN_ROUTE',
+  'DRIVER_ARRIVED',
+  'IN_PROGRESS',
+  'COMPLETED',
+  'CANCELLED',
+] as const;
+export type TripStatus = (typeof TRIP_STATUSES)[number];
 
 export const ACTIVE_TRIP_STATUSES: readonly TripStatus[] = [
   'DRIVER_EN_ROUTE',

@@ -1,6 +1,11 @@
 import { z } from 'zod';
 
-import { latitudeSchema, longitudeSchema } from '../location/coordinates';
+import {
+  latitudeSchema,
+  longitudeSchema,
+  notNullIsland,
+  NULL_ISLAND_ISSUE,
+} from '../location/coordinates';
 
 // eslint-disable-next-line no-control-regex
 const NO_CONTROL = /^[^\u0000-\u001f\u007f]*$/;
@@ -9,9 +14,6 @@ const text = (max: number) =>
 const optionalText = (max: number) => z.union([text(max), z.null()]).optional();
 
 const kind = z.enum(['HOME', 'WORK', 'FAVOURITE']);
-
-const notNullIsland = (c: { latitude?: number; longitude?: number }) =>
-  !(c.latitude === 0 && c.longitude === 0);
 
 export const createSavedPlaceSchema = z
   .object({
@@ -27,10 +29,7 @@ export const createSavedPlaceSchema = z
     country: optionalText(120),
   })
   .strict()
-  .refine(notNullIsland, {
-    message: 'Coordinates 0,0 are not a valid location',
-    path: ['latitude'],
-  });
+  .refine(notNullIsland, NULL_ISLAND_ISSUE);
 
 export const updateSavedPlaceSchema = z
   .object({
@@ -50,7 +49,4 @@ export const updateSavedPlaceSchema = z
     message: 'latitude and longitude must be provided together',
     path: ['latitude'],
   })
-  .refine(notNullIsland, {
-    message: 'Coordinates 0,0 are not a valid location',
-    path: ['latitude'],
-  });
+  .refine(notNullIsland, NULL_ISLAND_ISSUE);

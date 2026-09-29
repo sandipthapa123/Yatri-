@@ -13,6 +13,7 @@ export * from './driver-verification';
 export * from './location';
 export * from './tracking';
 export * from './availability';
+export * from './geo';
 
 /** Matches the API's PublicProfile response shape (GET/PATCH /users/me). */
 export interface AppUser {

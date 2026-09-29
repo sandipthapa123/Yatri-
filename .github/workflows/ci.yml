@@ -27,3 +27,6 @@ jobs:
 
       - name: Typecheck
         run: pnpm typecheck
+
+      - name: Build shared package and API (catches runtime-import breakage)
+        run: pnpm --filter @yatri/types build && pnpm --filter @yatri/api build

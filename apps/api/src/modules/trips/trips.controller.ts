@@ -3,7 +3,12 @@ import type { ApiResponse, LiveTripSnapshot, TripSummary } from '@yatri/types';
 import { z } from 'zod';
 
 import { HttpError } from '../../middleware/errorHandler';
-import { latitudeSchema, longitudeSchema } from '../location/coordinates';
+import {
+  latitudeSchema,
+  longitudeSchema,
+  notNullIsland,
+  NULL_ISLAND_ISSUE,
+} from '../location/coordinates';
 import { buildSnapshot, isActive, loadMeta } from '../tracking/tracking.service';
 import { getActiveTripFor, getTrip, toTripSummary, type TripRow } from './trips.repository';
 import { changeTripStatus, createTripForParticipants, metaFromRow } from './trips.service';
@@ -71,10 +76,7 @@ const placeSchema = z
     address: z.string().trim().min(1).max(300),
     name: z.string().trim().min(1).max(120).optional(),
   })
-  .refine((p) => !(p.latitude === 0 && p.longitude === 0), {
-    message: 'Coordinates 0,0 are not a valid location',
-    path: ['latitude'],
-  });
+  .refine(notNullIsland, NULL_ISLAND_ISSUE);
 
 export const createTripSchema = z.object({
   passengerId: z.string().uuid(),

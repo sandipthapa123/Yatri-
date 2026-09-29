@@ -1,3 +1,4 @@
+import { isNullIsland } from '@yatri/types';
 import { z } from 'zod';
 
 const NUMERIC_STRING = /^[+-]?(\d+\.?\d*|\.\d+)$/;
@@ -25,13 +26,19 @@ function boundedDegrees(name: string, limit: number) {
 export const latitudeSchema = boundedDegrees('latitude', 90);
 export const longitudeSchema = boundedDegrees('longitude', 180);
 
-/** (0, 0) is what many GPS stacks report when they have no fix at all; treat it as invalid. */
+/**
+ * (0, 0) is what many GPS stacks report when they have no fix at all; treat it as invalid.
+ * Use `.refine(notNullIsland, NULL_ISLAND_ISSUE)` on any lat/lng object so every schema shares one rule.
+ */
+export const notNullIsland = (c: { latitude?: number; longitude?: number }) => !isNullIsland(c);
+export const NULL_ISLAND_ISSUE = {
+  message: 'Coordinates 0,0 are not a valid location',
+  path: ['latitude'],
+};
+
 export const coordinateSchema = z
   .object({ latitude: latitudeSchema, longitude: longitudeSchema })
-  .refine((c) => !(c.latitude === 0 && c.longitude === 0), {
-    message: 'Coordinates 0,0 are not a valid location',
-    path: ['latitude'],
-  });
+  .refine(notNullIsland, NULL_ISLAND_ISSUE);
 
 export type Coordinate = z.infer<typeof coordinateSchema>;
 

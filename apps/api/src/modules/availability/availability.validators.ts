@@ -1,6 +1,12 @@
+import { DRIVER_AVAILABILITY_STATES, DRIVER_STATUSES } from '@yatri/types';
 import { z } from 'zod';
 
-import { latitudeSchema, longitudeSchema } from '../location/coordinates';
+import {
+  latitudeSchema,
+  longitudeSchema,
+  notNullIsland,
+  NULL_ISLAND_ISSUE,
+} from '../location/coordinates';
 
 /**
  * One GPS reading from a driver device. `.strict()`: unknown keys — including any
@@ -17,33 +23,15 @@ export const driverLocationSampleShape = {
   mockLocation: z.boolean().optional(),
 };
 
-const notNullIsland = (s: { latitude: number; longitude: number }) =>
-  !(s.latitude === 0 && s.longitude === 0);
-
 export const driverLocationSampleSchema = z
   .object(driverLocationSampleShape)
   .strict()
-  .refine(notNullIsland, {
-    message: 'Coordinates 0,0 are not a valid location',
-    path: ['latitude'],
-  });
+  .refine(notNullIsland, NULL_ISLAND_ISSUE);
 
 export const adminAvailabilityQuerySchema = z.object({
-  state: z
-    .enum(['OFFLINE', 'GOING_ONLINE', 'ONLINE', 'GOING_OFFLINE', 'SUSPENDED', 'UNAVAILABLE'])
-    .optional(),
+  state: z.enum(DRIVER_AVAILABILITY_STATES).optional(),
   freshness: z.enum(['fresh', 'stale', 'none']).optional(),
-  verification: z
-    .enum([
-      'NOT_STARTED',
-      'IN_PROGRESS',
-      'SUBMITTED',
-      'UNDER_REVIEW',
-      'VERIFIED',
-      'REJECTED',
-      'SUSPENDED',
-    ])
-    .optional(),
+  verification: z.enum(DRIVER_STATUSES).optional(),
   search: z.string().trim().max(100).optional(),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(50).default(20),

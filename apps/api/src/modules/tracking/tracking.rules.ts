@@ -1,5 +1,7 @@
 import type { Freshness } from '@yatri/types';
 
+import { isNullIsland } from '@yatri/types';
+
 import { haversineMeters } from '../location/geo';
 
 /**
@@ -42,18 +44,6 @@ export interface TrackingConfig {
   staleWithinMs: number;
 }
 
-export const DEFAULT_TRACKING_CONFIG: TrackingConfig = {
-  maxSpeedMps: 55,
-  jumpSlackMeters: 30,
-  maxFixAgeMs: 30_000,
-  maxClockSkewMs: 60_000,
-  minIntervalMs: 800,
-  maxAccuracyMeters: 200,
-  jumpConfirmations: 3,
-  liveWithinMs: 15_000,
-  staleWithinMs: 60_000,
-};
-
 export type RejectReason =
   | 'duplicate'
   | 'out_of_order'
@@ -73,7 +63,7 @@ function validCoordinate(f: Fix): boolean {
     Number.isFinite(f.longitude) &&
     Math.abs(f.latitude) <= 90 &&
     Math.abs(f.longitude) <= 180 &&
-    !(f.latitude === 0 && f.longitude === 0) &&
+    !isNullIsland(f) &&
     Number.isFinite(f.deviceTimeMs) &&
     (f.accuracyMeters === null || (Number.isFinite(f.accuracyMeters) && f.accuracyMeters >= 0))
   );
@@ -83,7 +73,7 @@ export function evaluateFix(
   prev: StoredFix | null,
   incoming: Fix,
   nowMs: number,
-  cfg: TrackingConfig = DEFAULT_TRACKING_CONFIG,
+  cfg: TrackingConfig,
 ): Decision {
   if (!validCoordinate(incoming)) return { accept: false, reason: 'invalid' };
   if (incoming.deviceTimeMs - nowMs > cfg.maxClockSkewMs) {
@@ -156,7 +146,7 @@ export function evaluateFix(
 export function freshnessOf(
   lastReceivedAtMs: number | null,
   nowMs: number,
-  cfg: TrackingConfig = DEFAULT_TRACKING_CONFIG,
+  cfg: Pick<TrackingConfig, 'liveWithinMs' | 'staleWithinMs'>,
 ): Freshness {
   if (lastReceivedAtMs === null) return 'none';
   const age = nowMs - lastReceivedAtMs;

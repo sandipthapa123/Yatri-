@@ -5,8 +5,15 @@
  * as ONLINE_AVAILABLE / ONLINE_ASSIGNED / ON_TRIP slot in as sub-states of
  * ONLINE without changing the persisted column (see availability.machine.ts).
  */
-export type DriverAvailabilityState =
-  'OFFLINE' | 'GOING_ONLINE' | 'ONLINE' | 'GOING_OFFLINE' | 'SUSPENDED' | 'UNAVAILABLE';
+export const DRIVER_AVAILABILITY_STATES = [
+  'OFFLINE',
+  'GOING_ONLINE',
+  'ONLINE',
+  'GOING_OFFLINE',
+  'SUSPENDED',
+  'UNAVAILABLE',
+] as const;
+export type DriverAvailabilityState = (typeof DRIVER_AVAILABILITY_STATES)[number];
 
 /** Age of the last accepted location: fresh (usable for matching), stale (not), none. */
 export type LocationFreshness = 'fresh' | 'stale' | 'none';
@@ -31,6 +38,8 @@ export interface DriverAvailabilityStatus {
   /** Configured update cadence, so the client never hard-codes it. */
   updateIntervalsMs: { idle: number; enRoute: number; onTrip: number };
   freshWithinSeconds: number;
+  /** Opening-fix accuracy the server requires to go online; clients read it instead of re-hardcoding it. */
+  onlineMaxAccuracyMeters: number;
 }
 
 export interface AdminDriverAvailabilityRow {

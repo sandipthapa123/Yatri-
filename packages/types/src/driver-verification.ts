@@ -4,14 +4,16 @@
  * internal row shapes.
  */
 
-export type DriverStatus =
-  | 'NOT_STARTED'
-  | 'IN_PROGRESS'
-  | 'SUBMITTED'
-  | 'UNDER_REVIEW'
-  | 'VERIFIED'
-  | 'REJECTED'
-  | 'SUSPENDED';
+export const DRIVER_STATUSES = [
+  'NOT_STARTED',
+  'IN_PROGRESS',
+  'SUBMITTED',
+  'UNDER_REVIEW',
+  'VERIFIED',
+  'REJECTED',
+  'SUSPENDED',
+] as const;
+export type DriverStatus = (typeof DRIVER_STATUSES)[number];
 
 export type VehicleVerificationStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 export type DocumentStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'EXPIRED';

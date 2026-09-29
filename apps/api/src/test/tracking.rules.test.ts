@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import { haversineMeters } from '../modules/location/geo';
 import { estimateEta } from '../modules/tracking/eta';
+import { trackingConfig } from '../modules/tracking/tracking.config';
 import {
-  DEFAULT_TRACKING_CONFIG,
   evaluateFix,
   freshnessOf,
   shouldRefreshPlaceName,
@@ -31,7 +31,7 @@ const stored = (over: Partial<StoredFix> = {}): StoredFix => ({
   receivedAtMs: NOW,
   ...over,
 });
-const cfg = { ...DEFAULT_TRACKING_CONFIG, minIntervalMs: 0 };
+const cfg = { ...trackingConfig(), minIntervalMs: 0 };
 
 describe('mocked GPS distances', () => {
   it.each([10, 50, 100, 500, 1000, 5000])('measures %s m within 0.5%', (d) => {
@@ -91,7 +91,7 @@ describe('evaluateFix', () => {
   });
 
   it('rate limits per party', () => {
-    const c = { ...DEFAULT_TRACKING_CONFIG, minIntervalMs: 800 };
+    const c = { ...trackingConfig(), minIntervalMs: 800 };
     expect(evaluateFix(stored(), fix({ deviceTimeMs: NOW + 100 }), NOW + 100, c)).toMatchObject({
       accept: false,
       reason: 'too_frequent',
@@ -193,11 +193,12 @@ describe('evaluateFix', () => {
 
 describe('freshness & place-name thresholds', () => {
   it('classifies live / stale / lost / none', () => {
-    expect(freshnessOf(null, NOW)).toBe('none');
-    expect(freshnessOf(NOW - 5_000, NOW)).toBe('live');
-    expect(freshnessOf(NOW - 15_000, NOW)).toBe('live');
-    expect(freshnessOf(NOW - 30_000, NOW)).toBe('stale');
-    expect(freshnessOf(NOW - 61_000, NOW)).toBe('lost');
+    const c = trackingConfig(); // thresholds come from config: live <= 30 s, stale <= 60 s by default
+    expect(freshnessOf(null, NOW, c)).toBe('none');
+    expect(freshnessOf(NOW - 5_000, NOW, c)).toBe('live');
+    expect(freshnessOf(NOW - 30_000, NOW, c)).toBe('live');
+    expect(freshnessOf(NOW - 45_000, NOW, c)).toBe('stale');
+    expect(freshnessOf(NOW - 61_000, NOW, c)).toBe('lost');
   });
 
   it('refreshes the place name only after real movement and a pause', () => {

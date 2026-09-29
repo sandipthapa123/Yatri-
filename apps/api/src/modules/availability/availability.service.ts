@@ -9,7 +9,8 @@ import { env } from '../../config/env';
 import { query } from '../../lib/db';
 import { HttpError } from '../../middleware/errorHandler';
 import { publishDriverChange } from '../realtime/bus';
-import { DEFAULT_TRACKING_CONFIG, evaluateFix, type Fix } from '../tracking/tracking.rules';
+import { trackingConfig } from '../tracking/tracking.config';
+import { evaluateFix, type Fix } from '../tracking/tracking.rules';
 import { canTransition, CAN_START_ONLINE, locationFreshness } from './availability.machine';
 import {
   casTransition,
@@ -45,11 +46,6 @@ export const availabilityConfig = () => ({
     enRoute: env.DRIVER_UPDATE_INTERVAL_EN_ROUTE_MS,
     onTrip: env.DRIVER_UPDATE_INTERVAL_ON_TRIP_MS,
   },
-});
-
-const trackingConfig = () => ({
-  ...DEFAULT_TRACKING_CONFIG,
-  minIntervalMs: env.TRACKING_MIN_INTERVAL_MS,
 });
 
 function toFix(s: DriverLocationSample): Fix {
@@ -92,6 +88,7 @@ export async function getStatus(
       : await evaluateDriverEligibility(driverId),
     updateIntervalsMs: cfg.intervals,
     freshWithinSeconds: cfg.freshSeconds,
+    onlineMaxAccuracyMeters: cfg.onlineMaxAccuracyMeters,
   };
 }
 

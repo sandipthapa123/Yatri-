@@ -19,7 +19,21 @@ const place = z
   .refine(notNullIsland, NULL_ISLAND_ISSUE);
 
 /** No distance, fare or ETA field exists: the server calculates every one of them. */
-export const tripRequestSchema = z.object({ pickup: place, destination: place }).strict();
+const categoryCode = z
+  .string()
+  .trim()
+  .min(1)
+  .max(40)
+  .regex(/^[A-Z0-9_]+$/);
+
+export const tripRequestSchema = z
+  .object({ pickup: place, destination: place, vehicleCategory: categoryCode })
+  .strict();
+
+/** The estimate may leave the category out; the response then lists every category. */
+export const tripEstimateSchema = z
+  .object({ pickup: place, destination: place, vehicleCategory: categoryCode.optional() })
+  .strict();
 
 export const cancelSchema = z
   .object({ reason: z.string().trim().min(1).max(200).optional() })

@@ -170,6 +170,14 @@ const envSchema = z
     DISPATCH_RADIUS_METERS: z.coerce.number().int().positive().default(5000),
     DISPATCH_OFFER_TTL_SECONDS: z.coerce.number().int().positive().default(20),
     DISPATCH_SEARCH_TIMEOUT_SECONDS: z.coerce.number().int().positive().default(120),
+    // How candidate drivers are ranked. Only "proximity" exists today; add a strategy in
+    // dispatch/matching.ts and its name here, never in a controller or an app.
+    MATCHING_STRATEGY: z.enum(['proximity']).default('proximity'),
+    // Cancellation rules. A passenger who cancels within CANCEL_FREE_SECONDS of a driver being
+    // assigned, or before any driver is assigned, pays nothing; later, the fee below is RECORDED on
+    // the ride (not charged: payments are a later phase). 0 disables the fee.
+    CANCEL_FREE_SECONDS: z.coerce.number().int().min(0).default(120),
+    CANCEL_FEE_NPR: z.coerce.number().int().min(0).default(0),
     DISPATCH_MAX_OFFERS: z.coerce.number().int().positive().default(6),
     // An assigned driver silent for this long (still en route) is replaced by re-matching.
     TRIP_DRIVER_LOST_SECONDS: z.coerce.number().int().positive().default(120),

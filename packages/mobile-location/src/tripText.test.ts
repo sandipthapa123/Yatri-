@@ -327,3 +327,19 @@ describe('announcement policy: informed, not flooded', () => {
     expect(spoken[0]?.polite).not.toContain('Estimated arrival');
   });
 });
+
+describe('announcement policy: the search', () => {
+  it('says "Searching for a driver." once when the screen opens on a search, and nothing more from snapshots', () => {
+    const searching = snapshot({
+      status: 'SEARCHING',
+      driver: null,
+      driverArrival: null,
+      trip: null,
+    });
+    const first = decideAnnouncement(INITIAL_ANNOUNCE_STATE, searching, 0, 'PASSENGER');
+    expect(first.announcement.polite).toBe('Searching for a driver.');
+    const again = decideAnnouncement(first.next, { ...searching, version: 2 }, 15_000, 'PASSENGER');
+    expect(again.announcement).toEqual({});
+    // the steps of the search are spoken from events (driver found, declined, accepted), not here
+  });
+});

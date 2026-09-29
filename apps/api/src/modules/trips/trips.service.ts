@@ -4,7 +4,9 @@ import {
   type TripCounterpart,
   type TripEventPayload,
   type TripEventType,
+  type RideCategoryOption,
   type TripPaymentStatus,
+  type TripEstimateBody,
   type TripRequestBody,
   type TripStatus,
   type TripSummary,
@@ -18,8 +20,11 @@ import { endLiveCallForTrip } from '../calls/calls.service';
 import { setDriverTrip } from '../availability/presence.state';
 import { cancelAcceptedOffer, cancelOpenOffersForTrip } from '../dispatch/offers.repository';
 import { calculateDistance } from '../location/location.service';
+import { getActiveCategoryByCode, listActiveCategories, pricingFor } from '../pricing/categories';
 import { estimateFare, waitingCharge } from '../pricing/pricing';
 import { pricingConfig } from '../pricing/pricing.config';
+import { isCategoryAvailable } from '../dispatch/matching';
+import { decidePassengerCancellation, requireCancellationAllowed } from './cancellation';
 import { estimateEta } from '../tracking/eta';
 import {
   bumpTripVersion,
@@ -135,6 +140,20 @@ export async function buildTripSummary(t: TripRow, viewerId: string): Promise<Tr
     counterpart,
     viewerRole: viewerIsPassenger ? 'PASSENGER' : 'DRIVER',
     paymentStatus: pay.rows[0]?.status ?? 'NONE',
+    vehicleCategory:
+      t.vehicle_category_code && t.vehicle_category_label
+        ? { code: t.vehicle_category_code, label: t.vehicle_category_label }
+        : null,
+    // What cancelling would cost right now, from THE cancellation rules (passenger of a live ride only).
+    cancelFeeNpr:
+      viewerIsPassenger && !TERMINAL_TRIP_STATUSES.includes(t.status)
+        ? decidePassengerCancellation({ status: t.status, matchedAt: t.matched_at }, new Date())
+            .feeNpr
+        : 0,
+    cancellation:
+      t.status === 'CANCELLED' && t.cancelled_from_status
+        ? { fromStatus: t.cancelled_from_status, feeNpr: t.cancellation_fee_npr }
+        : null,
     rated: !!rated.rowCount,
   };
 }
@@ -143,7 +162,8 @@ export async function buildTripSummary(t: TripRow, viewerId: string): Promise<Tr
 
 const MIN_TRIP_METERS = 50;
 
-export async function estimateForRequest(body: TripRequestBody) {
+/** The route, duration and distance for a trip: calculated by the server, never supplied by a client. */
+async function measureTrip(body: TripEstimateBody) {
   const distance = haversineMeters(body.pickup, body.destination);
   if (distance < MIN_TRIP_METERS) {
     throw new HttpError(
@@ -152,23 +172,57 @@ export async function estimateForRequest(body: TripRequestBody) {
       'Pickup and destination are too close together.',
     );
   }
-  // The server calculates the distance (route-based when a routing engine is configured);
-  // a client-supplied distance does not exist in the API.
+  // Route-based when a routing engine is configured; a client-supplied distance does not exist.
   const d = await calculateDistance(body.pickup, body.destination, 'route');
   const durationSeconds = d.durationSeconds ?? estimateEta(d.distanceMeters).etaSeconds;
-  const fare = estimateFare(
-    { distanceMeters: d.distanceMeters, durationSeconds, routeBased: d.method === 'route' },
-    pricingConfig(),
+  return { distanceMeters: d.distanceMeters, durationSeconds, routeBased: d.method === 'route' };
+}
+
+const unknownCategory = () =>
+  new HttpError(422, 'VEHICLE_CATEGORY_UNKNOWN', 'That vehicle type is not available.');
+
+/**
+ * The estimate for a request: the selected category's fare, plus every active category priced and
+ * marked available-or-not near the pickup (a yes/no; no driver is ever identified or counted).
+ */
+export async function estimateForRequest(body: TripEstimateBody) {
+  const trip = await measureTrip(body);
+  const categories = await listActiveCategories();
+  const selected = body.vehicleCategory
+    ? categories.find((c) => c.code === body.vehicleCategory)
+    : categories[0]; // no choice yet: price the first category; the picker lists them all
+  if (!selected) throw unknownCategory();
+  const options: RideCategoryOption[] = await Promise.all(
+    categories.map(async (c) => ({
+      code: c.code,
+      label: c.label,
+      available: await isCategoryAvailable(body.pickup, c.id),
+      fare: estimateFare(trip, pricingFor(c)),
+    })),
   );
-  return { fare, distanceMeters: d.distanceMeters, durationSeconds };
+  const chosen = options.find((o) => o.code === selected.code) as RideCategoryOption;
+  return {
+    fare: chosen.fare,
+    category: selected,
+    options,
+    distanceMeters: trip.distanceMeters,
+    durationSeconds: trip.durationSeconds,
+  };
 }
 
 export async function requestTrip(passengerId: string, body: TripRequestBody): Promise<TripRow> {
-  const est = await estimateForRequest(body);
+  const category = await getActiveCategoryByCode(body.vehicleCategory);
+  if (!category) throw unknownCategory();
+  const trip = await measureTrip(body);
+  // The fare is priced by the server for the chosen category; the request carries no price.
+  const fare = estimateFare(trip, pricingFor(category));
+  // Availability is informational (the picker shows it). A request with nobody nearby still
+  // searches: drivers come online, and the search ends in NO_DRIVERS on its own deadline.
   let row: TripRow;
   try {
     row = await createTripRequest({
       passengerId,
+      vehicleCategoryId: category.id,
       pickup: {
         latitude: body.pickup.latitude,
         longitude: body.pickup.longitude,
@@ -181,9 +235,9 @@ export async function requestTrip(passengerId: string, body: TripRequestBody): P
         address: body.destination.address,
         placeName: body.destination.name ?? null,
       },
-      distanceMeters: est.distanceMeters,
-      durationSeconds: est.durationSeconds,
-      fareEstimateNpr: est.fare.totalNpr,
+      distanceMeters: trip.distanceMeters,
+      durationSeconds: trip.durationSeconds,
+      fareEstimateNpr: fare.totalNpr,
       searchTimeoutSeconds: env.DISPATCH_SEARCH_TIMEOUT_SECONDS,
     });
   } catch (err) {
@@ -229,7 +283,13 @@ async function transition(tripId: string, spec: TransitionSpec): Promise<TripRow
   if (spec.to !== 'DRIVER_ARRIVED' && spec.to !== 'IN_PROGRESS' && spec.to !== 'DRIVER_EN_ROUTE') {
     await endLiveCallForTrip(tripId);
   }
-  await recordTripEvent({ tripId, ...spec.event });
+  // Cancellations and re-matches record the state they left, alongside who/why/when (the event's
+  // actor, payload and timestamp): the complete, authoritative record of a cancellation.
+  const leftFrom =
+    before && (spec.to === 'CANCELLED' || spec.event.type === 'DRIVER_REMATCHING')
+      ? { fromStatus: before.status }
+      : {};
+  await recordTripEvent({ tripId, ...spec.event, payload: { ...spec.event.payload, ...leftFrom } });
   return updated;
 }
 
@@ -325,21 +385,23 @@ export async function passengerCancel(
 ): Promise<CancelOutcome> {
   const trip = await getTrip(tripId);
   if (!trip || trip.passenger_id !== passengerId) throw notFound();
-  if (trip.status === 'IN_PROGRESS') {
-    throw new HttpError(
-      409,
-      'CANNOT_CANCEL_IN_PROGRESS',
-      'A ride in progress cannot be cancelled. Contact support if there is a problem.',
-    );
-  }
+  // THE cancellation rules decide whether this is allowed and what it costs (cancellation.ts).
+  const feeNpr = requireCancellationAllowed(
+    decidePassengerCancellation({ status: trip.status, matchedAt: trip.matched_at }, new Date()),
+  );
   const cancelled = await transition(tripId, {
     to: 'CANCELLED',
     from: ['SEARCHING', 'DRIVER_EN_ROUTE', 'DRIVER_ARRIVED'],
-    patch: { endedAt: 'now', cancelledBy: 'PASSENGER', cancelReason: reason ?? null },
+    patch: {
+      endedAt: 'now',
+      cancelledBy: 'PASSENGER',
+      cancelReason: reason ?? null,
+      cancellationFeeNpr: feeNpr,
+    },
     event: {
       type: 'TRIP_CANCELLED',
       actorId: passengerId,
-      payload: { by: 'PASSENGER', reason: reason ?? null },
+      payload: { by: 'PASSENGER', reason: reason ?? null, feeNpr },
     },
   });
   await cancelOpenOffersForTrip(tripId);

@@ -99,7 +99,7 @@ describe('ChatController: history, order and system messages', () => {
     expect(s.unreadCount).toBe(1);
     expect(
       s.entries.map((e) => (e.kind === 'system' ? e.text : `${e.mine ? 'me' : 'them'}: ${e.body}`)),
-    ).toEqual(['Driver has been assigned.', 'them: On my way', 'Your driver has arrived.']);
+    ).toEqual(['Driver has accepted your ride.', 'them: On my way', 'Your driver has arrived.']);
   });
 
   it('adds new system messages live from trip events and ignores ones that are not for chat', async () => {

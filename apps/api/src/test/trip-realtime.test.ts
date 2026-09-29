@@ -269,7 +269,7 @@ describe('ride events reach both people, once, in order', () => {
     const pc2 = await joined(w.passenger.accessToken, w.tripId);
     expect(snap(pc2.msgs.find((m) => m.type === 'snapshot')!).status).toBe('IN_PROGRESS');
     const missed = (
-      await api.get(`/api/v1/trips/${w.tripId}/events?after=2`).set(auth(w.passenger.accessToken))
+      await api.get(`/api/v1/trips/${w.tripId}/events?after=3`).set(auth(w.passenger.accessToken))
     ).body.data;
     expect(missed.map((e: { type: string }) => e.type)).toEqual([
       'DRIVER_NEARBY',

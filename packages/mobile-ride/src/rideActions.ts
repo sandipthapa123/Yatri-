@@ -24,8 +24,9 @@ export interface RideAction {
   confirm?: { title: string; message: string };
 }
 
-const cancelFor = (role: TripRole, status: TripStatus): RideAction => {
+const cancelFor = (role: TripRole, status: TripStatus, feeNpr: number): RideAction => {
   if (role === 'PASSENGER') {
+    const fee = feeNpr > 0 ? ` A cancellation fee of ${formatNpr(feeNpr)} applies.` : '';
     return {
       id: 'cancel',
       label: status === 'SEARCHING' ? 'Cancel request' : 'Cancel ride',
@@ -33,9 +34,9 @@ const cancelFor = (role: TripRole, status: TripStatus): RideAction => {
       confirm: {
         title: status === 'SEARCHING' ? 'Cancel this request?' : 'Cancel this ride?',
         message:
-          status === 'SEARCHING'
+          (status === 'SEARCHING'
             ? 'We will stop looking for a driver.'
-            : 'Your driver will be told the ride was cancelled.',
+            : 'Your driver will be told the ride was cancelled.') + fee,
       },
     };
   }
@@ -52,19 +53,26 @@ const cancelFor = (role: TripRole, status: TripStatus): RideAction => {
 
 export function rideActions(
   role: TripRole,
-  trip: { status: TripStatus; paymentStatus: TripSummary['paymentStatus']; rated: boolean },
+  trip: {
+    status: TripStatus;
+    paymentStatus: TripSummary['paymentStatus'];
+    rated: boolean;
+    /** What cancelling costs now, as the server's cancellation rules say (0 = free). */
+    cancelFeeNpr?: number;
+  },
   waiting: WaitingInfo | null,
 ): RideAction[] {
   const out: RideAction[] = [];
+  const fee = trip.cancelFeeNpr ?? 0;
   switch (trip.status) {
     case 'SEARCHING':
-      if (role === 'PASSENGER') out.push(cancelFor(role, trip.status));
+      if (role === 'PASSENGER') out.push(cancelFor(role, trip.status, fee));
       break;
     case 'DRIVER_EN_ROUTE':
       if (role === 'DRIVER') {
         out.push({ id: 'arrived', label: 'I have arrived at the pickup', tone: 'primary' });
       }
-      out.push(cancelFor(role, trip.status));
+      out.push(cancelFor(role, trip.status, fee));
       break;
     case 'DRIVER_ARRIVED':
       if (role === 'DRIVER') {
@@ -82,7 +90,7 @@ export function rideActions(
           });
         }
       }
-      out.push(cancelFor(role, trip.status));
+      out.push(cancelFor(role, trip.status, fee));
       break;
     case 'IN_PROGRESS':
       if (role === 'DRIVER') {

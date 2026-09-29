@@ -55,7 +55,11 @@ async function paidRide() {
 describe('fare estimate & ride request', () => {
   it('prices a ride on the server, with a breakdown and the waiting rule', async () => {
     const p = await onboardUser('PASSENGER');
-    const res = await post(p.accessToken, '/estimate', { pickup: THAMEL, destination: PATAN });
+    const res = await post(p.accessToken, '/estimate', {
+      pickup: THAMEL,
+      destination: PATAN,
+      vehicleCategory: 'CAR',
+    });
     expect(res.status).toBe(200);
     const fare = res.body.data.fare;
     expect(fare.currency).toBe('NPR');
@@ -83,6 +87,7 @@ describe('fare estimate & ride request', () => {
     const res = await post(p.accessToken, '/estimate', {
       pickup: THAMEL,
       destination: { ...north(THAMEL, 200), address: 'Nearby' },
+      vehicleCategory: 'CAR',
     });
     expect(res.body.data.fare.minimumFareApplied).toBe(true);
     expect(res.body.data.fare.totalNpr).toBe(pricingConfig().minimumNpr);
@@ -94,30 +99,51 @@ describe('fare estimate & ride request', () => {
       const res = await post(p.accessToken, '/estimate', {
         pickup: THAMEL,
         destination: PATAN,
+        vehicleCategory: 'CAR',
         ...extra,
       });
       expect(res.status, JSON.stringify(extra)).toBe(400);
     }
     for (const bad of [
-      { pickup: { ...THAMEL, latitude: 91 }, destination: PATAN },
-      { pickup: THAMEL, destination: { ...PATAN, longitude: 'x' } },
-      { pickup: { ...THAMEL, latitude: 0, longitude: 0 }, destination: PATAN },
-      { pickup: THAMEL },
+      { pickup: { ...THAMEL, latitude: 91 }, destination: PATAN, vehicleCategory: 'CAR' },
+      { pickup: THAMEL, destination: { ...PATAN, longitude: 'x' }, vehicleCategory: 'CAR' },
+      {
+        pickup: { ...THAMEL, latitude: 0, longitude: 0 },
+        destination: PATAN,
+        vehicleCategory: 'CAR',
+      },
+      { pickup: THAMEL, vehicleCategory: 'CAR' },
     ]) {
       expect((await post(p.accessToken, '/estimate', bad)).status).toBe(400);
     }
     expect(
-      (await post(p.accessToken, '/estimate', { pickup: THAMEL, destination: THAMEL })).status,
+      (
+        await post(p.accessToken, '/estimate', {
+          pickup: THAMEL,
+          destination: THAMEL,
+          vehicleCategory: 'CAR',
+        })
+      ).status,
     ).toBe(422);
   });
 
   it('is passenger-only and needs sign-in', async () => {
     const d = await onboardUser('DRIVER');
     expect(
-      (await post(d.accessToken, '/estimate', { pickup: THAMEL, destination: PATAN })).status,
+      (
+        await post(d.accessToken, '/estimate', {
+          pickup: THAMEL,
+          destination: PATAN,
+          vehicleCategory: 'CAR',
+        })
+      ).status,
     ).toBe(403);
     expect(
-      (await api.post('/api/v1/trips/request').send({ pickup: THAMEL, destination: PATAN })).status,
+      (
+        await api
+          .post('/api/v1/trips/request')
+          .send({ pickup: THAMEL, destination: PATAN, vehicleCategory: 'CAR' })
+      ).status,
     ).toBe(401);
   });
 
@@ -342,6 +368,7 @@ describe('the ride lifecycle', () => {
     expect(JSON.stringify(theirs)).not.toMatch(/\+977|phone/i);
     expect((await events(w.passenger.accessToken, w.tripId)).map((e) => e.type)).toEqual([
       'TRIP_REQUESTED',
+      'DRIVER_REQUESTED',
       'DRIVER_ASSIGNED',
     ]);
   });
@@ -377,6 +404,7 @@ describe('the ride lifecycle', () => {
     const types = (await events(w.passenger.accessToken, w.tripId)).map((e) => e.type);
     expect(types).toEqual([
       'TRIP_REQUESTED',
+      'DRIVER_REQUESTED',
       'DRIVER_ASSIGNED',
       'DRIVER_NEARBY',
       'DRIVER_ARRIVED',
@@ -384,7 +412,7 @@ describe('the ride lifecycle', () => {
       'TRIP_COMPLETED',
     ]);
     const seqs = (await events(w.passenger.accessToken, w.tripId)).map((e) => e.seq);
-    expect(seqs).toEqual([1, 2, 3, 4, 5, 6]); // gap-free for participants
+    expect(seqs).toEqual([1, 2, 3, 4, 5, 6, 7]); // gap-free for participants
     const t = (await get(w.passenger.accessToken, `/${w.tripId}`)).body.data;
     expect(t.status).toBe('COMPLETED');
     expect(t.fare.finalNpr).toBe(t.fare.estimateNpr + t.fare.waitingChargeNpr);
@@ -394,8 +422,8 @@ describe('the ride lifecycle', () => {
 
   it('lets a client fetch just the events it missed', async () => {
     const w = await completedRide();
-    const missed = await events(w.passenger.accessToken, w.tripId, 3);
-    expect(missed.map((e) => e.seq)).toEqual([4, 5, 6]);
+    const missed = await events(w.passenger.accessToken, w.tripId, 4);
+    expect(missed.map((e) => e.seq)).toEqual([5, 6, 7]);
   });
 
   it('a passenger cannot cancel a ride that has started; a driver cannot either', async () => {

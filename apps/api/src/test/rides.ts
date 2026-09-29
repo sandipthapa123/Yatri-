@@ -30,13 +30,38 @@ export const north = (p: { latitude: number; longitude: number }, meters: number
 export const auth = (token: string) => ({ Authorization: `Bearer ${token}` });
 
 /**
+ * What matching requires of a driver besides being online: a VERIFIED profile on an ACTIVE account
+ * and (when `category` is given) an APPROVED vehicle of that category. Pass null to make the
+ * driver ineligible for every category.
+ */
+export async function makeEligibleDriver(driverId: string, category: string | null = 'CAR') {
+  await pool.query(
+    `INSERT INTO driver_profiles (user_id, status) VALUES ($1, 'VERIFIED')
+     ON CONFLICT (user_id) DO UPDATE SET status = 'VERIFIED'`,
+    [driverId],
+  );
+  await pool.query('DELETE FROM vehicles WHERE driver_user_id = $1', [driverId]);
+  if (category) {
+    await pool.query(
+      `INSERT INTO vehicles (driver_user_id, category_id, make, model, year, color,
+                             registration_number, verification_status)
+       SELECT $1, id, 'Toyota', 'Corolla', 2020, 'White', $3, 'APPROVED'
+       FROM vehicle_categories WHERE code = $2`,
+      [driverId, category, `T-${driverId.slice(0, 8)}-${Date.now() % 100000}`],
+    );
+  }
+}
+
+/**
  * Puts a driver ONLINE with a fresh location without going through verification. Availability
  * eligibility has its own thorough tests; ride tests just need a matchable driver.
  */
 export async function forceDriverOnline(
   driverId: string,
   at: { latitude: number; longitude: number } = north(THAMEL, 300),
+  category: string | null = 'CAR',
 ) {
+  await makeEligibleDriver(driverId, category);
   await pool.query(
     `INSERT INTO driver_availability (driver_id, state, online_since) VALUES ($1, 'ONLINE', now())
      ON CONFLICT (driver_id) DO UPDATE SET state = 'ONLINE', online_since = now()`,
@@ -64,8 +89,13 @@ export async function forceDriverOnline(
   );
 }
 
-export const requestRide = (token: string, pickup = THAMEL, destination = PATAN) =>
-  api.post('/api/v1/trips/request').set(auth(token)).send({ pickup, destination });
+export const requestRide = (
+  token: string,
+  pickup = THAMEL,
+  destination = PATAN,
+  vehicleCategory = 'CAR',
+) =>
+  api.post('/api/v1/trips/request').set(auth(token)).send({ pickup, destination, vehicleCategory });
 
 export const currentOffer = (token: string) =>
   api.get('/api/v1/trips/offers/current').set(auth(token));

@@ -75,7 +75,7 @@ describe('the whole ride, from passenger, driver and admin', () => {
     expect(offer.fareEstimateNpr).toBe(requested.body.data.fare.estimateNpr);
     expect((await acceptCurrentOffer(driver.accessToken)).status).toBe(200);
     const assigned = await seen(pc, event('DRIVER_ASSIGNED'));
-    expect(describeTripEvent(assigned.event, 'PASSENGER')).toBe('Driver has been assigned.');
+    expect(describeTripEvent(assigned.event, 'PASSENGER')).toBe('Driver has accepted your ride.');
 
     // ---- live location: driver approaches, passenger's snapshot carries distance + ETA
     dc.send(fix(north(THAMEL, 900)));

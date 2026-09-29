@@ -98,6 +98,7 @@ export function RideRoom(props: RideRoomProps) {
       status: trip?.status ?? status ?? 'SEARCHING',
       paymentStatus: trip?.paymentStatus ?? 'NONE',
       rated: trip?.rated ?? false,
+      cancelFeeNpr: trip?.cancelFeeNpr ?? 0,
     },
     live.snapshot?.waiting ?? null,
   );

@@ -32,6 +32,7 @@ import {
   eventsQuerySchema,
   historyQuerySchema,
   ratingSchema,
+  tripEstimateSchema,
   tripRequestSchema,
 } from './trips.validators';
 
@@ -45,7 +46,7 @@ tripsRouter.post(
   '/estimate',
   requireRole('PASSENGER'),
   userRateLimit('trip-estimate', 30, 60),
-  validateBody(tripRequestSchema),
+  validateBody(tripEstimateSchema),
   estimateHandler,
 );
 tripsRouter.post(

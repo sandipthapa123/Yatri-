@@ -105,6 +105,14 @@ export interface TripSummary {
   /** Which side the requesting user is on. */
   viewerRole: TripRole;
   paymentStatus: TripPaymentStatus;
+  vehicleCategory: { code: string; label: string } | null;
+  /**
+   * What cancelling would cost right now under the server's cancellation rules (0 = free). Shown in
+   * the confirmation; the apps never compute or restate the rule. Only set for the passenger of a live ride.
+   */
+  cancelFeeNpr: number;
+  /** For a cancelled ride: the state it was cancelled from and the fee the rules recorded. */
+  cancellation: { fromStatus: TripStatus; feeNpr: number } | null;
   /** True when this viewer has already rated the trip. */
   rated: boolean;
 }

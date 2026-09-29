@@ -24,6 +24,11 @@ export interface TripRow {
   waiting_charge_npr: number;
   fare_final_npr: number | null;
   passenger_notified_at: Date | null;
+  vehicle_category_id: string | null;
+  vehicle_category_code: string | null;
+  vehicle_category_label: string | null;
+  cancelled_from_status: TripStatus | null;
+  cancellation_fee_npr: number;
   created_at: Date;
   pickup_name: string | null;
   pickup_address: string;
@@ -40,13 +45,16 @@ const SELECT = `
          t.started_at, t.ended_at, t.search_deadline_at, t.cancel_reason, t.cancelled_by,
          t.distance_meters, t.duration_seconds, t.fare_estimate_npr, t.waiting_charge_npr,
          t.fare_final_npr, t.passenger_notified_at, t.created_at,
+         t.vehicle_category_id, vc.code AS vehicle_category_code, vc.label AS vehicle_category_label,
+         t.cancelled_from_status, t.cancellation_fee_npr,
          pl.place_name AS pickup_name, pl.address AS pickup_address,
          pl.latitude AS pickup_lat, pl.longitude AS pickup_lng,
          dl.place_name AS dest_name, dl.address AS dest_address,
          dl.latitude AS dest_lat, dl.longitude AS dest_lng
   FROM trips t
   JOIN locations pl ON pl.id = t.pickup_location_id
-  JOIN locations dl ON dl.id = t.destination_location_id`;
+  JOIN locations dl ON dl.id = t.destination_location_id
+  LEFT JOIN vehicle_categories vc ON vc.id = t.vehicle_category_id`;
 
 /** SQL `IN` list derived from the shared constant — the statuses are defined once, in @yatri/types. */
 export const ACTIVE_SQL = sqlIn(ACTIVE_TRIP_STATUSES);
@@ -67,6 +75,7 @@ export async function getActiveTripFor(userId: string): Promise<TripRow | null> 
 
 export async function createTripRequest(input: {
   passengerId: string;
+  vehicleCategoryId: string;
   pickup: LocationFields;
   destination: LocationFields;
   distanceMeters: number;
@@ -82,8 +91,8 @@ export async function createTripRequest(input: {
     const ins = await client.query<{ id: string }>(
       `INSERT INTO trips
          (passenger_id, pickup_location_id, destination_location_id, status,
-          distance_meters, duration_seconds, fare_estimate_npr, search_deadline_at)
-       VALUES ($1, $2, $3, 'SEARCHING', $4, $5, $6, now() + ($7::int * interval '1 second'))
+          distance_meters, duration_seconds, fare_estimate_npr, search_deadline_at, vehicle_category_id)
+       VALUES ($1, $2, $3, 'SEARCHING', $4, $5, $6, now() + ($7::int * interval '1 second'), $8)
        RETURNING id`,
       [
         input.passengerId,
@@ -93,6 +102,7 @@ export async function createTripRequest(input: {
         input.durationSeconds === null ? null : Math.round(input.durationSeconds),
         input.fareEstimateNpr,
         input.searchTimeoutSeconds,
+        input.vehicleCategoryId,
       ],
     );
     await client.query('COMMIT');
@@ -116,6 +126,7 @@ export interface TripPatch {
   cancelReason?: string | null;
   cancelledBy?: 'PASSENGER' | 'DRIVER' | 'SYSTEM';
   waitingChargeNpr?: number;
+  cancellationFeeNpr?: number;
   fareFinalNpr?: number;
   searchDeadlineSeconds?: number;
 }
@@ -130,6 +141,7 @@ const COLUMN_FOR: Record<keyof TripPatch, string> = {
   cancelReason: 'cancel_reason',
   cancelledBy: 'cancelled_by',
   waitingChargeNpr: 'waiting_charge_npr',
+  cancellationFeeNpr: 'cancellation_fee_npr',
   fareFinalNpr: 'fare_final_npr',
   searchDeadlineSeconds: 'search_deadline_at',
 };
@@ -147,6 +159,9 @@ export async function casTripStatus(
   expectDriverId?: string,
 ): Promise<TripRow | null> {
   const sets: string[] = ['status = $3', 'updated_at = now()'];
+  // Atomic with the transition: the state a ride is cancelled FROM is read from the row itself
+  // (the pre-update value), so it can never disagree with what actually happened.
+  if (to === 'CANCELLED') sets.push('cancelled_from_status = status');
   const params: unknown[] = [id, from as string[], to];
   for (const key of Object.keys(patch) as Array<keyof TripPatch>) {
     const value = patch[key];

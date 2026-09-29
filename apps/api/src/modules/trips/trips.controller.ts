@@ -8,6 +8,7 @@ import type {
   TripEventRecord,
   TripHistoryPage,
   TripOfferInfo,
+  TripEstimateBody,
   TripRequestBody,
   TripSummary,
 } from '@yatri/types';
@@ -58,13 +59,15 @@ export async function estimateHandler(
   req: Request,
   res: Response<ApiResponse<FareEstimateResponse>>,
 ) {
-  const body = req.body as TripRequestBody;
-  const { fare } = await estimateForRequest(body);
+  const body = req.body as TripEstimateBody;
+  const { fare, category, options } = await estimateForRequest(body);
   const cfg = pricingConfig();
   res.json({
     success: true,
     data: {
       fare,
+      vehicleCategory: { code: category.code, label: category.label },
+      categories: options,
       pickup: {
         name: body.pickup.name ?? body.pickup.address,
         address: body.pickup.address,

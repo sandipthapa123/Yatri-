@@ -58,7 +58,7 @@ export function offerSecondsLeft(
 
 export function describeOffer(o: TripOfferInfo, secondsLeft: number): string {
   return [
-    'New ride request.',
+    o.vehicleCategory ? `New ${o.vehicleCategory.label} ride request.` : 'New ride request.',
     `Pickup ${o.pickup.name}, ${formatDistance(o.pickupDistanceMeters)} from you.`,
     `Destination ${o.destination.name}, ${formatDistance(o.tripDistanceMeters)} trip.`,
     `Fare ${formatNpr(o.fareEstimateNpr)}.`,

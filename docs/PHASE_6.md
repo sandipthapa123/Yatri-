@@ -134,6 +134,70 @@ from any tab), role-appropriate actions, payment, rating and "report a problem".
 also gets fare estimate + request and ride history; the driver gets offers (on the existing
 presence socket — no second connection) and history.
 
+### Ride request, matching and cancellation (refinement)
+
+**Vehicle category.** The passenger chooses a category (reference data in `vehicle_categories`; the
+picker shows what the server returns). One estimate call prices _every_ active category for the two
+places and marks each available-or-not near the pickup — a yes/no; no driver, id, position or count
+is ever returned. The request must name a category; the ride stores it; only drivers with an
+**approved vehicle of that category** are matched. A request with nobody available still searches
+(drivers come online) and ends in "no driver available" on the search deadline.
+
+**Fares by category.** `estimateFare` is the one pure function; a category stores only _overrides_
+of the platform defaults (`base_fare_npr`, `per_km_npr`, `per_minute_npr`, `minimum_fare_npr`, NULL =
+default from `FARE_*` env), merged by `pricing/categories.ts` `pricingFor`. Waiting rules stay
+global. The estimated fare (`fare_estimate_npr`) is stored separately from the final fare
+(`fare_final_npr`, set only at completion). The seeded overrides are placeholders for operations.
+
+**State names.** The authoritative machine (`trips/trip-machine.ts`) keeps these states; the states in
+the original brief map onto them (the per-driver steps live in `trip_offers`, so the trip row never
+flips between "matching" and "driver asked" states):
+
+| Brief                                           | Here                                                              |
+| ----------------------------------------------- | ----------------------------------------------------------------- |
+| REQUESTED, MATCHING                             | `SEARCHING` (trip) + an open `trip_offers` row (`OFFERED`)        |
+| DRIVER_DECLINED                                 | offer `DECLINED` (trip stays `SEARCHING`, next driver is offered) |
+| EXPIRED (a driver's request)                    | offer `EXPIRED`; the trip moves on to the next driver             |
+| EXPIRED (nobody found)                          | `NO_DRIVERS`                                                      |
+| DRIVER_ASSIGNED / DRIVER_ACCEPTED               | `DRIVER_EN_ROUTE` (accept and assignment are one atomic step)     |
+| DRIVER_ARRIVING / WAITING / STARTED / COMPLETED | `DRIVER_EN_ROUTE`, `DRIVER_ARRIVED`, `IN_PROGRESS`, `COMPLETED`   |
+| CANCELLED                                       | `CANCELLED`                                                       |
+
+**Events the passenger hears** (persisted, numbered, one wording function `describeTripEvent`):
+`TRIP_REQUESTED` "Ride requested. Looking for a nearby driver." (and, on opening the screen,
+"Searching for a driver.") → `DRIVER_REQUESTED` "Driver found, 450 meters away. Waiting for the driver
+to accept." → `DRIVER_DECLINED` "That driver could not take your ride. Searching for another driver."
+(decline _or_ expiry; the payload says which, for admins) → `DRIVER_ASSIGNED` "Driver has accepted your
+ride." → or `NO_DRIVERS_FOUND` "No drivers are available right now…". The passenger learns a distance,
+never who the driver is. Delivered over the existing socket; nothing polls.
+
+**Matching architecture** (`dispatch/matching.ts`, no controller or app holds a matching rule):
+
+1. _Eligibility_ `findEligibleDrivers` — the one definition, also behind "is the category available":
+   verified profile · ACTIVE account · ONLINE with a FRESH location (`isMatchable`) · approved vehicle of
+   the category · not on another ride · not holding an open offer · never offered this ride · inside
+   `DISPATCH_RADIUS_METERS`. A bounding-box query on indexed last-locations, then exact distance and
+   freshness from the live fix.
+2. _Ranking_ `MatchingStrategy.rank` — a pure ordering, chosen by `MATCHING_STRATEGY`. Only
+   `proximity` exists; ETA / rating / acceptance history are new strategies registered in that file.
+3. _Scheduling_ `dispatch.service` — one open offer at a time, TTL, next driver on decline/expiry,
+   deadline, max offers. Who wins a contested ride is decided by two guarded `UPDATE`s (offer, then trip),
+   never by a client.
+
+**Cancellation** (`trips/cancellation.ts`, one pure decision + one service path). Passenger: free while
+searching and within `CANCEL_FREE_SECONDS` of a driver being assigned; later a fee of `CANCEL_FEE_NPR`
+is **recorded** on the ride (not charged — payments are a later phase); never once the ride is in
+progress. The confirmation shows the server-reported `cancelFeeNpr`; apps never restate the rule. A
+driver cancelling sends the ride back to matching (it is not a cancellation of the passenger's ride).
+Every cancellation records **who** (`cancelled_by` + the event actor), **why** (`cancel_reason`),
+**when** (`ended_at` and the event time), **from which state** (`cancelled_from_status`, written in the
+same UPDATE as the transition so it cannot disagree) and the **fee**; the `TRIP_CANCELLED` event carries
+`fromStatus` and `feeNpr`, and the admin ride detail shows them.
+
+**Indexes added for this:** `trips(vehicle_category_id, status)`, `trips(requested_at desc)`,
+`driver_last_locations(latitude, longitude)`, and a partial `vehicles(category_id, driver_user_id)` for
+approved vehicles (existing: status/creation, passenger and driver history).
+
 ## 3. Accessibility
 
 - Every state is text with a role; no meaning by colour alone (cash/paid/waiting/quality are words).
@@ -156,14 +220,16 @@ presence socket — no second connection) and history.
 `WAITING_NOTIFY_SECONDS`, `NEARBY_NOTIFY_METERS`, `TRIP_ARRIVAL_RADIUS_METERS`,
 `DISPATCH_RADIUS_METERS`, `DISPATCH_OFFER_TTL_SECONDS`, `DISPATCH_SEARCH_TIMEOUT_SECONDS`,
 `DISPATCH_MAX_OFFERS`, `TRIP_DRIVER_LOST_SECONDS`, `CHAT_OPEN_AFTER_TRIP_MINUTES`,
-`CHAT_RATE_LIMIT_PER_MINUTE`, `CHAT_RETENTION_DAYS`, `CALL_RING_TIMEOUT_SECONDS`, `CALL_STUN_URLS`, `CALL_TURN_URLS`,
+`CHAT_RATE_LIMIT_PER_MINUTE`, `CHAT_RETENTION_DAYS`, `MATCHING_STRATEGY`, `CANCEL_FREE_SECONDS`,
+`CANCEL_FEE_NPR`, `CALL_RING_TIMEOUT_SECONDS`, `CALL_STUN_URLS`, `CALL_TURN_URLS`,
 `CALL_TURN_SHARED_SECRET`, `CALL_TURN_CREDENTIAL_TTL_SECONDS`. See `apps/api/.env.example`.
 
 ## 5. Database
 
 Migrations `1738500010000_trip-lifecycle` (trips columns; `trip_events`, `trip_offers`,
 `trip_messages`, `trip_calls`, `trip_payments`, `trip_ratings`, `trip_disputes`) and
-`1738500020000_admin-access-log`. **The database must be UTF-8** (Nepali text): the API refuses to
+`1738500020000_admin-access-log`, and `1738600010000_ride-request-categories` (category fare overrides,
+`trips.vehicle_category_id`, `cancelled_from_status`, `cancellation_fee_npr`, indexes). **The database must be UTF-8** (Nepali text): the API refuses to
 start otherwise (`assertUtf8Database`).
 
 ## 6. Privacy and retention
@@ -184,9 +250,9 @@ start otherwise (`assertUtf8Database`).
   chat with receipts → call signalling → arrival (proximity-checked) → driver waiting (server
   clock, charged) → start → live trip ETA → complete → cash payment → both ratings → history for
   both people → the admin's view of the same ride including the audited chat read. Full suite:
-  315 passed, 1 failed — the failure (`documents.test.ts` "rejects an oversized file") **pre-dates
+  333 passed, 1 failed — the failure (`documents.test.ts` "rejects an oversized file") **pre-dates
   this phase** and is unrelated.
-- **Mobile packages**: `mobile-location` 98 tests, `mobile-ride` 48 (chat, call state machine with a
+- **Mobile packages**: `mobile-location` 99 tests, `mobile-ride` 50 (chat, call state machine with a
   fake WebRTC, quality evaluation, offers, action rules).
 - **Admin**: `next build` succeeds; with the API running in test mode against the journey ride,
   the Rides list, Ride detail, audited chat page, Reported problems and dashboard were fetched with a

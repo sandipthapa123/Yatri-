@@ -77,6 +77,22 @@ describe('rideActions: who sees which button', () => {
     ]);
   });
 
+  it('states the cancellation fee the server reports, and only when there is one', () => {
+    const late = { ...trip('DRIVER_EN_ROUTE'), cancelFeeNpr: 50 };
+    const cancel = rideActions('PASSENGER', late, null).find((a) => a.id === 'cancel')!;
+    expect(cancel.confirm?.message).toBe(
+      'Your driver will be told the ride was cancelled. A cancellation fee of NPR 50 applies.',
+    );
+    const free = rideActions('PASSENGER', trip('DRIVER_EN_ROUTE'), null).find(
+      (a) => a.id === 'cancel',
+    )!;
+    expect(free.confirm?.message).not.toMatch(/fee/i);
+    // the driver dropping out never mentions a passenger fee
+    expect(
+      rideActions('DRIVER', late, null).find((a) => a.id === 'cancel')!.confirm?.message,
+    ).not.toMatch(/fee/i);
+  });
+
   it('cancelled and no-driver rides have no actions', () => {
     expect(rideActions('PASSENGER', trip('CANCELLED'), null)).toEqual([]);
     expect(rideActions('PASSENGER', trip('NO_DRIVERS'), null)).toEqual([]);

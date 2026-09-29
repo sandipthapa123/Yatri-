@@ -15,4 +15,8 @@ Yatri-specific reminders:
   through an API response, never hardcode it in an app.
 - New coordinate/geo rule? Extend `coordinates.ts` / `packages/types/src/geo.ts`.
 - New spoken text? `tripText.ts` / `driverPresenceText.ts`.
+- A decision about WHO or WHICH or HOW MUCH (eligibility, ranking, cancellation policy, fares) is
+  one function in one service module (`dispatch/matching.ts`, `trips/cancellation.ts`,
+  `pricing/`). Controllers call it, apps display what the server returns, and a new rule is a new
+  strategy or config value there — never a branch in a controller or a screen.
 - If you discover a duplicate, consolidate it or add it to "Known duplication" in the doc.

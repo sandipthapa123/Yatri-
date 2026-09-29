@@ -54,12 +54,38 @@ export interface DisputeInfo {
 }
 
 export interface TripRequestBody {
+  /** Code of the vehicle category (see `RideCategoryOption`). The server validates it. */
+  vehicleCategory: string;
   pickup: { latitude: number; longitude: number; address: string; name?: string };
   destination: { latitude: number; longitude: number; address: string; name?: string };
 }
 
-export interface FareEstimateResponse {
+/** A vehicle category a passenger can ride in. Categories are reference data owned by the server. */
+export interface VehicleCategoryInfo {
+  code: string;
+  label: string;
+}
+
+/**
+ * One row of the category picker: what it would cost and whether a driver is available NOW near
+ * the pickup. `available` is a yes/no — the passenger never learns who or how many drivers there are.
+ */
+export interface RideCategoryOption extends VehicleCategoryInfo {
+  available: boolean;
   fare: FareBreakdown;
+}
+
+/** An estimate may omit the category: the server then prices the default one and returns them all. */
+export type TripEstimateBody = Omit<TripRequestBody, 'vehicleCategory'> & {
+  vehicleCategory?: string;
+};
+
+export interface FareEstimateResponse {
+  /** The fare for the requested category (also present in `categories`). */
+  fare: FareBreakdown;
+  vehicleCategory: VehicleCategoryInfo;
+  /** Every active category priced for this trip, so the picker needs no second request. */
+  categories: RideCategoryOption[];
   pickup: TripPlace;
   destination: TripPlace;
   waitingRule: { freeSeconds: number; perMinuteNpr: number };
@@ -78,6 +104,7 @@ export interface TripOfferInfo {
   destination: TripPlace;
   pickupDistanceMeters: number;
   tripDistanceMeters: number;
+  vehicleCategory: VehicleCategoryInfo | null;
   fareEstimateNpr: number;
   expiresAt: string;
   serverTime: string;

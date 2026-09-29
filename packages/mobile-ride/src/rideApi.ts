@@ -9,6 +9,7 @@ import type {
   PaymentInfo,
   RatingInput,
   TripHistoryPage,
+  TripEstimateBody,
   TripOfferInfo,
   TripRequestBody,
   TripSummary,
@@ -27,7 +28,7 @@ const post = <T>(path: string, accessToken: Token, body?: object) =>
 
 export const rideApi = {
   // ---- passenger
-  estimate: (t: Token, body: TripRequestBody) =>
+  estimate: (t: Token, body: TripEstimateBody) =>
     post<FareEstimateResponse>('/trips/estimate', t, body),
   request: (t: Token, body: TripRequestBody) => post<TripSummary>('/trips/request', t, body),
 

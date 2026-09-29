@@ -47,7 +47,7 @@ describe('chat availability follows the ride', () => {
     expect(system.map((i: { event: { type: string } }) => i.event.type)).toEqual([
       'DRIVER_ASSIGNED',
     ]);
-    expect(describeTripEvent(system[0].event, 'PASSENGER')).toBe('Driver has been assigned.');
+    expect(describeTripEvent(system[0].event, 'PASSENGER')).toBe('Driver has accepted your ride.');
     // "requested" is not a chat message; nor are internal search details
     expect(
       h.items.some((i: { event?: { type: string } }) => i.event?.type === 'TRIP_REQUESTED'),

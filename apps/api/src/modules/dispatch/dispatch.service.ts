@@ -1,16 +1,14 @@
-import { ASSIGNED_TRIP_STATUSES, haversineMeters, type TripOfferInfo } from '@yatri/types';
+import type { TripOfferInfo } from '@yatri/types';
 
 import { env } from '../../config/env';
 import { query } from '../../lib/db';
-import { sqlIn } from '../../lib/sql';
 import { HttpError } from '../../middleware/errorHandler';
 import { getOrCreateAvailability } from '../availability/availability.repository';
-import { availabilityConfig } from '../availability/availability.service';
-import { isMatchable, locationFreshness } from '../availability/availability.machine';
-import { getLiveFix } from '../availability/presence.state';
 import { publishToUser } from '../realtime/bus';
+import { recordTripEvent } from '../trips/trip-events.service';
 import { getTrip, pickupOf, destinationOf, type TripRow } from '../trips/trips.repository';
 import { assignDriver, markNoDrivers } from '../trips/trips.service';
+import { matchDrivers } from './matching';
 import {
   closeOffer,
   countOffers,
@@ -23,60 +21,12 @@ import {
 } from './offers.repository';
 
 /**
- * Dispatch: turns a SEARCHING trip into an assigned driver. One offer at a time goes to the
- * nearest eligible driver — ONLINE with a FRESH location (`isMatchable`, the availability
- * module's single definition), inside the configured radius, not already on a trip, not
- * already holding another offer, never offered this trip before. The driver has
- * DISPATCH_OFFER_TTL_SECONDS to accept; declining or timing out moves on to the next driver.
+ * Dispatch: turns a SEARCHING trip into an assigned driver. WHO may be offered the ride and in
+ * what order is matching.ts (eligibility + the configured ranking strategy); this module only
+ * schedules: one offer at a time, DISPATCH_OFFER_TTL_SECONDS to accept, and declining or timing
+ * out moves on to the next driver.
  * The accept race is decided by two guarded UPDATEs (offer, then trip), never by the client.
  */
-
-interface Candidate {
-  driverId: string;
-  distanceMeters: number;
-}
-
-async function findCandidates(trip: TripRow): Promise<Candidate[]> {
-  const pickup = pickupOf(trip);
-  const cfg = availabilityConfig();
-  const dLat = env.DISPATCH_RADIUS_METERS / 111_195;
-  const dLon = dLat / Math.max(0.2, Math.cos((pickup.latitude * Math.PI) / 180));
-  const r = await query<{ driver_id: string }>(
-    `SELECT l.driver_id
-     FROM driver_availability a
-     JOIN driver_last_locations l ON l.driver_id = a.driver_id
-     WHERE a.state = 'ONLINE'
-       AND l.latitude BETWEEN $1 AND $2 AND l.longitude BETWEEN $3 AND $4
-       AND l.recorded_at > now() - (($5::int + $6::int) * interval '1 second')
-       AND NOT EXISTS (SELECT 1 FROM trips t
-                       WHERE t.driver_id = l.driver_id AND t.status IN ${sqlIn(ASSIGNED_TRIP_STATUSES)})
-       AND NOT EXISTS (SELECT 1 FROM trip_offers o WHERE o.trip_id = $7 AND o.driver_id = l.driver_id)
-       AND NOT EXISTS (SELECT 1 FROM trip_offers o WHERE o.driver_id = l.driver_id AND o.status = 'OFFERED')
-     LIMIT 50`,
-    [
-      pickup.latitude - dLat,
-      pickup.latitude + dLat,
-      pickup.longitude - dLon,
-      pickup.longitude + dLon,
-      cfg.freshSeconds,
-      cfg.persistSeconds,
-      trip.id,
-    ],
-  );
-
-  const now = Date.now();
-  const out: Candidate[] = [];
-  for (const row of r.rows) {
-    // The DB row is a coarse pre-filter; the live (Redis) fix decides freshness and distance.
-    const live = await getLiveFix(row.driver_id);
-    const freshness = locationFreshness(live?.fix.receivedAtMs ?? null, now, cfg.freshSeconds);
-    if (!live || !isMatchable('ONLINE', freshness)) continue;
-    const distanceMeters = haversineMeters(live.fix, pickup);
-    if (distanceMeters <= env.DISPATCH_RADIUS_METERS)
-      out.push({ driverId: row.driver_id, distanceMeters });
-  }
-  return out.sort((a, b) => a.distanceMeters - b.distanceMeters);
-}
 
 function toOfferInfo(o: OfferRow, trip: TripRow): TripOfferInfo {
   return {
@@ -86,6 +36,10 @@ function toOfferInfo(o: OfferRow, trip: TripRow): TripOfferInfo {
     destination: destinationOf(trip),
     pickupDistanceMeters: o.pickup_distance_meters,
     tripDistanceMeters: trip.distance_meters ?? 0,
+    vehicleCategory:
+      trip.vehicle_category_code && trip.vehicle_category_label
+        ? { code: trip.vehicle_category_code, label: trip.vehicle_category_label }
+        : null,
     fareEstimateNpr: trip.fare_estimate_npr ?? 0,
     expiresAt: o.expires_at.toISOString(),
     serverTime: new Date().toISOString(),
@@ -109,7 +63,12 @@ export async function offerNext(tripId: string): Promise<OfferOutcome> {
     return 'no_drivers';
   }
 
-  for (const c of (await findCandidates(trip)).slice(0, 5)) {
+  const ranked = await matchDrivers({
+    tripId,
+    pickup: pickupOf(trip),
+    vehicleCategoryId: trip.vehicle_category_id,
+  });
+  for (const c of ranked.slice(0, 5)) {
     const offer = await insertOffer({
       tripId,
       driverId: c.driverId,
@@ -118,9 +77,28 @@ export async function offerNext(tripId: string): Promise<OfferOutcome> {
     });
     if (!offer) continue; // another dispatcher run took this driver: try the next one
     await publishToUser(c.driverId, { type: 'trip_offer', offer: toOfferInfo(offer, trip) });
+    // The passenger hears that a driver was found (a distance only, never who).
+    await recordTripEvent({
+      tripId,
+      type: 'DRIVER_REQUESTED',
+      payload: { pickupDistanceMeters: Math.round(c.distanceMeters) },
+      dedupeKey: `req:${offer.id}`,
+    });
     return 'offered';
   }
   return 'waiting'; // nobody suitable right now; the sweeper tries again until the deadline
+}
+
+/** Tell the passenger the driver they were waiting on will not take the ride (only while still searching). */
+async function announceOfferLost(tripId: string, offerId: string, reason: 'DECLINED' | 'EXPIRED') {
+  const trip = await getTrip(tripId);
+  if (!trip || trip.status !== 'SEARCHING') return;
+  await recordTripEvent({
+    tripId,
+    type: 'DRIVER_DECLINED',
+    payload: { reason },
+    dedupeKey: `dec:${offerId}`,
+  });
 }
 
 /** The driver's current open offer, if any (so a reconnecting app can show it again). */
@@ -148,7 +126,10 @@ export async function respondOffer(
 
   if (!accept) {
     const declined = await respondToOffer(offerId, driverId, 'DECLINED');
-    if (declined) await offerNext(offer.trip_id);
+    if (declined) {
+      await announceOfferLost(offer.trip_id, offerId, 'DECLINED');
+      await offerNext(offer.trip_id);
+    }
     return { accepted: false, tripId: offer.trip_id }; // already closed: declining again is harmless
   }
 
@@ -186,6 +167,7 @@ export async function sweepDispatch(): Promise<DispatchSweepResult> {
 
   for (const o of await expireDueOffers()) {
     out.expiredOffers++;
+    await announceOfferLost(o.trip_id, o.id, 'EXPIRED');
     await publishToUser(o.driver_id, {
       type: 'trip_offer_closed',
       offerId: o.id,

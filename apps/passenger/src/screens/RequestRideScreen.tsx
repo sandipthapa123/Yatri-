@@ -1,8 +1,9 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ApiError, useAuth } from '@yatri/mobile-auth';
-import { ActionButton, Card, Fact, rideApi } from '@yatri/mobile-ride';
+import { ActionButton, CategoryPicker, Card, Fact, rideApi } from '@yatri/mobile-ride';
 import {
   formatDistance,
+  formatDuration,
   formatElapsed,
   formatNpr,
   type FareEstimateResponse,
@@ -25,9 +26,9 @@ interface Result {
 }
 
 /**
- * Review the fare, then ask for a ride. The fare is calculated by the server from the two places
- * (this screen never computes a price), and the request that follows is priced again by the
- * server, so what is shown here is an estimate, not a promise. Everything is text.
+ * Choose a vehicle type, review the fare, then ask for a ride. Distance, duration and every fare
+ * come from the server (this screen never computes a price), and the request that follows is priced
+ * again by the server, so what is shown here is an estimate, not a promise. Everything is text.
  */
 export function RequestRideScreen({ navigation }: Props) {
   const theme = useTheme();
@@ -35,10 +36,11 @@ export function RequestRideScreen({ navigation }: Props) {
   const { pickup, destination } = useTripLocations();
   const [result, setResult] = useState<Result | null>(null);
   const [attempt, setAttempt] = useState(0);
+  const [chosen, setChosen] = useState<string | null>(null);
   const [requestError, setRequestError] = useState<string | null>(null);
   const [requesting, setRequesting] = useState(false);
 
-  const body: TripRequestBody | null = useMemo(
+  const places = useMemo(
     () =>
       pickup && destination
         ? {
@@ -58,14 +60,15 @@ export function RequestRideScreen({ navigation }: Props) {
         : null,
     [pickup, destination],
   );
-  const key = body ? `${JSON.stringify(body)}#${attempt}` : '';
+  const key = places ? `${JSON.stringify(places)}#${attempt}` : '';
 
+  // One estimate for the two places: it prices EVERY category, so choosing a type needs no request.
   useEffect(() => {
-    if (!body) return;
+    if (!places) return;
     let cancelled = false;
     void (async () => {
       try {
-        const estimate = await rideApi.estimate(await getAccessToken(), body);
+        const estimate = await rideApi.estimate(await getAccessToken(), places);
         if (!cancelled) setResult({ key, estimate, error: null });
       } catch (e) {
         if (!cancelled) {
@@ -80,18 +83,26 @@ export function RequestRideScreen({ navigation }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [body, key, getAccessToken]);
+  }, [places, key, getAccessToken]);
 
-  // The answer for the current places, or "still loading" when it is for an older request.
   const current = result && result.key === key ? result : null;
   const estimate = current?.estimate ?? null;
-  const loading = !!body && !current;
+  const loading = !!places && !current;
   const error = requestError ?? current?.error ?? null;
 
+  // Until the passenger chooses, suggest the first type that has a driver nearby.
+  const options = estimate?.categories ?? [];
+  const selectedCode =
+    chosen && options.some((o) => o.code === chosen)
+      ? chosen
+      : (options.find((o) => o.available) ?? options[0])?.code;
+  const selected = options.find((o) => o.code === selectedCode) ?? null;
+
   const request = async () => {
-    if (!body || requesting) return;
+    if (!places || !selectedCode || requesting) return;
     setRequesting(true);
     setRequestError(null);
+    const body: TripRequestBody = { ...places, vehicleCategory: selectedCode };
     try {
       const trip = await rideApi.request(await getAccessToken(), body);
       navigation.replace('TripTracking', { tripId: trip.id });
@@ -116,7 +127,6 @@ export function RequestRideScreen({ navigation }: Props) {
   };
 
   const ui = { colors: theme.colors, minTouchTarget: theme.minTouchTarget };
-  const fare = estimate?.fare;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }}>
@@ -125,7 +135,7 @@ export function RequestRideScreen({ navigation }: Props) {
           Your ride
         </Text>
 
-        {!body ? (
+        {!places ? (
           <Text style={{ color: theme.colors.textPrimary }}>
             Choose a pickup and a destination on the home screen first.
           </Text>
@@ -147,31 +157,53 @@ export function RequestRideScreen({ navigation }: Props) {
               ) : null}
             </View>
 
-            {fare && estimate ? (
-              <Card {...ui} title="Estimated fare">
-                <Fact {...ui} label="Estimated fare" value={formatNpr(fare.totalNpr)} />
-                <Fact {...ui} label="Distance" value={formatDistance(fare.distanceMeters)} />
-                <Text style={{ color: theme.colors.textSecondary }}>
-                  {fare.routeBased
-                    ? 'Based on the road route.'
-                    : 'Based on the straight-line distance, so the real fare may differ a little.'}
-                  {fare.minimumFareApplied ? ' The minimum fare applies.' : ''}
-                </Text>
-                <Text style={{ color: theme.colors.textSecondary }}>
-                  If your driver waits for you, the first{' '}
-                  {formatElapsed(estimate.waitingRule.freeSeconds)} are free, then{' '}
-                  {formatNpr(estimate.waitingRule.perMinuteNpr)} for each minute. You pay your
-                  driver in cash.
-                </Text>
-              </Card>
+            {estimate && selected && selectedCode ? (
+              <>
+                <Card {...ui} title="Vehicle type">
+                  <CategoryPicker
+                    {...ui}
+                    options={options}
+                    selected={selectedCode}
+                    onSelect={setChosen}
+                  />
+                </Card>
+
+                <Card {...ui} title="Estimate">
+                  <Fact {...ui} label="Estimated fare" value={formatNpr(selected.fare.totalNpr)} />
+                  <Fact
+                    {...ui}
+                    label="Distance"
+                    value={formatDistance(selected.fare.distanceMeters)}
+                  />
+                  {selected.fare.durationSeconds !== null ? (
+                    <Fact
+                      {...ui}
+                      label="Estimated time"
+                      value={formatDuration(selected.fare.durationSeconds)}
+                    />
+                  ) : null}
+                  <Text style={{ color: theme.colors.textSecondary }}>
+                    {selected.fare.routeBased
+                      ? 'Based on the road route.'
+                      : 'Based on the straight-line distance, so the real fare may differ a little.'}
+                    {selected.fare.minimumFareApplied ? ' The minimum fare applies.' : ''}
+                  </Text>
+                  <Text style={{ color: theme.colors.textSecondary }}>
+                    If your driver waits for you, the first{' '}
+                    {formatElapsed(estimate.waitingRule.freeSeconds)} are free, then{' '}
+                    {formatNpr(estimate.waitingRule.perMinuteNpr)} for each minute. You pay your
+                    driver in cash.
+                  </Text>
+                </Card>
+              </>
             ) : null}
 
             <ActionButton
               {...ui}
-              label="Request ride"
+              label={selected ? `Request ${selected.label}` : 'Request ride'}
               tone="primary"
               busy={requesting}
-              disabled={!estimate}
+              disabled={!selected}
               hint="Looks for a nearby driver"
               onPress={() => void request()}
             />

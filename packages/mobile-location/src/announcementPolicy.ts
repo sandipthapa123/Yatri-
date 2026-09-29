@@ -71,6 +71,12 @@ export function decideAnnouncement(
   const freshness = s.driver?.freshness ?? null;
   next.freshness = freshness;
 
+  // Opening the screen on a search: say what is happening (later steps come from events).
+  if (s.status === 'SEARCHING') {
+    if (prev.status === null) out.polite = 'Searching for a driver.';
+    return { announcement: out, next };
+  }
+
   if (s.status === 'COMPLETED' || s.status === 'CANCELLED' || s.status === 'NO_DRIVERS') {
     return { announcement: out, next };
   }

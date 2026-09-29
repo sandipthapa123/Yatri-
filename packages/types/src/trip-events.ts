@@ -10,6 +10,8 @@ import { compassWord, formatDistance, formatElapsed, formatNpr } from './format'
  */
 export const TRIP_EVENT_TYPES = [
   'TRIP_REQUESTED',
+  'DRIVER_REQUESTED',
+  'DRIVER_DECLINED',
   'DRIVER_ASSIGNED',
   'DRIVER_NEARBY',
   'DRIVER_ARRIVED',
@@ -41,6 +43,8 @@ const meta = (important: boolean, chatVisible: boolean): TripEventMeta => ({
 
 export const TRIP_EVENT_META: Record<TripEventType, TripEventMeta> = {
   TRIP_REQUESTED: meta(false, false),
+  DRIVER_REQUESTED: meta(false, false),
+  DRIVER_DECLINED: meta(false, false),
   DRIVER_ASSIGNED: meta(true, true),
   DRIVER_NEARBY: meta(false, true),
   DRIVER_ARRIVED: meta(true, true),
@@ -88,8 +92,23 @@ export function describeTripEvent(
       return viewer === 'ADMIN'
         ? 'Ride requested.'
         : 'Ride requested. Looking for a nearby driver.';
+    case 'DRIVER_REQUESTED': {
+      const d = num(p.pickupDistanceMeters);
+      const away = d === null ? '' : `, ${formatDistance(d)} away`;
+      return viewer === 'ADMIN'
+        ? `Ride offered to a driver${away}.`
+        : `Driver found${away}. Waiting for the driver to accept.`;
+    }
+    case 'DRIVER_DECLINED':
+      return viewer === 'ADMIN'
+        ? `Driver ${str(p.reason) === 'EXPIRED' ? 'did not answer' : 'declined'}.`
+        : 'That driver could not take your ride. Searching for another driver.';
     case 'DRIVER_ASSIGNED':
-      return isDriver ? 'You have been assigned this ride.' : 'Driver has been assigned.';
+      return isDriver
+        ? 'You have been assigned this ride.'
+        : viewer === 'ADMIN'
+          ? 'Driver accepted the ride.'
+          : 'Driver has accepted your ride.';
     case 'DRIVER_NEARBY': {
       const d = num(p.distanceMeters);
       const away = d === null ? 'nearby' : `${formatDistance(d)} away`;
@@ -135,7 +154,12 @@ export function describeTripEvent(
               ? 'you'
               : 'the driver'
             : 'Yatri';
-      return `The ride was cancelled by ${who}.${str(p.reason) ? ` Reason: ${str(p.reason)}.` : ''}`;
+      const fee = num(p.feeNpr);
+      const feeText =
+        fee !== null && fee > 0 && !isDriver
+          ? ` A cancellation fee of ${formatNpr(fee)} applies.`
+          : '';
+      return `The ride was cancelled by ${who}.${str(p.reason) ? ` Reason: ${str(p.reason)}.` : ''}${feeText}`;
     }
     case 'NO_DRIVERS_FOUND':
       return 'No drivers are available right now. Please try again in a moment.';

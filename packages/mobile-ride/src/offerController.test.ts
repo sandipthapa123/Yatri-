@@ -17,6 +17,7 @@ const offer = (id = 'o1', over: Partial<TripOfferInfo> = {}): TripOfferInfo => (
   pickupDistanceMeters: 450,
   tripDistanceMeters: 5300,
   fareEstimateNpr: 320,
+  vehicleCategory: null,
   serverTime: '2026-01-01T10:00:00.000Z',
   expiresAt: '2026-01-01T10:00:20.000Z',
   ...over,
@@ -65,6 +66,12 @@ describe('offer countdown', () => {
     expect(offerSecondsLeft(o, 5_000, 99_000)).toBe(0); // never negative
     // a phone whose clock is far off gives the same answer, because only elapsed time is used
     expect(offerSecondsLeft(o, 9_000_000_000, 9_000_007_000)).toBe(13);
+  });
+
+  it('names the vehicle type when the ride has one', () => {
+    expect(
+      describeOffer(offer('o1', { vehicleCategory: { code: 'SUV', label: 'SUV' } }), 20),
+    ).toMatch(/^New SUV ride request\. Pickup Thamel/);
   });
 
   it('words an offer completely, with distances in words', () => {

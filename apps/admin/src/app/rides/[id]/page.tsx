@@ -87,6 +87,7 @@ export default async function RideDetailPage({ params }: PageProps) {
         <Facts
           rows={[
             ['Status', TRIP_STATUS_LABELS[d.status]],
+            ['Vehicle type', d.vehicleCategory?.label ?? 'Not recorded'],
             ['Passenger', d.passenger.name ?? 'Unnamed'],
             ['Driver', d.driver ? (d.driver.name ?? 'Unnamed') : 'Not assigned'],
             ['Pickup', `${d.pickup.name}, ${d.pickup.address}`],
@@ -100,6 +101,16 @@ export default async function RideDetailPage({ params }: PageProps) {
               ? ([
                   ['Cancelled by', d.cancelledBy],
                   ['Cancel reason', d.cancelReason ?? 'None given'],
+                  [
+                    'Cancelled from',
+                    d.cancelledFromStatus ? TRIP_STATUS_LABELS[d.cancelledFromStatus] : 'Unknown',
+                  ],
+                  [
+                    'Cancellation fee',
+                    d.cancellationFeeNpr > 0
+                      ? `${formatNpr(d.cancellationFeeNpr)} recorded (not charged)`
+                      : 'None',
+                  ],
                 ] as Array<[string, string]>)
               : []),
           ]}

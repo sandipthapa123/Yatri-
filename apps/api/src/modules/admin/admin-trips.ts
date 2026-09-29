@@ -206,6 +206,12 @@ export async function tripDetailHandler(req: Request, res: Response<ApiResponse<
       startedAt: trip.started_at?.toISOString() ?? null,
       endedAt: trip.ended_at?.toISOString() ?? null,
       cancelledBy: trip.cancelled_by,
+      cancelledFromStatus: trip.cancelled_from_status,
+      cancellationFeeNpr: trip.cancellation_fee_npr,
+      vehicleCategory:
+        trip.vehicle_category_code && trip.vehicle_category_label
+          ? { code: trip.vehicle_category_code, label: trip.vehicle_category_label }
+          : null,
       cancelReason: trip.cancel_reason,
       pickup: pickupOf(trip),
       destination: destinationOf(trip),

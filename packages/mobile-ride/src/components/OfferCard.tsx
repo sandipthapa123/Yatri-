@@ -34,6 +34,9 @@ export function OfferCard(
       ) : null}
       {offer ? (
         <Card {...ui} title="New ride request">
+          {offer.vehicleCategory ? (
+            <Fact {...ui} label="Vehicle type" value={offer.vehicleCategory.label} />
+          ) : null}
           <Fact
             {...ui}
             label="Pickup"

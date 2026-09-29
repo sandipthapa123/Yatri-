@@ -16,6 +16,7 @@ export { useChat, useCall, useDriverOffers, useNow } from './hooks';
 export { RideRoom } from './components/RideRoom';
 export type { RideRoomProps } from './components/RideRoom';
 export { OfferCard } from './components/OfferCard';
+export { CategoryPicker, categoryLabel } from './components/CategoryPicker';
 export { ActionButton, Announcer, Card, Fact } from './components/RideUi';
 export type { RideColors, UiProps } from './components/RideUi';
 export { HistoryList, historyLabel } from './components/HistoryList';

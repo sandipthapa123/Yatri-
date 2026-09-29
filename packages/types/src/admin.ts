@@ -22,6 +22,10 @@ export interface AdminTripDetail {
   startedAt: string | null;
   endedAt: string | null;
   cancelledBy: string | null;
+  /** The state the ride was cancelled from, and the fee the cancellation rules recorded. */
+  cancelledFromStatus: TripStatus | null;
+  cancellationFeeNpr: number;
+  vehicleCategory: { code: string; label: string } | null;
   cancelReason: string | null;
   pickup: TripPlace;
   destination: TripPlace;

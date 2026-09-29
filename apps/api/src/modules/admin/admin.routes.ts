@@ -7,7 +7,18 @@ import { validateQuery } from '../../middleware/validateQuery';
 import { validateUuidParam } from '../../middleware/validateUuidParam';
 import { listAvailabilityHandler } from '../availability/admin-availability';
 import { adminAvailabilityQuerySchema } from '../availability/availability.validators';
-import { adminCreateTripHandler, createTripSchema } from '../trips/trips.controller';
+import {
+  adminCancelHandler,
+  adminCancelSchema,
+  adminDisputesQuerySchema,
+  adminResolveSchema,
+  adminTripsQuerySchema,
+  listDisputesHandler,
+  listTripsHandler,
+  resolveDisputeHandler,
+  tripChatHandler,
+  tripDetailHandler,
+} from './admin-trips';
 import { getMeHandler } from '../users/users.controller';
 import {
   approveDocumentHandler,
@@ -37,13 +48,28 @@ export const adminRouter: RouterType = Router();
 adminRouter.use(authenticate, requireRole('ADMIN'));
 
 adminRouter.get('/me', getMeHandler);
-// Stand-in for ride matching (a later phase): lets an admin/test create a trip so live tracking can run.
-adminRouter.post('/trips', validateBody(createTripSchema), adminCreateTripHandler);
 
 adminRouter.get(
   '/availability/drivers',
   validateQuery(adminAvailabilityQuerySchema),
   listAvailabilityHandler,
+);
+
+adminRouter.get('/trips', validateQuery(adminTripsQuerySchema), listTripsHandler);
+adminRouter.get('/trips/:id', validateUuidParam('id'), tripDetailHandler);
+adminRouter.get('/trips/:id/chat', validateUuidParam('id'), tripChatHandler);
+adminRouter.post(
+  '/trips/:id/cancel',
+  validateUuidParam('id'),
+  validateBody(adminCancelSchema),
+  adminCancelHandler,
+);
+adminRouter.get('/disputes', validateQuery(adminDisputesQuerySchema), listDisputesHandler);
+adminRouter.post(
+  '/disputes/:id/resolve',
+  validateUuidParam('id'),
+  validateBody(adminResolveSchema),
+  resolveDisputeHandler,
 );
 
 adminRouter.get('/drivers', validateQuery(listDriversQuerySchema), listDriversHandler);

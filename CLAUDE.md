@@ -1,7 +1,8 @@
 # Yatri — project rules
 
 Monorepo: `apps/api` (Express + Postgres + Redis + WebSocket), `apps/passenger` and
-`apps/driver` (Expo), `apps/admin` (Next.js), `packages/*` (shared).
+`apps/driver` (Expo), `apps/admin` (Next.js), `packages/*` (shared; `mobile-ride` holds the ride,
+chat, call and offer clients both apps render).
 
 ## Non-negotiables
 
@@ -27,4 +28,5 @@ pnpm lint && pnpm typecheck
 pnpm --filter @yatri/types build          # compiled shared package (needed to run the API from dist)
 pnpm --filter @yatri/api migrate:test:up && pnpm --filter @yatri/api test   # needs Postgres + Redis
 pnpm --filter @yatri/mobile-location test
+pnpm --filter @yatri/mobile-ride test
 ```

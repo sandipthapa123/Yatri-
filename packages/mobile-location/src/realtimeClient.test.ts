@@ -38,10 +38,11 @@ class FakeSocket implements WebSocketLike {
   }
 }
 
-const snap = (eventId: number, extra: Partial<LiveTripSnapshot> = {}): LiveTripSnapshot => ({
+const snap = (version: number, extra: Partial<LiveTripSnapshot> = {}): LiveTripSnapshot => ({
   tripId: 't',
   status: 'DRIVER_EN_ROUTE',
-  eventId,
+  version,
+  lastEventSeq: 0,
   serverTime: '',
   pickup: { name: 'p', address: '', latitude: 1, longitude: 1 },
   destination: { name: 'd', address: '', latitude: 1, longitude: 1 },
@@ -49,7 +50,7 @@ const snap = (eventId: number, extra: Partial<LiveTripSnapshot> = {}): LiveTripS
   passenger: null,
   driverArrival: null,
   trip: null,
-  waitingSeconds: null,
+  waiting: null,
   ...extra,
 });
 
@@ -120,7 +121,7 @@ describe('TripRealtimeClient', () => {
     last().receive({ type: 'snapshot', snapshot: snap(7) });
     last().receive({ type: 'snapshot', snapshot: snap(6) }); // late
     last().receive({ type: 'snapshot', snapshot: snap(7) }); // same-id re-issue allowed
-    expect(snaps.map((s) => s.eventId)).toEqual([5, 7, 7]);
+    expect(snaps.map((s) => s.version)).toEqual([5, 7, 7]);
     c.stop();
   });
 
@@ -232,7 +233,7 @@ describe('TripRealtimeClient', () => {
     c.start();
     // Not connected yet: three samples queue, only the newest survives.
     for (const lat of [27.1, 27.2, 27.3]) {
-      c.sendLocation('driver_location', {
+      c.sendLocation('passenger_location', {
         latitude: lat,
         longitude: 85,
         accuracyMeters: 5,
@@ -243,13 +244,13 @@ describe('TripRealtimeClient', () => {
     await vi.advanceTimersByTimeAsync(0);
     last().receive({ type: 'authed', userId: 'u', role: 'DRIVER' });
     last().receive({ type: 'subscribed', tripId: 't' });
-    const sent = last().sent.filter((m) => m.type === 'driver_location');
+    const sent = last().sent.filter((m) => m.type === 'passenger_location');
     expect(sent).toHaveLength(1);
     expect(sent[0]).toMatchObject({ latitude: 27.3, tripId: 't' });
 
     // A sample that sat in the queue for over 25 s is discarded instead of being sent late.
     last().drop();
-    c.sendLocation('driver_location', {
+    c.sendLocation('passenger_location', {
       latitude: 27.4,
       longitude: 85,
       accuracyMeters: 5,
@@ -261,7 +262,7 @@ describe('TripRealtimeClient', () => {
     await vi.advanceTimersByTimeAsync(0);
     last().receive({ type: 'authed', userId: 'u', role: 'DRIVER' });
     last().receive({ type: 'subscribed', tripId: 't' });
-    expect(last().sent.filter((m) => m.type === 'driver_location')).toHaveLength(0);
+    expect(last().sent.filter((m) => m.type === 'passenger_location')).toHaveLength(0);
     c.stop();
   });
 
@@ -274,13 +275,13 @@ describe('TripRealtimeClient', () => {
       accuracyMeters: 5,
       deviceTimeMs: clock,
     });
-    c.sendLocation('driver_location', sample(27.1));
-    c.sendLocation('driver_location', sample(27.2)); // within 1 s: held, superseded
+    c.sendLocation('passenger_location', sample(27.1));
+    c.sendLocation('passenger_location', sample(27.2)); // within 1 s: held, superseded
     clock += 1100;
-    c.sendLocation('driver_location', sample(27.3));
+    c.sendLocation('passenger_location', sample(27.3));
     expect(
       last()
-        .sent.filter((m) => m.type === 'driver_location')
+        .sent.filter((m) => m.type === 'passenger_location')
         .map((m) => m.latitude),
     ).toEqual([27.1, 27.3]);
     c.stop();

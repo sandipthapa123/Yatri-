@@ -1,6 +1,6 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useAuth } from '@yatri/mobile-auth';
-import { tripsApi } from '@yatri/mobile-location';
+import { rideApi } from '@yatri/mobile-ride';
 import type { DriverStatus } from '@yatri/types';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -70,7 +70,7 @@ export function VerificationPendingScreen({ navigation }: Props) {
       setStatus(progress.status);
       setRejectionReason(progress.rejectionReason);
       try {
-        const trip = await tripsApi.active(token);
+        const trip = await rideApi.active(token);
         setActiveTripId(trip ? trip.id : null);
       } catch {
         /* optional entry point */

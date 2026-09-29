@@ -8,6 +8,20 @@ loadDotenv({
   path: path.resolve(__dirname, '../..', process.env.NODE_ENV === 'test' ? '.env.test' : '.env'),
 });
 
+function numList(v: string): number[] {
+  return v
+    .split(',')
+    .map((x) => Number(x.trim()))
+    .filter((n) => Number.isFinite(n) && n > 0)
+    .sort((a, b) => a - b);
+}
+function strList(v: string): string[] {
+  return v
+    .split(',')
+    .map((x) => x.trim())
+    .filter(Boolean);
+}
+
 function boolFromEnv(defaultValue: boolean) {
   return z
     .enum(['true', 'false'])
@@ -134,6 +148,45 @@ const envSchema = z
     DRIVER_LOCATION_PERSIST_SECONDS: z.coerce.number().int().min(0).default(20),
     // A GOING_ONLINE / GOING_OFFLINE transition that never completes is rolled back after this.
     DRIVER_TRANSITION_TIMEOUT_SECONDS: z.coerce.number().int().positive().default(30),
+    // --- Pricing & waiting (whole Nepalese rupees) ---
+    FARE_BASE_NPR: z.coerce.number().int().min(0).default(50),
+    FARE_PER_KM_NPR: z.coerce.number().min(0).default(30),
+    FARE_PER_MINUTE_NPR: z.coerce.number().min(0).default(2),
+    FARE_MINIMUM_NPR: z.coerce.number().int().min(0).default(100),
+    // Waiting at the pickup: free period, then a per-minute charge added to the fare.
+    WAITING_FREE_SECONDS: z.coerce.number().int().min(0).default(180),
+    WAITING_PER_MINUTE_NPR: z.coerce.number().min(0).default(5),
+    // After this long a waiting driver may cancel as a passenger no-show.
+    NO_SHOW_AFTER_SECONDS: z.coerce.number().int().positive().default(300),
+    // When (seconds of waiting) the other party is told about a wait, and at what driver
+    // distances (meters) "driver is N away" events fire. Comma-separated.
+    WAITING_NOTIFY_SECONDS: z.string().default('120,240,360,480,600').transform(numList),
+    NEARBY_NOTIFY_METERS: z.string().default('1000,500,200').transform(numList),
+
+    // The driver must be this close to the pickup for the server to accept "I have arrived".
+    TRIP_ARRIVAL_RADIUS_METERS: z.coerce.number().int().positive().default(150),
+
+    // --- Dispatch (matching) ---
+    DISPATCH_RADIUS_METERS: z.coerce.number().int().positive().default(5000),
+    DISPATCH_OFFER_TTL_SECONDS: z.coerce.number().int().positive().default(20),
+    DISPATCH_SEARCH_TIMEOUT_SECONDS: z.coerce.number().int().positive().default(120),
+    DISPATCH_MAX_OFFERS: z.coerce.number().int().positive().default(6),
+    // An assigned driver silent for this long (still en route) is replaced by re-matching.
+    TRIP_DRIVER_LOST_SECONDS: z.coerce.number().int().positive().default(120),
+
+    // --- Chat ---
+    // Chat stays writable this long after a trip ends (e.g. to arrange a lost item), then read-only.
+    CHAT_OPEN_AFTER_TRIP_MINUTES: z.coerce.number().int().min(0).default(15),
+    CHAT_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().positive().default(30),
+
+    // --- Calls (WebRTC) ---
+    CALL_RING_TIMEOUT_SECONDS: z.coerce.number().int().positive().default(45),
+    // STUN/TURN for media. Comma-separated URLs; TURN uses coturn's time-limited shared-secret credentials.
+    CALL_STUN_URLS: z.string().default('stun:stun.l.google.com:19302').transform(strList),
+    CALL_TURN_URLS: z.string().default('').transform(strList),
+    CALL_TURN_SHARED_SECRET: z.preprocess((v) => (v === '' ? undefined : v), z.string().optional()),
+    CALL_TURN_CREDENTIAL_TTL_SECONDS: z.coerce.number().int().positive().default(3600),
+
     LOCATION_SEARCH_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().positive().default(60),
 
     MAX_UPLOAD_FILE_SIZE_BYTES: z.coerce

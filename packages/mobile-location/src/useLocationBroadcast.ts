@@ -33,7 +33,7 @@ export const BROADCAST_MESSAGES: Record<BroadcastStatus, string> = {
  */
 export function useLocationBroadcast(opts: {
   client: TripRealtimeClient | null;
-  kind: 'driver_location' | 'passenger_location';
+  kind: 'passenger_location';
   enabled: boolean;
 }) {
   const { client, kind, enabled } = opts;

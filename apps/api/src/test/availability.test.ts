@@ -16,6 +16,7 @@ import {
   sweepDrivers,
 } from '../modules/availability/availability.service';
 import { api, createVerifiedDriver, loginTestAdmin, onboardUser } from './helpers';
+import { acceptCurrentOffer, requestRide } from './rides';
 
 const auth = (t: string) => ({ Authorization: `Bearer ${t}` });
 const THAMEL = { latitude: 27.7154, longitude: 85.3123 };
@@ -144,18 +145,12 @@ describe('going online: eligibility is decided by the server', () => {
   });
 
   it('refuses a driver who is already on an active trip', async () => {
-    const { driver, adminToken } = await createVerifiedDriver();
+    const { driver } = await createVerifiedDriver();
     const passenger = await onboardUser('PASSENGER');
-    const trip = await api
-      .post('/api/v1/admin/trips')
-      .set(auth(adminToken))
-      .send({
-        passengerId: passenger.user.id,
-        driverId: driver.user.id,
-        pickup: { ...THAMEL, address: 'Thamel' },
-        destination: { ...north(THAMEL, 3000), address: 'Somewhere' },
-      });
-    expect(trip.status).toBe(201);
+    expect((await online(driver.accessToken)).status).toBe(200);
+    expect((await requestRide(passenger.accessToken)).status).toBe(201);
+    expect((await acceptCurrentOffer(driver.accessToken)).status).toBe(200);
+    expect((await offline(driver.accessToken)).status).toBe(200);
     const res = await online(driver.accessToken);
     expect(res.status).toBe(403);
     expect(res.body.error.details.reasons.join(' ')).toMatch(/active trip/i);
@@ -512,7 +507,7 @@ describe('privacy & admin RBAC', () => {
     );
     expect(rowPriv.location).toMatchObject({ latitude: 27.7154, longitude: 85.3123 });
     const audit = await pool.query(
-      "SELECT 1 FROM driver_availability_events WHERE driver_id = $1 AND event_type = 'ADMIN_LOCATION_VIEW'",
+      "SELECT 1 FROM admin_access_log WHERE subject_id = $1 AND action = 'VIEW_DRIVER_LOCATION'",
       [driver.user.id],
     );
     expect(audit.rowCount).toBe(1);

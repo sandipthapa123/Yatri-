@@ -46,5 +46,5 @@ export function useDriverPresence(getAccessToken: () => Promise<string>) {
   const state: PresenceState = useSyncExternalStore(controller.subscribe, controller.getState);
   const goOnline = useCallback(() => void controller.goOnline(), [controller]);
   const goOffline = useCallback(() => void controller.goOffline(), [controller]);
-  return { state, goOnline, goOffline };
+  return { state, goOnline, goOffline, socket: controller };
 }

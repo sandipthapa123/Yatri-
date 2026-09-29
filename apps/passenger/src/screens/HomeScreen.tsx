@@ -1,6 +1,7 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useAuth } from '@yatri/mobile-auth';
-import { formatDistance, locationApi, tripsApi } from '@yatri/mobile-location';
+import { formatDistance, locationApi } from '@yatri/mobile-location';
+import { ActionButton, rideApi } from '@yatri/mobile-ride';
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -30,7 +31,7 @@ export function HomeScreen({ navigation }: Props) {
     const check = () => {
       void (async () => {
         try {
-          const t = await tripsApi.active(await getAccessToken());
+          const t = await rideApi.active(await getAccessToken());
           setActiveTripId(t ? t.id : null);
         } catch {
           /* optional entry point */
@@ -175,9 +176,31 @@ export function HomeScreen({ navigation }: Props) {
               Saved places
             </Text>
           </Pressable>
-          <Text style={[styles.comingSoon, { color: theme.colors.textSecondary }]}>
-            Ride booking is coming soon.
-          </Text>
+          <ActionButton
+            colors={theme.colors}
+            minTouchTarget={theme.minTouchTarget}
+            label="See fare and request a ride"
+            tone="primary"
+            disabled={!pickup || !destination || !!activeTripId}
+            hint={
+              activeTripId
+                ? 'You already have a ride in progress'
+                : !pickup || !destination
+                  ? 'Choose a pickup and a destination first'
+                  : undefined
+            }
+            onPress={() => navigation.navigate('RequestRide')}
+          />
+          <Pressable
+            onPress={() => navigation.navigate('RideHistory')}
+            accessibilityRole="button"
+            accessibilityLabel="Your rides"
+            style={[styles.profileLink, { minHeight: theme.minTouchTarget }]}
+          >
+            <Text style={[styles.profileLinkText, { color: theme.colors.primary }]}>
+              Your rides
+            </Text>
+          </Pressable>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -221,9 +244,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 16,
     justifyContent: 'center',
-  },
-  comingSoon: {
-    fontSize: 13,
   },
   topBar: {
     flexDirection: 'row',

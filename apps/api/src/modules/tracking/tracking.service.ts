@@ -1,19 +1,21 @@
-import type {
-  Freshness,
-  LiveParty,
-  LiveTripSnapshot,
-  TripEventName,
-  TripPlace,
-  TripStatus,
+import {
+  ACTIVE_TRIP_STATUSES,
+  haversineMeters,
+  type Freshness,
+  type LiveParty,
+  type LiveTripSnapshot,
+  type TripPlace,
+  type TripStatus,
 } from '@yatri/types';
-import { ACTIVE_TRIP_STATUSES } from '@yatri/types';
 
 import { env } from '../../config/env';
 import { getRedisClient } from '../../config/redis';
-import { haversineMeters } from '../location/geo';
 import { reverseGeocode } from '../location/location.service';
 import { getRouteProvider } from '../location/providers';
+import { pricingConfig } from '../pricing/pricing.config';
 import { publishTripChange } from '../realtime/bus';
+import { getLastEventSeq, recordTripEvent } from '../trips/trip-events.service';
+import { computeWaiting } from '../trips/waiting';
 import { computeEta, estimateEta } from './eta';
 import { trackingConfig } from './tracking.config';
 import {
@@ -29,6 +31,10 @@ import {
  * Live positions exist only in Redis, only while a trip is active, and are
  * deleted the moment it ends. There is no location history table: a
  * passenger can never fetch where a driver "was" after the trip.
+ *
+ * There is ONE driver-location path: the driver's presence connection (availability module)
+ * forwards each accepted fix here while the driver has an active trip. Nothing else feeds a
+ * driver's position into a trip.
  */
 const STATE_TTL_SECONDS = 6 * 60 * 60;
 const TERMINAL_META_TTL_SECONDS = 10 * 60;
@@ -41,16 +47,24 @@ export interface TripMeta {
   tripId: string;
   status: TripStatus;
   passengerId: string;
-  driverId: string;
+  /** Null while SEARCHING (and after a re-match released the previous driver). */
+  driverId: string | null;
   pickup: TripPlace;
   destination: TripPlace;
+  /** The server-calculated route distance of the whole trip (progress denominator). */
+  distanceMeters: number | null;
+  matchedAtMs: number | null;
   arrivedAtMs: number | null;
+  passengerNotifiedAtMs: number | null;
+  /** When the driver was last told the passenger is waiting. */
+  driverNotifiedAtMs: number | null;
 }
 
 interface PartyState {
   fix: StoredFix;
   /** Smoothed speed (m/s) from consecutive accepted fixes. */
   speedMps: number | null;
+  headingDegrees: number | null;
 }
 interface PlaceState {
   name: string;
@@ -75,7 +89,8 @@ const k = {
   party: (id: string, p: Party) => `trk:${id}:${p}`,
   place: (id: string, p: Party) => `trk:${id}:${p}:place`,
   eta: (id: string) => `trk:${id}:eta`,
-  seq: (id: string) => `trk:${id}:seq`,
+  version: (id: string) => `trk:${id}:seq`,
+  near: (id: string) => `trk:${id}:near`,
 };
 
 async function getJson<T>(key: string): Promise<T | null> {
@@ -114,15 +129,13 @@ export async function saveMeta(meta: TripMeta) {
 }
 export const loadMeta = (tripId: string) => getJson<TripMeta>(k.meta(tripId));
 
-async function nextEventId(tripId: string): Promise<number> {
-  return getRedisClient().incr(k.seq(tripId));
-}
-
-async function announce(tripId: string, event?: TripEventName, important = false) {
-  const eventId = await nextEventId(tripId);
-  await getRedisClient().expire(k.seq(tripId), STATE_TTL_SECONDS);
-  await publishTripChange({ tripId, eventId, event, important });
-  return eventId;
+/** Tell every subscribed socket to rebuild its role-specific snapshot. */
+export async function bumpTripVersion(tripId: string): Promise<number> {
+  const redis = getRedisClient();
+  const version = await redis.incr(k.version(tripId));
+  await redis.expire(k.version(tripId), STATE_TTL_SECONDS);
+  await publishTripChange({ tripId, version });
+  return version;
 }
 
 export async function clearLiveState(tripId: string) {
@@ -132,17 +145,19 @@ export async function clearLiveState(tripId: string) {
     k.place(tripId, 'driver'),
     k.place(tripId, 'passenger'),
     k.eta(tripId),
+    k.near(tripId),
   );
 }
 
-/** Called by the trip lifecycle after every DB status change. */
-export async function onTripStatusChanged(meta: TripMeta, event: TripEventName): Promise<void> {
+/** Called by the trip lifecycle after every DB status change (the event itself is recorded by the caller). */
+export async function onTripStatusChanged(meta: TripMeta): Promise<void> {
   await saveMeta(meta);
-  await getRedisClient().del(k.eta(meta.tripId)); // target changes (pickup -> destination)
-  if (!isActive(meta.status)) {
-    await clearLiveState(meta.tripId); // privacy: positions die with the trip
+  const redis = getRedisClient();
+  await redis.del(k.eta(meta.tripId), k.near(meta.tripId)); // target changes (pickup -> destination)
+  if (!isActive(meta.status) || meta.status === 'SEARCHING') {
+    await clearLiveState(meta.tripId); // privacy: positions die with the trip / a released driver
   }
-  await announce(meta.tripId, event, true);
+  await bumpTripVersion(meta.tripId);
 }
 
 export type UpdateResult =
@@ -154,6 +169,7 @@ export async function applyLocationUpdate(input: {
   userId: string;
   party: Party;
   fix: Fix;
+  headingDegrees?: number | null;
   nowMs?: number;
 }): Promise<UpdateResult> {
   const { tripId, userId, party, fix } = input;
@@ -194,6 +210,7 @@ export async function applyLocationUpdate(input: {
     await setJson(k.party(tripId, party), {
       fix: decision.next,
       speedMps: speed,
+      headingDegrees: input.headingDegrees ?? null,
     } satisfies PartyState);
 
     if (party === 'driver') {
@@ -201,8 +218,29 @@ export async function applyLocationUpdate(input: {
     }
     void refreshPlaceName(tripId, party, decision.next, nowMs); // never blocks the update path
 
-    await announce(tripId, wasLost && party === 'driver' ? 'DRIVER_LOCATION_RESTORED' : undefined);
+    await bumpTripVersion(tripId);
+    if (wasLost && party === 'driver') {
+      await recordTripEvent({ tripId, type: 'DRIVER_LOCATION_RESTORED' });
+    }
     return { accepted: true as const };
+  });
+}
+
+/** "Driver is 500 meters away": raised once per configured threshold as the driver closes in. */
+async function maybeNearby(meta: TripMeta, distanceMeters: number) {
+  if (meta.status !== 'DRIVER_EN_ROUTE') return;
+  const thresholds = env.NEARBY_NOTIFY_METERS; // ascending
+  const crossed = thresholds.find((t) => distanceMeters <= t);
+  if (crossed === undefined) return;
+  const redis = getRedisClient();
+  const lowest = await redis.get(k.near(meta.tripId));
+  if (lowest !== null && Number(lowest) <= crossed) return;
+  await redis.set(k.near(meta.tripId), String(crossed), 'EX', STATE_TTL_SECONDS);
+  await recordTripEvent({
+    tripId: meta.tripId,
+    type: 'DRIVER_NEARBY',
+    payload: { distanceMeters: Math.round(distanceMeters), thresholdMeters: crossed },
+    dedupeKey: `near:${crossed}`,
   });
 }
 
@@ -217,6 +255,7 @@ async function refreshEta(meta: TripMeta, fix: StoredFix, speed: number | null, 
   const to = target === 'pickup' ? meta.pickup : meta.destination;
   const prev = await getJson<EtaState>(k.eta(meta.tripId));
   const straight = haversineMeters(fix, to);
+  await maybeNearby(meta, straight);
 
   const reusable =
     prev &&
@@ -261,12 +300,12 @@ async function refreshPlaceName(tripId: string, party: Party, fix: StoredFix, no
         stale: false,
       } satisfies PlaceState);
       // Only wake subscribers when the name actually changed (or was recovered).
-      if (changed || last?.stale) await announce(tripId);
+      if (changed || last?.stale) await bumpTripVersion(tripId);
     } catch {
       // Geocoding failed: keep the previous name, flag it as stale, and retry after the normal interval.
       if (last) {
         await setJson(k.place(tripId, party), { ...last, atMs: nowMs, stale: true });
-        if (!last.stale) await announce(tripId);
+        if (!last.stale) await bumpTripVersion(tripId);
       }
     }
   } catch (err) {
@@ -286,6 +325,7 @@ function toParty(
     latitude: state.fix.latitude,
     longitude: state.fix.longitude,
     accuracyMeters: state.fix.accuracyMeters,
+    headingDegrees: state.headingDegrees ?? null,
     updatedAt: new Date(state.fix.receivedAtMs).toISOString(),
     ageSeconds: Math.round(age / 1000),
     freshness,
@@ -306,7 +346,7 @@ export async function buildSnapshot(
 ): Promise<LiveTripSnapshot> {
   const active = isActive(meta.status);
   const redis = getRedisClient();
-  const eventId = Number((await redis.get(k.seq(meta.tripId))) ?? 0);
+  const version = Number((await redis.get(k.version(meta.tripId))) ?? 0);
 
   const [driverState, driverPlace, passengerState, passengerPlace, eta] = active
     ? await Promise.all([
@@ -333,14 +373,24 @@ export async function buildSnapshot(
     if (meta.status === 'DRIVER_EN_ROUTE') {
       driverArrival = { distanceMeters: distance, etaSeconds, basis };
     } else {
-      trip = { distanceRemainingMeters: distance, etaSeconds, basis };
+      const total = meta.distanceMeters;
+      trip = {
+        distanceRemainingMeters: distance,
+        etaSeconds,
+        progressPercent:
+          total && total > 0
+            ? Math.max(0, Math.min(100, Math.round((1 - distance / total) * 100)))
+            : null,
+        basis,
+      };
     }
   }
 
   return {
     tripId: meta.tripId,
     status: meta.status,
-    eventId,
+    version,
+    lastEventSeq: await getLastEventSeq(meta.tripId),
     serverTime: new Date(nowMs).toISOString(),
     pickup: meta.pickup,
     destination: meta.destination,
@@ -348,10 +398,8 @@ export async function buildSnapshot(
     passenger,
     driverArrival,
     trip,
-    waitingSeconds:
-      meta.status === 'DRIVER_ARRIVED' && meta.arrivedAtMs
-        ? Math.max(0, Math.round((nowMs - meta.arrivedAtMs) / 1000))
-        : null,
+    // Waiting is computed from server timestamps only; both apps render exactly this.
+    waiting: computeWaiting(meta, nowMs, pricingConfig()),
   };
 }
 
@@ -378,10 +426,20 @@ export async function driverFreshness(tripId: string, nowMs = Date.now()): Promi
 
 export async function passengerStopsSharing(tripId: string): Promise<void> {
   await getRedisClient().del(k.party(tripId, 'passenger'), k.place(tripId, 'passenger'));
-  await announce(tripId);
+  await bumpTripVersion(tripId);
 }
 
 export async function announceStaleness(tripId: string, freshness: Freshness) {
-  if (freshness === 'lost') await announce(tripId, 'DRIVER_LOCATION_LOST', true);
-  else await announce(tripId);
+  if (freshness === 'lost') await recordTripEvent({ tripId, type: 'DRIVER_LOCATION_LOST' });
+  await bumpTripVersion(tripId);
+}
+
+/** The driver's latest accepted position for a trip (server-side use only; never sent as history). */
+export async function getDriverFix(
+  tripId: string,
+): Promise<{ latitude: number; longitude: number; receivedAtMs: number } | null> {
+  const s = await getJson<PartyState>(k.party(tripId, 'driver'));
+  return s
+    ? { latitude: s.fix.latitude, longitude: s.fix.longitude, receivedAtMs: s.fix.receivedAtMs }
+    : null;
 }

@@ -44,7 +44,8 @@ OSRM, GraphHopper, Valhalla and the offline fallback.
 
 ## Realtime protocol (`/ws/v1/realtime`)
 
-JSON messages; types in `packages/types/src/tracking.ts`.
+JSON messages; types in `packages/types/src/realtime.ts` (this document covers the tracking part of the
+protocol; chat, calls, offers and events are in [PHASE_6](PHASE_6.md)).
 
 - The **first** message must be `{type:'auth', token}` (never in the URL). No auth within
   5 s → close `4401`. A client re-sends `auth` with a fresh token every 10 minutes; the
@@ -52,14 +53,17 @@ JSON messages; types in `packages/types/src/tracking.ts`.
   the session every 60 s (revoked/suspended accounts are dropped).
 - `subscribe {tripId}` → `subscribed` + a full `snapshot`. Non-participants, missing and
   ended trips all get the identical `NOT_FOUND` error (no way to probe other trips).
-- `driver_location` / `passenger_location {tripId, latitude, longitude, accuracyMeters,
-deviceTimeMs}`; `stop_sharing`; `ping`.
-- Server → client: `snapshot` (role-specific, with a per-trip monotonic `eventId`),
-  `event` (`DRIVER_ARRIVED`, `TRIP_STARTED`, `TRIP_COMPLETED`, `TRIP_CANCELLED`,
-  `DRIVER_LOCATION_LOST/RESTORED`, with `important`), `rejected {reason}`, `error`.
+- `passenger_location {tripId, latitude, longitude, accuracyMeters, deviceTimeMs}`;
+  `stop_sharing`; `ping`. The driver's position arrives **only** through driver presence
+  (`location`, Phase 5), which the server forwards into the driver's active trip. There is no
+  trip-scoped driver message.
+- Server → client: `snapshot` (role-specific, with a per-trip monotonic `version`),
+  `trip_event {event, important}` (persisted domain events with a gap-free per-trip `seq`; see
+  PHASE_6), `rejected {reason}`, `error`.
 - Limits: 4 KB messages, 8 msgs/s per socket, slow consumers skip snapshots.
 - Reconnect = resubscribe = full current state; no replay log needed. Clients drop
-  snapshots with an older `eventId` (duplicates / out-of-order).
+  snapshots with an older `version` (duplicates / out-of-order) and fetch events they missed
+  with `GET /trips/:id/events?after=<seq>`.
 - REST fallback: `GET /api/v1/trips/:id/live` (participants, active trips only) for first
   paint.
 
@@ -78,7 +82,8 @@ feed is judged by the **server** clock using the shared config (`DRIVER_LOCATION
 
 `LiveTripSnapshot` carries three distinct, mutually exclusive values:
 `driverArrival` (only `DRIVER_EN_ROUTE`: driver→pickup), `trip` (only `IN_PROGRESS`:
-driver→destination), `waitingSeconds` (only `DRIVER_ARRIVED`). ETA comes from the
+driver→destination), and `waiting` (a server-computed structure: the passenger waiting while the
+driver approaches, the driver waiting after arrival; see PHASE_6). ETA comes from the
 `RouteProvider` when it can give a duration (`basis: 'route'`, re-queried at most every
 30 s or 150 m of movement, otherwise scaled by remaining distance); otherwise a
 speed-based estimate with `basis: 'estimate'`, shown as "(estimate)". Distance is
@@ -150,4 +155,4 @@ passenger and per driver.
   component tests; the announcement policy, text builders, realtime client and controller
   are unit tested instead, and the gateway/tracking flow is integration tested.
 - Reverse geocoding uses the public OSM server in development only (see PHASE_4).
-- No trip history, matching, fares or payments.
+- Matching, fares, payments and history arrived in Phase 6 (see PHASE_6 for its own limits).

@@ -5,9 +5,9 @@ import {
   LOCATION_STATUS_HELP,
   LOCATION_STATUS_TEXT,
   locationStatusKey,
-  tripsApi,
   useDriverPresence,
 } from '@yatri/mobile-location';
+import { OfferCard, rideApi, useDriverOffers } from '@yatri/mobile-ride';
 import { useEffect, useState } from 'react';
 import {
   AccessibilityInfo,
@@ -38,7 +38,9 @@ const AGE_TICK_MS = 5000;
 export function DriverHomeScreen({ navigation }: Props) {
   const theme = useTheme();
   const { getAccessToken } = useAuth();
-  const { state, goOnline, goOffline } = useDriverPresence(getAccessToken);
+  const { state, goOnline, goOffline, socket } = useDriverPresence(getAccessToken);
+  // Offers arrive on the presence socket (one socket, no second connection).
+  const offers = useDriverOffers(socket, getAccessToken);
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [activeTripId, setActiveTripId] = useState<string | null>(null);
 
@@ -52,7 +54,7 @@ export function DriverHomeScreen({ navigation }: Props) {
     const check = () => {
       void (async () => {
         try {
-          const t = await tripsApi.active(await getAccessToken());
+          const t = await rideApi.active(await getAccessToken());
           setActiveTripId(t ? t.id : null);
         } catch {
           /* optional entry point */
@@ -116,6 +118,14 @@ export function DriverHomeScreen({ navigation }: Props) {
             </Text>
           ) : null}
         </View>
+
+        <OfferCard
+          colors={theme.colors}
+          minTouchTarget={theme.minTouchTarget}
+          state={offers.state}
+          controller={offers.controller}
+          onAccepted={(tripId) => navigation.navigate('DriverTrip', { tripId })}
+        />
 
         <View
           accessibilityRole="list"
@@ -243,6 +253,17 @@ export function DriverHomeScreen({ navigation }: Props) {
             </Text>
           </Pressable>
         ) : null}
+        <Pressable
+          onPress={() => navigation.navigate('DriverRideHistory')}
+          accessibilityRole="button"
+          accessibilityLabel="Your rides"
+          style={[
+            styles.secondary,
+            { minHeight: theme.minTouchTarget, borderColor: theme.colors.border },
+          ]}
+        >
+          <Text style={{ color: theme.colors.textPrimary, fontWeight: '600' }}>Your rides</Text>
+        </Pressable>
         <Pressable
           onPress={() => navigation.navigate('DriverLocation')}
           accessibilityRole="button"

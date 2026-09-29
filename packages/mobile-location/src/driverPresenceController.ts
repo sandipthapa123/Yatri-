@@ -122,8 +122,27 @@ export class DriverPresenceController {
   private announceId = 0;
   private lastPlace: { latitude: number; longitude: number; atMs: number } | null = null;
   private disposed = false;
+  private messageListeners = new Set<(m: ServerRealtimeMessage) => void>();
+  private connectionListeners = new Set<(c: ConnectionState) => void>();
 
   constructor(private readonly opts: PresenceOptions) {}
+
+  /**
+   * Every server message on the presence socket (ride offers arrive here). One socket, many
+   * consumers: the offer handling subscribes instead of opening a second connection.
+   */
+  onMessage = (l: (m: ServerRealtimeMessage) => void) => {
+    this.messageListeners.add(l);
+    return () => {
+      this.messageListeners.delete(l);
+    };
+  };
+  onConnectionChange = (l: (c: ConnectionState) => void) => {
+    this.connectionListeners.add(l);
+    return () => {
+      this.connectionListeners.delete(l);
+    };
+  };
 
   subscribe = (l: () => void) => {
     this.listeners.add(l);
@@ -147,6 +166,8 @@ export class DriverPresenceController {
 
   dispose() {
     this.disposed = true;
+    this.messageListeners.clear();
+    this.connectionListeners.clear();
     this.teardownTracking();
   }
 
@@ -278,8 +299,12 @@ export class DriverPresenceController {
       onConnection: (connection) => {
         this.set({ connection });
         this.recomputeSharing();
+        for (const l of this.connectionListeners) l(connection);
       },
-      onMessage: (m) => this.onServerMessage(m),
+      onMessage: (m) => {
+        for (const l of this.messageListeners) l(m);
+        this.onServerMessage(m);
+      },
     });
     this.client.start();
 

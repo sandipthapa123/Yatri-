@@ -1,4 +1,4 @@
-import type { LiveParty, LiveTripSnapshot } from '@yatri/types';
+import type { LiveParty, LiveTripSnapshot, WaitingInfo } from '@yatri/types';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -19,10 +19,20 @@ import {
   summaryRows,
 } from './tripText';
 
+const driverWaiting = (seconds: number): WaitingInfo => ({
+  driver: { startedAt: '2026-01-01T00:00:00.000Z', seconds, notifiedAt: null },
+  passenger: null,
+  rule: { freeSeconds: 180, perMinuteNpr: 5, noShowAfterSeconds: 600 },
+  affectsFare: seconds > 180,
+  chargeableSeconds: Math.max(0, seconds - 180),
+  chargeNpr: 0,
+});
+
 const party = (over: Partial<LiveParty> = {}): LiveParty => ({
   latitude: 27.7,
   longitude: 85.3,
   accuracyMeters: 15,
+  headingDegrees: null,
   updatedAt: '2026-01-01T00:00:00.000Z',
   ageSeconds: 2,
   freshness: 'live',
@@ -36,7 +46,8 @@ function snapshot(over: Partial<LiveTripSnapshot> = {}): LiveTripSnapshot {
   return {
     tripId: 't1',
     status: 'DRIVER_EN_ROUTE',
-    eventId: 1,
+    version: 1,
+    lastEventSeq: 0,
     serverTime: '2026-01-01T00:00:00.000Z',
     pickup: {
       name: 'Kathmandu Mall',
@@ -49,7 +60,7 @@ function snapshot(over: Partial<LiveTripSnapshot> = {}): LiveTripSnapshot {
     passenger: null,
     driverArrival: { distanceMeters: 180, etaSeconds: 120, basis: 'estimate' },
     trip: null,
-    waitingSeconds: null,
+    waiting: null,
     ...over,
   };
 }
@@ -135,7 +146,12 @@ describe('summary rows (the non-visual trip layer)', () => {
       snapshot({
         status: 'IN_PROGRESS',
         driverArrival: null,
-        trip: { distanceRemainingMeters: 4200, etaSeconds: 900, basis: 'route' },
+        trip: {
+          distanceRemainingMeters: 4200,
+          etaSeconds: 900,
+          progressPercent: null,
+          basis: 'route',
+        },
       }),
     );
     expect(riding['Trip ETA']).toBe('15 minutes');
@@ -143,9 +159,11 @@ describe('summary rows (the non-visual trip layer)', () => {
     expect(riding['Distance to destination']).toBe('4.2 kilometres');
 
     const waiting = rows(
-      snapshot({ status: 'DRIVER_ARRIVED', driverArrival: null, waitingSeconds: 130 }),
+      snapshot({ status: 'DRIVER_ARRIVED', driverArrival: null, waiting: driverWaiting(130) }),
     );
-    expect(waiting['Waiting time']).toBe('2 minutes');
+    expect(waiting['Your driver has been waiting']).toBe(
+      '2 minutes 10 seconds. Free waiting time remaining: 50 seconds.',
+    );
     expect(waiting['Driver arrival ETA']).toBeUndefined();
     expect(waiting['Trip ETA']).toBeUndefined();
   });
@@ -226,16 +244,20 @@ describe('announcement policy: informed, not flooded', () => {
     expect(distanceStep(3000)).toBe(500);
   });
 
-  it('rate limits ordinary updates but never delays important ones', () => {
+  it('rate limits ordinary updates; phase changes are never spoken from snapshots', () => {
     const spoken = run([
       [0, at(1000, 300)],
       [2000, at(700, 200)], // big change but < 10 s since last -> held back
       [4000, at(400, 100)],
-      [5000, snapshot({ status: 'DRIVER_ARRIVED', driverArrival: null, waitingSeconds: 0 })],
+      [
+        5000,
+        snapshot({ status: 'DRIVER_ARRIVED', driverArrival: null, waiting: driverWaiting(0) }),
+      ],
     ]);
-    expect(spoken.map((s) => s.t)).toEqual([0, 5000]);
-    expect(spoken[1]?.assertive).toBe('Your driver has arrived at the pickup.');
-    expect(spoken[1]?.polite).toBeUndefined();
+    // "Your driver has arrived" comes from the DRIVER_ARRIVED event (see liveTripController.test),
+    // so the snapshot pipeline stays silent here instead of reading it twice.
+    expect(spoken.map((s) => s.t)).toEqual([0]);
+    expect(spoken.every((s) => s.assertive === undefined)).toBe(true);
   });
 
   it('announces a place-name change once, and not while it is unchanged', () => {
@@ -259,57 +281,19 @@ describe('announcement policy: informed, not flooded', () => {
     expect(spoken[1]?.polite).toBe('Place name temporarily unavailable.');
   });
 
-  it('is assertive only for important events: arrived, started, completed, cancelled, signal lost', () => {
+  it('never speaks phase changes or signal loss itself — those are server events', () => {
     const base = snapshot();
-    const cases: Array<[string, LiveTripSnapshot, string]> = [
-      [
-        'arrived',
-        snapshot({ status: 'DRIVER_ARRIVED', driverArrival: null, waitingSeconds: 0 }),
-        'has arrived',
-      ],
-      [
-        'started',
-        snapshot({
-          status: 'IN_PROGRESS',
-          driverArrival: null,
-          trip: { distanceRemainingMeters: 4000, etaSeconds: 800, basis: 'route' },
-        }),
-        'has started',
-      ],
-      [
-        'completed',
-        snapshot({ status: 'COMPLETED', driver: null, driverArrival: null }),
-        'reached your destination',
-      ],
-      [
-        'cancelled',
-        snapshot({ status: 'CANCELLED', driver: null, driverArrival: null }),
-        'cancelled',
-      ],
-    ];
-    for (const [name, next, text] of cases) {
-      const first = decideAnnouncement(INITIAL_ANNOUNCE_STATE, base, 0, 'PASSENGER').next;
-      const r = decideAnnouncement(first, next, 1000, 'PASSENGER').announcement;
-      expect(r.assertive, name).toContain(text);
-    }
     const first = decideAnnouncement(INITIAL_ANNOUNCE_STATE, base, 0, 'PASSENGER').next;
-    const lost = decideAnnouncement(
-      first,
+    for (const next of [
+      snapshot({ status: 'DRIVER_ARRIVED', driverArrival: null, waiting: driverWaiting(0) }),
+      snapshot({ status: 'IN_PROGRESS', driverArrival: null }),
+      snapshot({ status: 'COMPLETED', driver: null, driverArrival: null }),
+      snapshot({ status: 'CANCELLED', driver: null, driverArrival: null }),
       snapshot({ driver: party({ freshness: 'lost', ageSeconds: 90 }) }),
-      1000,
-      'PASSENGER',
-    );
-    expect(lost.announcement.assertive).toContain('signal lost');
-  });
-
-  it('says the location is back (politely) after a loss', () => {
-    const spoken = run([
-      [0, snapshot()],
-      [1000, snapshot({ driver: party({ freshness: 'lost', ageSeconds: 90 }) })],
-      [20_000, snapshot({ driver: party({ freshness: 'live', ageSeconds: 1 }) })],
-    ]);
-    expect(spoken[1]?.assertive).toContain('signal lost');
-    expect(spoken[2]?.polite).toContain('Driver location is back.');
+    ]) {
+      const r = decideAnnouncement(first, next, 1000, 'PASSENGER').announcement;
+      expect(r.assertive).toBeUndefined();
+    }
   });
 
   it('does not repeat itself when the same snapshot arrives twice (duplicate events)', () => {
@@ -330,7 +314,12 @@ describe('announcement policy: informed, not flooded', () => {
         snapshot({
           status: 'IN_PROGRESS',
           driverArrival: null,
-          trip: { distanceRemainingMeters: 4200, etaSeconds: 900, basis: 'route' },
+          trip: {
+            distanceRemainingMeters: 4200,
+            etaSeconds: 900,
+            progressPercent: null,
+            basis: 'route',
+          },
         }),
       ],
     ]);

@@ -41,6 +41,13 @@
         {
           "photosPermission": "Yatri uses your photo library so you can set a profile picture."
         }
+      ],
+      [
+        "@config-plugins/react-native-webrtc",
+        {
+          "cameraPermission": "Yatri uses the camera only during a video call with your driver.",
+          "microphonePermission": "Yatri uses the microphone only during a call with your driver."
+        }
       ]
     ]
   }

@@ -3,15 +3,7 @@
  * words ("85 meters", "1.2 kilometres") rather than symbols ("85 m") so
  * TTS engines never misread the unit.
  */
-export function formatDistance(meters: number): string {
-  if (!Number.isFinite(meters) || meters < 0) return 'unknown distance';
-  if (meters < 1000) {
-    const rounded = Math.round(meters);
-    return `${rounded} ${rounded === 1 ? 'meter' : 'meters'}`;
-  }
-  const km = Math.round(meters / 100) / 10;
-  return `${km} ${km === 1 ? 'kilometre' : 'kilometres'}`;
-}
+export { formatDistance } from '@yatri/types';
 
 export function formatAccuracy(meters: number | null | undefined): string | null {
   if (meters === null || meters === undefined || !Number.isFinite(meters)) return null;

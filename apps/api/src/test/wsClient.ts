@@ -88,3 +88,11 @@ export class Client {
     await new Promise((r) => setTimeout(r, 50));
   }
 }
+
+/** Opens a socket, authenticates, and resolves once the server says `authed`. */
+export async function login(port: number, token: string): Promise<Client> {
+  const c = await Client.connect(port);
+  c.send({ type: 'auth', token });
+  await c.waitFor((m) => m.type === 'authed');
+  return c;
+}

@@ -1,47 +1,133 @@
 import type { Request, Response } from 'express';
-import type { ApiResponse, LiveTripSnapshot, TripSummary } from '@yatri/types';
-import { z } from 'zod';
+import type {
+  ApiResponse,
+  DisputeInfo,
+  FareEstimateResponse,
+  LiveTripSnapshot,
+  PaymentInfo,
+  TripEventRecord,
+  TripHistoryPage,
+  TripOfferInfo,
+  TripRequestBody,
+  TripSummary,
+} from '@yatri/types';
 
 import { HttpError } from '../../middleware/errorHandler';
-import {
-  latitudeSchema,
-  longitudeSchema,
-  notNullIsland,
-  NULL_ISLAND_ISSUE,
-} from '../location/coordinates';
+import { currentOfferFor, offerNext, respondOffer } from '../dispatch/dispatch.service';
+import { pricingConfig } from '../pricing/pricing.config';
 import { buildSnapshot, isActive, loadMeta } from '../tracking/tracking.service';
-import { getActiveTripFor, getTrip, toTripSummary, type TripRow } from './trips.repository';
-import { changeTripStatus, createTripForParticipants, metaFromRow } from './trips.service';
+import { openDispute, listMyDisputes } from './disputes.service';
+import { getPaymentFor, settlePayment } from './payments.service';
+import { rateTrip } from './ratings.service';
+import { listTripEvents } from './trip-events.service';
+import { getActiveTripFor, getTrip } from './trips.repository';
+import {
+  buildTripSummary,
+  completeTrip,
+  driverArrived,
+  driverDropsOut,
+  driverNoShow,
+  estimateForRequest,
+  listHistory,
+  metaFromRow,
+  participantTrip,
+  passengerCancel,
+  requestTrip,
+  startTrip,
+} from './trips.service';
 
 function uid(req: Request): string {
   if (!req.auth) throw new HttpError(401, 'UNAUTHENTICATED', 'Authentication required.');
   return req.auth.userId;
 }
-const idParam = (req: Request) => {
-  const v = req.params.id;
+const param = (req: Request, name: string) => {
+  const v = req.params[name];
   return Array.isArray(v) ? (v[0] ?? '') : (v ?? '');
 };
+const idParam = (req: Request) => param(req, 'id');
 
-/** Only a trip's own passenger or driver may see it; everyone else gets a plain 404. */
-async function participantTrip(req: Request): Promise<TripRow> {
-  const trip = await getTrip(idParam(req));
-  const me = uid(req);
-  if (!trip || (trip.passenger_id !== me && trip.driver_id !== me)) {
-    throw new HttpError(404, 'NOT_FOUND', 'Trip not found.');
-  }
-  return trip;
+async function summaryFor(req: Request, tripId: string): Promise<TripSummary> {
+  const trip = await getTrip(tripId);
+  if (!trip) throw new HttpError(404, 'NOT_FOUND', 'Trip not found.');
+  return buildTripSummary(trip, uid(req));
 }
+
+// ---- passenger: estimate & request -------------------------------------------------------
+
+export async function estimateHandler(
+  req: Request,
+  res: Response<ApiResponse<FareEstimateResponse>>,
+) {
+  const body = req.body as TripRequestBody;
+  const { fare } = await estimateForRequest(body);
+  const cfg = pricingConfig();
+  res.json({
+    success: true,
+    data: {
+      fare,
+      pickup: {
+        name: body.pickup.name ?? body.pickup.address,
+        address: body.pickup.address,
+        latitude: body.pickup.latitude,
+        longitude: body.pickup.longitude,
+      },
+      destination: {
+        name: body.destination.name ?? body.destination.address,
+        address: body.destination.address,
+        latitude: body.destination.latitude,
+        longitude: body.destination.longitude,
+      },
+      waitingRule: { freeSeconds: cfg.waitingFreeSeconds, perMinuteNpr: cfg.waitingPerMinuteNpr },
+    },
+  });
+}
+
+export async function requestHandler(req: Request, res: Response<ApiResponse<TripSummary>>) {
+  const trip = await requestTrip(uid(req), req.body as TripRequestBody);
+  await offerNext(trip.id); // first offer immediately; the dispatch sweeper carries on from here
+  res.status(201).json({ success: true, data: await summaryFor(req, trip.id) });
+}
+
+// ---- driver: offers -----------------------------------------------------------------------
+
+export async function currentOfferHandler(
+  req: Request,
+  res: Response<ApiResponse<TripOfferInfo | null>>,
+) {
+  res.json({ success: true, data: await currentOfferFor(uid(req)) });
+}
+
+export function offerResponseHandler(accept: boolean) {
+  return async (
+    req: Request,
+    res: Response<ApiResponse<{ accepted: boolean; trip: TripSummary | null }>>,
+  ) => {
+    const r = await respondOffer(uid(req), param(req, 'offerId'), accept);
+    res.json({
+      success: true,
+      data: { accepted: r.accepted, trip: r.accepted ? await summaryFor(req, r.tripId) : null },
+    });
+  };
+}
+
+// ---- reading -------------------------------------------------------------------------------
 
 export async function activeTripHandler(
   req: Request,
   res: Response<ApiResponse<TripSummary | null>>,
 ) {
   const trip = await getActiveTripFor(uid(req));
-  res.json({ success: true, data: trip ? toTripSummary(trip, uid(req)) : null });
+  res.json({ success: true, data: trip ? await buildTripSummary(trip, uid(req)) : null });
+}
+
+export async function historyHandler(req: Request, res: Response<ApiResponse<TripHistoryPage>>) {
+  const q = req.validatedQuery as { page: number; pageSize: number };
+  res.json({ success: true, data: await listHistory(uid(req), q.page, q.pageSize) });
 }
 
 export async function getTripHandler(req: Request, res: Response<ApiResponse<TripSummary>>) {
-  res.json({ success: true, data: toTripSummary(await participantTrip(req), uid(req)) });
+  const trip = await participantTrip(idParam(req), uid(req));
+  res.json({ success: true, data: await buildTripSummary(trip, uid(req)) });
 }
 
 /** REST snapshot: the initial paint and the fallback when the socket is down. Not a history endpoint. */
@@ -49,7 +135,7 @@ export async function liveSnapshotHandler(
   req: Request,
   res: Response<ApiResponse<LiveTripSnapshot>>,
 ) {
-  const trip = await participantTrip(req);
+  const trip = await participantTrip(idParam(req), uid(req));
   if (!isActive(trip.status)) {
     throw new HttpError(
       409,
@@ -62,49 +148,66 @@ export async function liveSnapshotHandler(
   res.json({ success: true, data: await buildSnapshot(meta, viewer) });
 }
 
-export function statusHandler(action: 'arrived' | 'start' | 'complete' | 'cancel') {
+/** Missed something while offline? Ask for everything after the last event number you applied. */
+export async function eventsHandler(req: Request, res: Response<ApiResponse<TripEventRecord[]>>) {
+  const trip = await participantTrip(idParam(req), uid(req));
+  const q = req.validatedQuery as { after: number };
+  res.json({ success: true, data: await listTripEvents(trip.id, { afterSeq: q.after }) });
+}
+
+// ---- lifecycle actions ---------------------------------------------------------------------
+
+export function driverAction(action: 'arrived' | 'start' | 'complete' | 'no-show') {
   return async (req: Request, res: Response<ApiResponse<TripSummary>>) => {
-    const row = await changeTripStatus(idParam(req), uid(req), action);
-    res.json({ success: true, data: toTripSummary(row, uid(req)) });
+    const id = idParam(req);
+    const me = uid(req);
+    if (action === 'arrived') await driverArrived(id, me);
+    else if (action === 'start') await startTrip(id, me);
+    else if (action === 'complete') await completeTrip(id, me);
+    else await driverNoShow(id, me);
+    res.json({ success: true, data: await summaryFor(req, id) });
   };
 }
 
-const placeSchema = z
-  .object({
-    latitude: latitudeSchema,
-    longitude: longitudeSchema,
-    address: z.string().trim().min(1).max(300),
-    name: z.string().trim().min(1).max(120).optional(),
-  })
-  .refine(notNullIsland, NULL_ISLAND_ISSUE);
+/** Cancel: a passenger cancels the ride; a driver dropping out sends it back to be re-matched. */
+export async function cancelHandler(req: Request, res: Response<ApiResponse<TripSummary>>) {
+  const id = idParam(req);
+  const me = uid(req);
+  const trip = await participantTrip(id, me);
+  const { reason } = req.body as { reason?: string };
+  if (trip.passenger_id === me) {
+    await passengerCancel(id, me, reason);
+  } else {
+    const out = await driverDropsOut(id, me, 'DRIVER_CANCELLED');
+    if (out.rematching) await offerNext(id);
+  }
+  res.json({ success: true, data: await summaryFor(req, id) });
+}
 
-export const createTripSchema = z.object({
-  passengerId: z.string().uuid(),
-  driverId: z.string().uuid(),
-  pickup: placeSchema,
-  destination: placeSchema,
-});
+// ---- payment, rating, disputes -----------------------------------------------------------
 
-export async function adminCreateTripHandler(
+export async function getPaymentHandler(req: Request, res: Response<ApiResponse<PaymentInfo>>) {
+  res.json({ success: true, data: await getPaymentFor(idParam(req), uid(req)) });
+}
+
+export async function confirmPaymentHandler(req: Request, res: Response<ApiResponse<PaymentInfo>>) {
+  res.json({ success: true, data: await settlePayment(idParam(req), uid(req)) });
+}
+
+export async function rateHandler(
   req: Request,
-  res: Response<ApiResponse<TripSummary>>,
+  res: Response<ApiResponse<{ id: string; tripId: string; stars: number }>>,
 ) {
-  const b = req.body as z.infer<typeof createTripSchema>;
-  const row = await createTripForParticipants({
-    passengerId: b.passengerId,
-    driverId: b.driverId,
-    pickup: {
-      latitude: b.pickup.latitude,
-      longitude: b.pickup.longitude,
-      address: b.pickup.address,
-      placeName: b.pickup.name ?? null,
-    },
-    destination: {
-      latitude: b.destination.latitude,
-      longitude: b.destination.longitude,
-      address: b.destination.address,
-      placeName: b.destination.name ?? null,
-    },
-  });
-  res.status(201).json({ success: true, data: toTripSummary(row, b.passengerId) });
+  res
+    .status(201)
+    .json({ success: true, data: await rateTrip(idParam(req), uid(req), req.body as never) });
+}
+
+export async function openDisputeHandler(req: Request, res: Response<ApiResponse<DisputeInfo>>) {
+  const { reason } = req.body as { reason: string };
+  res.status(201).json({ success: true, data: await openDispute(idParam(req), uid(req), reason) });
+}
+
+export async function listDisputesHandler(req: Request, res: Response<ApiResponse<DisputeInfo[]>>) {
+  res.json({ success: true, data: await listMyDisputes(idParam(req), uid(req)) });
 }

@@ -1,4 +1,8 @@
 import type {
+  AdminDisputeRow,
+  AdminTripDetail,
+  AdminTripRow,
+  ChatHistory,
   AdminDriverDetail,
   AdminDriverAvailabilityResponse,
   AdminDriverListResponse,
@@ -235,4 +239,59 @@ export function listDriverAvailability(
     `/availability/drivers${qs ? `?${qs}` : ''}`,
     accessToken,
   );
+}
+
+// ---- rides and disputes (the same authoritative records the apps use) ----------------------
+
+const toQuery = (params: object) => {
+  const q = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) if (v !== undefined && v !== '') q.set(k, String(v));
+  const s = q.toString();
+  return s ? `?${s}` : '';
+};
+
+export interface ListTripsParams {
+  status?: string;
+  search?: string;
+  page?: number;
+  pageSize?: number;
+}
+export function listAdminTrips(accessToken: string, params: ListTripsParams) {
+  return adminRequest<{ items: AdminTripRow[]; total: number }>(
+    `/trips${toQuery(params)}`,
+    accessToken,
+  );
+}
+export function getAdminTrip(accessToken: string, tripId: string) {
+  return adminRequest<AdminTripDetail>(`/trips/${tripId}`, accessToken);
+}
+/** Needs TRIP_CHAT_VIEW; the API refuses otherwise and writes every read to the access log. */
+export function getAdminTripChat(accessToken: string, tripId: string) {
+  return adminRequest<ChatHistory>(`/trips/${tripId}/chat`, accessToken);
+}
+export function adminCancelTrip(accessToken: string, tripId: string, reason: string) {
+  return adminRequest<{ status: string }>(`/trips/${tripId}/cancel`, accessToken, {
+    method: 'POST',
+    body: { reason },
+  });
+}
+export function listAdminDisputes(
+  accessToken: string,
+  params: { status?: string; page?: number; pageSize?: number },
+) {
+  return adminRequest<{ items: AdminDisputeRow[]; total: number }>(
+    `/disputes${toQuery(params)}`,
+    accessToken,
+  );
+}
+export function resolveAdminDispute(
+  accessToken: string,
+  disputeId: string,
+  status: 'RESOLVED' | 'REJECTED',
+  resolution: string,
+) {
+  return adminRequest<unknown>(`/disputes/${disputeId}/resolve`, accessToken, {
+    method: 'POST',
+    body: { status, resolution },
+  });
 }

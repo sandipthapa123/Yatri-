@@ -8,7 +8,9 @@ import type {
 import { env } from '../../config/env';
 import { query } from '../../lib/db';
 import { HttpError } from '../../middleware/errorHandler';
-import { publishDriverChange } from '../realtime/bus';
+import { publishToUser } from '../realtime/bus';
+import { applyLocationUpdate } from '../tracking/tracking.service';
+import { getActiveTripFor } from '../trips/trips.repository';
 import { trackingConfig } from '../tracking/tracking.config';
 import { evaluateFix, type Fix } from '../tracking/tracking.rules';
 import { canTransition, CAN_START_ONLINE, locationFreshness } from './availability.machine';
@@ -26,9 +28,11 @@ import {
   claimPersistSlot,
   clearLiveFix,
   getLiveFix,
+  getDriverTrip,
   getNotifiedFreshness,
   getStateMirror,
   setLiveFix,
+  setDriverTrip,
   setNotifiedFreshness,
   setStateMirror,
   touchSeen,
@@ -57,9 +61,14 @@ function toFix(s: DriverLocationSample): Fix {
   };
 }
 
+/** Tell every connection of this driver where their availability stands (one path for all changes). */
+async function pushDriverStatus(driverId: string) {
+  await publishToUser(driverId, { type: 'availability', status: await getStatus(driverId) });
+}
+
 async function setState(driverId: string, state: DriverAvailabilityState) {
   await setStateMirror(driverId, state);
-  await publishDriverChange(driverId);
+  await pushDriverStatus(driverId);
 }
 
 // ---------------------------------------------------------------- status
@@ -103,6 +112,28 @@ async function currentState(driverId: string): Promise<DriverAvailabilityState> 
 
 // ---------------------------------------------------------------- location
 
+/**
+ * THE single driver-location path into a trip: the presence connection feeds the trip the
+ * driver is currently assigned to. (The lookup is cached in Redis; '' = checked, none.)
+ */
+async function forwardToActiveTrip(driverId: string, sample: DriverLocationSample, nowMs: number) {
+  let tripId = await getDriverTrip(driverId);
+  if (tripId === undefined) {
+    const t = await getActiveTripFor(driverId);
+    tripId = t && t.driver_id === driverId ? t.id : null;
+    await setDriverTrip(driverId, tripId);
+  }
+  if (!tripId) return;
+  await applyLocationUpdate({
+    tripId,
+    userId: driverId,
+    party: 'driver',
+    fix: toFix(sample),
+    headingDegrees: sample.headingDegrees ?? null,
+    nowMs,
+  });
+}
+
 export type IngestResult =
   | { accepted: true; receivedAt: string; freshness: LocationFreshness }
   | { accepted: false; reason: string };
@@ -145,6 +176,7 @@ export async function ingestLocation(
   }
 
   await storeAccepted(driverId, sample, decision.next, nowMs);
+  await forwardToActiveTrip(driverId, sample, nowMs);
   return {
     accepted: true,
     receivedAt: new Date(nowMs).toISOString(),
@@ -375,7 +407,7 @@ export async function sweepDrivers(nowMs = Date.now()): Promise<SweepResult> {
     } else if (ageSec > cfg.freshSeconds) {
       if ((await getNotifiedFreshness(d.driver_id)) !== 'stale') {
         await setNotifiedFreshness(d.driver_id, 'stale');
-        await publishDriverChange(d.driver_id); // the driver's client shows "location update delayed"
+        await pushDriverStatus(d.driver_id); // the driver's client shows "location update delayed"
         out.notifiedStale.push(d.driver_id);
       }
     } else if ((await getNotifiedFreshness(d.driver_id)) === 'stale') {

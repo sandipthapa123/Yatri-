@@ -72,3 +72,15 @@ export async function getNotifiedFreshness(driverId: string): Promise<string | n
 export async function setNotifiedFreshness(driverId: string, freshness: string) {
   await redis().set(key.notified(driverId), freshness, 'EX', TTL_SECONDS);
 }
+
+// ---- the driver's active trip (so the presence connection can feed exactly that trip) ----
+const tripKey = (id: string) => `drv:${id}:trip`;
+
+/** '' means "checked, no active trip" (so we don't hit the DB on every fix). */
+export async function setDriverTrip(driverId: string, tripId: string | null): Promise<void> {
+  await redis().set(tripKey(driverId), tripId ?? '', 'EX', TTL_SECONDS);
+}
+export async function getDriverTrip(driverId: string): Promise<string | null | undefined> {
+  const v = await redis().get(tripKey(driverId));
+  return v === null ? undefined : v === '' ? null : v;
+}

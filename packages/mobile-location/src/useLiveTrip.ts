@@ -18,6 +18,7 @@ const IDLE: LiveTripState = {
   polite: null,
   assertive: null,
   rejection: null,
+  events: [],
 };
 
 /**
@@ -29,7 +30,11 @@ export function useLiveTrip(
   tripId: string | null,
   getAccessToken: () => Promise<string>,
   viewer: Viewer,
-): LiveTripState & { client: TripRealtimeClient | null } {
+): LiveTripState & {
+  client: TripRealtimeClient | null;
+  /** The trip's socket for chat/calls (one socket per trip, shared). */
+  socket: LiveTripController['socket'] | null;
+} {
   const controller = useMemo(
     () =>
       tripId
@@ -39,6 +44,7 @@ export function useLiveTrip(
             getToken: getAccessToken,
             url: realtimeUrlFrom(API_BASE_URL, WS_OVERRIDE),
             fetchInitial: async () => tripsApi.live(await getAccessToken(), tripId),
+            fetchEvents: async (after) => tripsApi.events(await getAccessToken(), tripId, after),
           })
         : null,
     [tripId, viewer, getAccessToken],
@@ -53,7 +59,7 @@ export function useLiveTrip(
     controller ? controller.subscribe : noopSubscribe,
     controller ? controller.getState : getIdle,
   );
-  return { ...state, client: controller?.client ?? null };
+  return { ...state, client: controller?.client ?? null, socket: controller?.socket ?? null };
 }
 
 const noopSubscribe = () => () => undefined;

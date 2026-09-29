@@ -7,7 +7,8 @@ Yatri is a pnpm-workspaces monorepo split into `apps/` (deployable applications)
 
 ```
 apps/passenger  ─┐
-apps/driver     ─┼─► packages/mobile-auth ─► packages/shared, packages/types
+apps/driver     ─┼─► packages/mobile-ride ─► packages/mobile-location ─► packages/mobile-auth
+                 │                                                      └─► packages/shared, packages/types
 apps/admin      ─────────────────────────► packages/shared, packages/types
 apps/api        ─────────────────────────► packages/types
 ```
@@ -34,8 +35,14 @@ src/modules/vehicles/        # Vehicle registration + categories (DRIVER only, o
 src/modules/documents/       # Document upload/list/delete + signed download URLs
 src/modules/storage/         # Serves signed URLs issued by StorageProvider (public route,
                               # but every request is signature+expiry verified)
-src/modules/admin/           # Driver review, document/vehicle approval, verification history
-                              # (ADMIN only) — see docs/PHASE_3.md
+src/modules/admin/           # Driver review, document/vehicle approval, verification history,
+                              # rides, disputes, RBAC + access log (ADMIN only) — PHASE_3 / PHASE_6
+src/modules/trips/           # ride lifecycle, events, waiting, payments, ratings, disputes — PHASE_6
+src/modules/dispatch/        # offers to nearby drivers, expiry, rematch — PHASE_6
+src/modules/chat/            # trip chat — PHASE_6
+src/modules/calls/           # call state machine + signalling relay + ICE servers — PHASE_6
+src/modules/pricing/         # fare and waiting charge (server-only) — PHASE_6
+src/modules/realtime/        # ONE socket: presence, snapshots, events, chat, calls, offers
 ```
 
 `src/routes/index.ts` mounts every module's router under `/api/v1`. Adding a capability means
@@ -113,25 +120,30 @@ rules and data; clients present results and never re-derive them.
 
 ### Who owns what
 
-| Concern                                                                      | The one source                                                                                                                                 | Everyone else                                                                                                    |
-| ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| Shared types, status/state lists, pure shared rules (haversine, null-island) | `packages/types` (`TRIP_STATUSES`, `ACTIVE_TRIP_STATUSES`, `DRIVER_AVAILABILITY_STATES`, `DRIVER_STATUSES`, `haversineMeters`, `isNullIsland`) | import it; derive zod enums / SQL lists / UI maps from the constants                                             |
-| Brand tokens, theme                                                          | `packages/shared`                                                                                                                              | apps read via their `useTheme`                                                                                   |
-| Coordinate validation                                                        | `apps/api/src/modules/location/coordinates.ts` (`coordinateSchema`, `latitudeSchema`, `notNullIsland`)                                         | every validator composes these; clients never validate authoritatively                                           |
-| Distance                                                                     | `haversineMeters` (`@yatri/types`); road distance/ETA via `RouteProvider`                                                                      | API and mobile import the same function                                                                          |
-| GPS freshness & tracking thresholds                                          | `modules/tracking/tracking.config.ts` (from env)                                                                                               | availability, trip tracking and admin all call it; clients receive the values from the API                       |
-| Availability state machine                                                   | `modules/availability/availability.machine.ts`                                                                                                 | service, SQL (`sqlIn(TRANSITIONAL_STATES)`), validators derive from it                                           |
-| Go-online eligibility                                                        | `availability/eligibility.ts` (+ phase-3 `checkVerificationEligibility`)                                                                       | clients display the server's reasons                                                                             |
-| Trip status rules                                                            | `TRIP_STATUSES` + `trips.service` `RULES`                                                                                                      | SQL uses `sqlIn(ACTIVE_TRIP_STATUSES)` (`ACTIVE_SQL`)                                                            |
-| Map/geocoder/router choice                                                   | `modules/location/providers/index.ts` (config only)                                                                                            | business code uses the interfaces                                                                                |
-| Configuration                                                                | `apps/api/src/config/env.ts` + `.env.example`                                                                                                  | thresholds reach clients through API responses (e.g. `updateIntervalsMs`, `onlineMaxAccuracyMeters`), not copies |
-| Spoken/UI wording                                                            | `mobile-location` `tripText.ts`, `driverPresenceText.ts`                                                                                       | screens render, never restate                                                                                    |
-| API calls from apps                                                          | `mobile-location/locationApi.ts`, `mobile-auth/apiClient.ts`                                                                                   | screens never `fetch` directly                                                                                   |
-| SQL literals for enums                                                       | generated with `lib/sql.ts` `sqlIn(...)` from the constants above                                                                              | migrations are historical snapshots and may keep literals                                                        |
+| Concern                                                                      | The one source                                                                                                                                  | Everyone else                                                                                                    |
+| ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Shared types, status/state lists, pure shared rules (haversine, null-island) | `packages/types` (`TRIP_STATUSES`, `ACTIVE_TRIP_STATUSES`, `DRIVER_AVAILABILITY_STATES`, `DRIVER_STATUSES`, `haversineMeters`, `isNullIsland`)  | import it; derive zod enums / SQL lists / UI maps from the constants                                             |
+| Brand tokens, theme                                                          | `packages/shared`                                                                                                                               | apps read via their `useTheme`                                                                                   |
+| Coordinate validation                                                        | `apps/api/src/modules/location/coordinates.ts` (`coordinateSchema`, `latitudeSchema`, `notNullIsland`)                                          | every validator composes these; clients never validate authoritatively                                           |
+| Distance                                                                     | `haversineMeters` (`@yatri/types`); road distance/ETA via `RouteProvider`                                                                       | API and mobile import the same function                                                                          |
+| GPS freshness & tracking thresholds                                          | `modules/tracking/tracking.config.ts` (from env)                                                                                                | availability, trip tracking and admin all call it; clients receive the values from the API                       |
+| Availability state machine                                                   | `modules/availability/availability.machine.ts`                                                                                                  | service, SQL (`sqlIn(TRANSITIONAL_STATES)`), validators derive from it                                           |
+| Go-online eligibility                                                        | `availability/eligibility.ts` (+ phase-3 `checkVerificationEligibility`)                                                                        | clients display the server's reasons                                                                             |
+| Trip status rules                                                            | `TRIP_STATUSES` + `trips/trip-machine.ts` (the one transition table)                                                                            | SQL uses `sqlIn(ACTIVE_TRIP_STATUSES)` (`ACTIVE_SQL`); all changes via `transition()`                            |
+| Trip events and their wording                                                | `TRIP_EVENT_TYPES` + `describeTripEvent` (`@yatri/types`); persisted by `recordTripEvent`                                                       | announcements, system chat lines, notifications and the admin timeline render from it                            |
+| Waiting time and its fare effect                                             | `trips/waiting.ts` `computeWaiting` + `pricing/`                                                                                                | apps display the server `waiting`; they add only elapsed display time                                            |
+| Which ride buttons a person sees                                             | `mobile-ride/rideActions.ts` (presentation only; the server re-checks)                                                                          | both apps render `RideRoom`                                                                                      |
+| Admin permissions and the access log                                         | `ADMIN_PERMISSIONS` (`@yatri/types`) + `admin/permissions.ts`                                                                                   | every sensitive admin read calls `hasPermission` and `recordAdminAccess`                                         |
+| Distance/duration/money formatting                                           | `format.ts` in `@yatri/types`                                                                                                                   | API messages and every app use it                                                                                |
+| Map/geocoder/router choice                                                   | `modules/location/providers/index.ts` (config only)                                                                                             | business code uses the interfaces                                                                                |
+| Configuration                                                                | `apps/api/src/config/env.ts` + `.env.example`                                                                                                   | thresholds reach clients through API responses (e.g. `updateIntervalsMs`, `onlineMaxAccuracyMeters`), not copies |
+| Spoken/UI wording                                                            | `describeTripEvent` (events); `mobile-location` `tripText.ts` / `driverPresenceText.ts` (snapshot text); `mobile-ride` (chat, call, offer text) | screens render, never restate                                                                                    |
+| API calls from apps                                                          | `mobile-location/locationApi.ts`, `mobile-ride/rideApi.ts`, `mobile-auth/apiClient.ts`                                                          | screens never `fetch` directly                                                                                   |
+| SQL literals for enums                                                       | generated with `lib/sql.ts` `sqlIn(...)` from the constants above                                                                               | migrations are historical snapshots and may keep literals                                                        |
 
 ### Known duplication (recorded, not silently left)
 
-- The realtime protocol exists twice: TypeScript unions in `packages/types/src/tracking.ts`
+- The realtime protocol exists twice: TypeScript unions in `packages/types/src/realtime.ts`
   and zod schemas in `modules/realtime/gateway.ts`. Both are exercised by the realtime tests;
   the goal is to generate the TS types from shared zod schemas.
 - Admin `STATE_TEXT` labels vs the driver app's presence wording (different audiences).

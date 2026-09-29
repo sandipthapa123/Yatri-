@@ -65,7 +65,22 @@ export function LiveTripView({
             ageSeconds: p.ageSeconds + extra,
           }
         : p;
-    return { ...snapshot, driver: bump(snapshot.driver), passenger: bump(snapshot.passenger) };
+    // Waiting timers tick on screen from the server's seconds-at-send plus local elapsed time
+    // (display only: the server owns when waiting started and what it costs).
+    const w = snapshot.waiting;
+    const waiting = w
+      ? {
+          ...w,
+          driver: w.driver ? { ...w.driver, seconds: w.driver.seconds + extra } : null,
+          passenger: w.passenger ? { ...w.passenger, seconds: w.passenger.seconds + extra } : null,
+        }
+      : w;
+    return {
+      ...snapshot,
+      driver: bump(snapshot.driver),
+      passenger: bump(snapshot.passenger),
+      waiting,
+    };
   }, [snapshot, receivedAtMs, nowMs]);
 
   const rows = aged ? summaryRows(aged, viewer) : [];

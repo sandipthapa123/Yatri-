@@ -1,35 +1,56 @@
-import type { TripEventName } from '@yatri/types';
+import type { ServerRealtimeMessage } from '@yatri/types';
 import Redis from 'ioredis';
 
 import { env } from '../../config/env';
 import { getRedisClient } from '../../config/redis';
 
 /**
- * Cross-process fan-out. Every API instance publishes "trip X changed" and
- * every instance forwards it to the sockets it holds. The message carries
- * NO location data: each instance rebuilds role-specific snapshots from
- * Redis, so the privacy rules live in one place (tracking.service).
+ * Cross-process fan-out. There are exactly TWO primitives, so chat, calls, offers, events,
+ * availability and snapshots all travel one coherent path:
+ *
+ *  1. `publishTripChange`  – "trip X changed": every instance rebuilds role-specific snapshots
+ *     for the sockets subscribed to X. Carries NO location data, so the privacy rules live in
+ *     one place (tracking.service).
+ *  2. `publishToUser`      – "deliver this protocol message to user U's connections". Used for
+ *     everything addressed to a person: trip events, chat, receipts, call state/signalling,
+ *     ride offers, availability status.
  */
-const CHANNEL = 'yatri:trip-changes';
+const TRIP_CHANNEL = 'yatri:trip-changes';
+const USER_CHANNEL = 'yatri:user-messages';
 
 export interface TripChange {
   tripId: string;
-  eventId: number;
-  event?: TripEventName;
-  important?: boolean;
+  /** Snapshot version, monotonic per trip. */
+  version: number;
 }
 
-type Handler = (change: TripChange) => void;
-const handlers = new Set<Handler>();
+export interface UserMessage {
+  userId: string;
+  message: ServerRealtimeMessage;
+}
+
+type TripHandler = (change: TripChange) => void;
+type UserHandler = (m: UserMessage) => void;
+const tripHandlers = new Set<TripHandler>();
+const userHandlers = new Set<UserHandler>();
 let subscriber: Redis | null = null;
 
 export async function publishTripChange(change: TripChange): Promise<void> {
-  await getRedisClient().publish(CHANNEL, JSON.stringify(change));
+  await getRedisClient().publish(TRIP_CHANNEL, JSON.stringify(change));
 }
 
-export function onTripChange(handler: Handler): () => void {
-  handlers.add(handler);
-  return () => handlers.delete(handler);
+export async function publishToUser(userId: string, message: ServerRealtimeMessage): Promise<void> {
+  await getRedisClient().publish(USER_CHANNEL, JSON.stringify({ userId, message }));
+}
+
+export function onTripChange(handler: TripHandler): () => void {
+  tripHandlers.add(handler);
+  return () => tripHandlers.delete(handler);
+}
+
+export function onUserMessage(handler: UserHandler): () => void {
+  userHandlers.add(handler);
+  return () => userHandlers.delete(handler);
 }
 
 export async function startBus(): Promise<void> {
@@ -37,19 +58,20 @@ export async function startBus(): Promise<void> {
   subscriber = new Redis(env.REDIS_URL, { maxRetriesPerRequest: null });
   subscriber.on('error', (err) => console.error('Realtime bus error', err));
   subscriber.on('message', (channel, raw) => {
-    if (channel === DRIVER_CHANNEL) {
-      for (const h of driverHandlers) h(raw);
-      return;
-    }
     try {
-      const change = JSON.parse(raw) as TripChange;
-      for (const h of handlers) h(change);
+      if (channel === USER_CHANNEL) {
+        const m = JSON.parse(raw) as UserMessage;
+        for (const h of userHandlers) h(m);
+      } else {
+        const change = JSON.parse(raw) as TripChange;
+        for (const h of tripHandlers) h(change);
+      }
     } catch {
       /* ignore malformed */
     }
   });
   // ioredis resubscribes automatically after a reconnect.
-  await subscriber.subscribe(CHANNEL, DRIVER_CHANNEL);
+  await subscriber.subscribe(TRIP_CHANNEL, USER_CHANNEL);
 }
 
 export async function stopBus(): Promise<void> {
@@ -59,17 +81,4 @@ export async function stopBus(): Promise<void> {
     s.removeAllListeners('message');
     await s.quit().catch(() => undefined);
   }
-}
-
-// ---- driver availability changes (same idea: "driver X changed", no coordinates) ----
-const DRIVER_CHANNEL = 'yatri:driver-changes';
-type DriverHandler = (driverId: string) => void;
-const driverHandlers = new Set<DriverHandler>();
-
-export async function publishDriverChange(driverId: string): Promise<void> {
-  await getRedisClient().publish(DRIVER_CHANNEL, driverId);
-}
-export function onDriverChange(handler: DriverHandler): () => void {
-  driverHandlers.add(handler);
-  return () => driverHandlers.delete(handler);
 }

@@ -1,4 +1,4 @@
-import type { LiveTripSnapshot, ServerRealtimeMessage, TripEventName } from '@yatri/types';
+import type { LiveTripSnapshot, ServerRealtimeMessage, TripEventRecord } from '@yatri/types';
 
 export type ConnectionState = 'connecting' | 'live' | 'reconnecting' | 'ended' | 'closed';
 
@@ -39,7 +39,7 @@ export interface RealtimeClientOptions {
   onSnapshot?: (snapshot: LiveTripSnapshot) => void;
   /** Every server message, after the client has handled connection concerns. */
   onMessage?: (message: ServerRealtimeMessage) => void;
-  onEvent?: (e: { event: TripEventName; important: boolean; eventId: number }) => void;
+  onEvent?: (e: { event: TripEventRecord; important: boolean }) => void;
   onConnection: (state: ConnectionState) => void;
   onRejected?: (reason: string) => void;
   /** Injectable for tests. */
@@ -72,7 +72,7 @@ export class TripRealtimeClient {
   private stopped = false;
   private attempt = 0;
   private subscribed = false;
-  private lastEventId = -1;
+  private lastVersion = -1;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private pingTimer: ReturnType<typeof setInterval> | null = null;
   private tokenTimer: ReturnType<typeof setInterval> | null = null;
@@ -119,7 +119,7 @@ export class TripRealtimeClient {
   }
 
   /** Latest-wins: while offline only the newest sample is kept, and it expires. */
-  sendLocation(kind: 'driver_location' | 'passenger_location', sample: LocationSample) {
+  sendLocation(kind: 'passenger_location', sample: LocationSample) {
     this.pending = {
       deviceTimeMs: sample.deviceTimeMs,
       message: {
@@ -246,13 +246,13 @@ export class TripRealtimeClient {
       case 'snapshot': {
         // Duplicates and late arrivals must not roll the UI backwards. Equal ids are allowed
         // (place-name enrichment can re-issue the same state), older ones are dropped.
-        if (msg.snapshot.eventId < this.lastEventId) return;
-        this.lastEventId = msg.snapshot.eventId;
+        if (msg.snapshot.version < this.lastVersion) return;
+        this.lastVersion = msg.snapshot.version;
         this.opts.onSnapshot?.(msg.snapshot);
         break;
       }
-      case 'event':
-        this.opts.onEvent?.({ event: msg.event, important: msg.important, eventId: msg.eventId });
+      case 'trip_event':
+        this.opts.onEvent?.({ event: msg.event, important: msg.important });
         break;
       case 'rejected':
         this.opts.onRejected?.(msg.reason);

@@ -1,24 +1,11 @@
-import type { Freshness, LiveTripSnapshot, TripStatus } from '@yatri/types';
+import { formatDistance, formatDuration, formatElapsed } from '@yatri/types';
+import type { Freshness, LiveTripSnapshot, TripStatus, WaitingInfo } from '@yatri/types';
 
-import { formatAccuracy, formatDistance } from './format';
+import { formatAccuracy } from './format';
+
+export { formatDuration };
 
 export type Viewer = 'PASSENGER' | 'DRIVER';
-
-/** "45 seconds", "3 minutes", "1 hour 5 minutes" — words, never "3m 45s", so TTS reads it naturally. */
-export function formatDuration(totalSeconds: number): string {
-  if (!Number.isFinite(totalSeconds) || totalSeconds < 0) return 'unknown time';
-  if (totalSeconds < 60) {
-    // Round to 5 s so a ticking value doesn't churn the text every second.
-    const s = Math.max(5, Math.round(totalSeconds / 5) * 5);
-    return s >= 60 ? '1 minute' : `${s} seconds`;
-  }
-  const minutes = Math.round(totalSeconds / 60);
-  if (minutes < 60) return `${minutes} ${minutes === 1 ? 'minute' : 'minutes'}`;
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  const hours = `${h} ${h === 1 ? 'hour' : 'hours'}`;
-  return m === 0 ? hours : `${hours} ${m} ${m === 1 ? 'minute' : 'minutes'}`;
-}
 
 /** "Driver is 85 meters away." / "Driver is very close." */
 export function distancePhrase(subject: string, meters: number): string {
@@ -63,12 +50,42 @@ export function freshnessPhrase(subject: string, freshness: Freshness, ageSecond
 }
 
 export const STATUS_TEXT: Record<TripStatus, string> = {
+  SEARCHING: 'Looking for a driver',
+  NO_DRIVERS: 'No drivers available',
   DRIVER_EN_ROUTE: 'Driver is on the way',
   DRIVER_ARRIVED: 'Driver has arrived at the pickup',
   IN_PROGRESS: 'Trip in progress',
   COMPLETED: 'Trip completed',
   CANCELLED: 'Trip cancelled',
 };
+
+/**
+ * Waiting as a label/value row. The seconds come from the server; this only words them.
+ * Fare effect is stated in words so it is never conveyed by colour alone.
+ */
+export function waitingRow(w: WaitingInfo | null, viewer: Viewer): SummaryRow | null {
+  if (!w) return null;
+  if (w.driver) {
+    const t = formatElapsed(w.driver.seconds);
+    const fare =
+      w.chargeNpr > 0
+        ? ` Waiting charge so far: NPR ${w.chargeNpr}.`
+        : w.driver.seconds < w.rule.freeSeconds
+          ? ` Free waiting time remaining: ${formatElapsed(w.rule.freeSeconds - w.driver.seconds)}.`
+          : '';
+    return {
+      label: viewer === 'DRIVER' ? 'You have been waiting' : 'Your driver has been waiting',
+      value: `${t}.${fare}`,
+    };
+  }
+  if (w.passenger) {
+    return {
+      label: viewer === 'PASSENGER' ? 'You have been waiting' : 'The passenger has been waiting',
+      value: `${formatElapsed(w.passenger.seconds)}. No waiting charge applies.`,
+    };
+  }
+  return null;
+}
 
 export interface SummaryRow {
   label: string;
@@ -121,9 +138,8 @@ export function summaryRows(s: LiveTripSnapshot, viewer: Viewer): SummaryRow[] {
           : `${formatDuration(s.trip.etaSeconds)}${s.trip.basis === 'estimate' ? ' (estimate)' : ''}`,
     });
   }
-  if (s.waitingSeconds !== null) {
-    rows.push({ label: 'Waiting time', value: formatDuration(s.waitingSeconds) });
-  }
+  const wait = waitingRow(s.waiting, viewer);
+  if (wait) rows.push(wait);
 
   rows.push({ label: 'Trip status', value: STATUS_TEXT[s.status] });
   rows.push({
@@ -174,9 +190,6 @@ export function liveSentence(s: LiveTripSnapshot, viewer: Viewer): string {
         ? 'Driver has arrived at the pickup.'
         : 'You have arrived at the pickup.',
     );
-    if (s.waitingSeconds !== null && s.waitingSeconds >= 30) {
-      parts.push(`Waiting time ${formatDuration(s.waitingSeconds)}.`);
-    }
   } else if (s.driverArrival) {
     parts.push(
       viewer === 'PASSENGER'

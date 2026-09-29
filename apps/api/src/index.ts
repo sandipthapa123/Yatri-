@@ -1,6 +1,7 @@
 import { createServer } from 'node:http';
 
 import { createApp } from './app';
+import { assertUtf8Database } from './config/database';
 import { env } from './config/env';
 import { attachRealtimeGateway } from './modules/realtime/gateway';
 
@@ -8,6 +9,7 @@ const app = createApp();
 const server = createServer(app);
 
 async function main() {
+  await assertUtf8Database();
   const gateway = await attachRealtimeGateway(server);
 
   server.listen(env.PORT, () => {

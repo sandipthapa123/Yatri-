@@ -12,8 +12,10 @@ import { distancePhrase, etaPhrase, liveSentence, placePhrase, type Viewer } fro
  *  - ordinary updates are POLITE and rate limited; only genuinely
  *    important changes (arrived, started, completed, cancelled, GPS lost)
  *    are ASSERTIVE and bypass the rate limit.
- * Speech is driven by snapshot changes only. Realtime "event" messages are
- * deliberately NOT spoken separately, or every arrival would be read twice.
+ * Division of labour (so nothing is ever read twice): the server's domain EVENTS
+ * (arrived, started, waiting milestones, cancelled, signal lost/restored) are worded by
+ * describeTripEvent and spoken by LiveTripController; this policy speaks only what
+ * events do not carry — distance, ETA and place-name changes from snapshots.
  */
 export interface AnnounceState {
   lastPoliteAtMs: number | null;
@@ -50,16 +52,6 @@ export function distanceStep(meters: number): number {
   return 500;
 }
 
-const IMPORTANT_STATUS_TEXT: Partial<Record<TripStatus, (v: Viewer) => string>> = {
-  DRIVER_ARRIVED: (v) =>
-    v === 'PASSENGER'
-      ? 'Your driver has arrived at the pickup.'
-      : 'You have arrived at the pickup.',
-  IN_PROGRESS: () => 'Your trip has started.',
-  COMPLETED: () => 'Trip completed. You have reached your destination.',
-  CANCELLED: () => 'This trip was cancelled.',
-};
-
 export function decideAnnouncement(
   prev: AnnounceState,
   s: LiveTripSnapshot,
@@ -69,32 +61,17 @@ export function decideAnnouncement(
   const next: AnnounceState = { ...prev, status: s.status };
   const out: Announcement = {};
 
-  // ---- important (assertive) ----
+  // A new phase re-baselines distance/ETA (arrival ETA -> trip ETA are different things).
+  // The phase change itself is announced from its event, not here.
   if (prev.status !== null && prev.status !== s.status) {
-    const text = IMPORTANT_STATUS_TEXT[s.status]?.(viewer);
-    if (text) out.assertive = text;
-    // A new phase re-baselines distance/ETA (arrival ETA -> trip ETA are different things).
     next.announcedDistance = null;
     next.announcedEtaSeconds = null;
     next.announcedVeryClose = false;
   }
-
   const freshness = s.driver?.freshness ?? null;
-  if (freshness !== prev.freshness) {
-    next.freshness = freshness;
-    if (freshness === 'lost' && prev.freshness !== null) {
-      out.assertive = [
-        out.assertive,
-        viewer === 'PASSENGER'
-          ? 'Driver location signal lost. Showing the last known position.'
-          : 'Your location signal is lost. Move to an open area.',
-      ]
-        .filter(Boolean)
-        .join(' ');
-    }
-  }
+  next.freshness = freshness;
 
-  if (s.status === 'COMPLETED' || s.status === 'CANCELLED') {
+  if (s.status === 'COMPLETED' || s.status === 'CANCELLED' || s.status === 'NO_DRIVERS') {
     return { announcement: out, next };
   }
 
@@ -122,12 +99,11 @@ export function decideAnnouncement(
   const placeChanged = placeName !== null && placeName !== prev.announcedPlace;
   const placeBecameStale =
     !!s.driver && s.driver.placeStale && !prev.announcedPlaceStale && prev.announcedPlace !== null;
-  const recovered = freshness === 'live' && prev.freshness !== null && prev.freshness !== 'live';
 
   const rateOk =
     prev.lastPoliteAtMs === null || nowMs - prev.lastPoliteAtMs >= POLITE_MIN_INTERVAL_MS;
 
-  if (!out.assertive && rateOk && s.driver) {
+  if (rateOk && s.driver) {
     if (first) {
       politeParts.push(liveSentence(s, viewer));
     } else {
@@ -160,10 +136,6 @@ export function decideAnnouncement(
       } else if (placeBecameStale) {
         politeParts.push('Place name temporarily unavailable.');
       }
-      if (recovered)
-        politeParts.unshift(
-          viewer === 'PASSENGER' ? 'Driver location is back.' : 'Location signal restored.',
-        );
     }
   }
 

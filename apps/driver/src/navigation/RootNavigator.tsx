@@ -4,6 +4,7 @@ import { useAuth } from '@yatri/mobile-auth';
 
 import { DriverHomeScreen } from '../screens/DriverHomeScreen';
 import { DriverLocationScreen } from '../screens/DriverLocationScreen';
+import { DriverRideHistoryScreen } from '../screens/DriverRideHistoryScreen';
 import { DriverTripScreen } from '../screens/DriverTripScreen';
 import { DriverProfileSetupScreen } from '../screens/DriverProfileSetupScreen';
 import { OnboardingScreen } from '../screens/onboarding/OnboardingScreen';
@@ -21,6 +22,7 @@ export type RootStackParamList = {
   VerificationPending: undefined;
   DriverLocation: undefined;
   DriverTrip: { tripId: string };
+  DriverRideHistory: undefined;
   DriverHome: undefined;
 };
 
@@ -52,6 +54,7 @@ export function RootNavigator() {
             <Stack.Screen name="DriverProfileSetup" component={DriverProfileSetupScreen} />
             <Stack.Screen name="DriverLocation" component={DriverLocationScreen} />
             <Stack.Screen name="DriverTrip" component={DriverTripScreen} />
+            <Stack.Screen name="DriverRideHistory" component={DriverRideHistoryScreen} />
             <Stack.Screen name="DriverHome" component={DriverHomeScreen} />
           </>
         ) : (

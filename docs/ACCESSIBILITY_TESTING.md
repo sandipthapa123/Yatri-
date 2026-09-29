@@ -4,9 +4,10 @@ Automated tests cover the logic (announcement thresholds, spoken text, realtime 
 gateway flow). They **cannot** prove screen-reader behaviour. Run this protocol before a
 release; record device, OS, screen reader and result. Nothing here has been run yet.
 
-Setup: API running with Postgres + Redis (`LOCATION_PROVIDER=static` works offline);
-create a trip with `POST /api/v1/admin/trips`; drive the "driver" with a mock GPS
-(Android emulator extended controls → Location route, or Xcode simulated location).
+Setup: API running with Postgres + Redis (`LOCATION_PROVIDER=static` works offline); one passenger
+device and one driver device (or emulators) each signed in; the driver goes online, the passenger
+requests a ride and the driver accepts it in the app; drive the "driver" with a mock GPS (Android
+emulator extended controls → Location route, or Xcode simulated location).
 
 ## A. Location selection (passenger) — TalkBack, VoiceOver, and NVDA on the web build
 
@@ -71,3 +72,52 @@ With TalkBack / VoiceOver / NVDA, offline → online → offline:
 7. Go offline: assertive "You are now offline. Location sharing has stopped."
 8. Confirm the "Last update" row ticking never interrupts speech, and no state is conveyed by
    colour alone.
+
+## G. Requesting a ride, and offers (passenger + driver)
+
+Nothing here has been run on a device yet.
+
+1. Passenger: **See fare and request a ride** is announced as disabled, with a hint, until both
+   places are chosen. On the request screen the fare, distance and waiting rule are read as text;
+   "Based on the straight-line distance…" is read when it applies.
+2. **Request ride** → the ride screen says "Looking for a driver" (no colour-only state) and
+   **Cancel request** asks for confirmation.
+3. Driver (online): an offer is announced **assertively once** ("New ride request. Pickup …, N meters
+   from you. Destination …. Fare NPR …. Respond within N seconds."). The countdown row is visible but
+   is not re-announced every second. **Accept ride** and **Decline** are the first controls reached.
+4. Let an offer expire: "The ride request expired." is spoken once, politely. Have another driver take
+   it: "Another driver took this ride."
+5. No drivers: the passenger hears "No drivers are available right now…" (assertive) and can go back.
+
+## H. Waiting, arrival, payment, rating
+
+1. Driver arrives → passenger hears "Your driver has arrived." **once** (assertive). The rows change
+   to "Your driver has been waiting" with the free time remaining, in words.
+2. Keep waiting: the passenger hears **only** the server's milestones ("Your driver has been waiting
+   for 2 minutes.") — never a per-second timer. Reading the waiting row shows the current time.
+3. Before the driver arrives the passenger hears "You have been waiting for N minutes." at the
+   milestones; the driver hears "The passenger has been waiting…" once the ride has waited long enough.
+4. After the driver's no-show wait, **Passenger did not arrive** appears for the driver, with a
+   confirmation that states how long they waited.
+5. Start → "Your ride has started." End → fare in words; the driver hears/reads the cash instruction;
+   the passenger hears "Please pay your driver NPR … in cash."
+6. After the driver confirms cash: **Rate your driver** appears; stars are a radio group read as
+   "3 stars out of 5, selected". **Report a problem** works with the keyboard/screen reader.
+7. Reconnect test: airplane mode for 30 s during the wait, then restore. You hear "Live updates
+   restored." and anything you missed **once, batched**; opening the screen never replays history.
+
+## I. Chat and calls
+
+1. Chat tab label reads "Chat, 2 unread messages" when relevant. In the tab, every line is one
+   element: "You, 10:32, delivered: …" / "Your driver, 10:33: …" / "Ride update, 10:34: …".
+2. A message from the other person is announced **once**, politely, from any tab
+   ("Message from your driver: …"). System lines ("Your driver has arrived.") are **not** read twice.
+3. Send with the keyboard; a failed message shows **Try sending again**; closed chat shows the reason.
+4. Incoming call: assertive "Incoming audio call from your driver. Answer or decline."; the Call tab
+   opens with **Answer** first. During the call, mute/speaker/camera are switches with state; the
+   timer and quality line are silent until focused.
+5. Poor connection → "Call quality is poor." once; recovery → "Call quality has improved." "HD audio"
+   appears only after a sustained measurement — confirm it never shows on a bad connection.
+6. Decline / miss / end / ride ends during a call: the reason is spoken in words for each side.
+7. **Requires a development build with WebRTC (not Expo Go).** In a build without it the Call tab must
+   say calling is unavailable and point to chat.

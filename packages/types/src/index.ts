@@ -11,7 +11,13 @@ export type AccountStatus = 'ACTIVE' | 'SUSPENDED' | 'DEACTIVATED';
 
 export * from './driver-verification';
 export * from './location';
-export * from './tracking';
+export * from './trip';
+export * from './trip-events';
+export * from './trip-commerce';
+export * from './trip-comms';
+export * from './realtime';
+export * from './format';
+export * from './admin';
 export * from './availability';
 export * from './geo';
 

@@ -20,3 +20,21 @@ export const pool = new Pool({ connectionString: env.DATABASE_URL });
 pool.on('error', (err) => {
   console.error('Unexpected error on an idle PostgreSQL client', err);
 });
+
+/**
+ * Yatri stores Nepali names, addresses and chat in Devanagari. A database created with a legacy
+ * encoding (e.g. WIN1252, the Windows default) silently rejects or mangles it, so the API
+ * refuses to start against anything but UTF8. Create the database with `ENCODING 'UTF8'`.
+ */
+export async function assertUtf8Database(): Promise<void> {
+  const r = await pool.query<{ enc: string }>(
+    'SELECT pg_encoding_to_char(encoding) AS enc FROM pg_database WHERE datname = current_database()',
+  );
+  const enc = r.rows[0]?.enc;
+  if (enc !== 'UTF8') {
+    throw new Error(
+      `The database encoding is ${enc ?? 'unknown'} but Yatri requires UTF8 (Nepali text). ` +
+        "Recreate it with: CREATE DATABASE <name> ENCODING 'UTF8' TEMPLATE template0;",
+    );
+  }
+}

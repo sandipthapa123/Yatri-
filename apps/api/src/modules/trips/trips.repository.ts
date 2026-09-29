@@ -1,23 +1,29 @@
-import {
-  ACTIVE_TRIP_STATUSES,
-  type TripPlace,
-  type TripStatus,
-  type TripSummary,
-} from '@yatri/types';
+import { ACTIVE_TRIP_STATUSES, type TripPlace, type TripStatus } from '@yatri/types';
 
 import { pool } from '../../config/database';
-import { sqlIn } from '../../lib/sql';
 import { query } from '../../lib/db';
+import { sqlIn } from '../../lib/sql';
 import { insertLocation, type LocationFields } from '../location/locations.repository';
 
 export interface TripRow {
   id: string;
   passenger_id: string;
-  driver_id: string;
+  driver_id: string | null;
   status: TripStatus;
+  requested_at: Date;
+  matched_at: Date | null;
   arrived_at: Date | null;
   started_at: Date | null;
   ended_at: Date | null;
+  search_deadline_at: Date | null;
+  cancel_reason: string | null;
+  cancelled_by: string | null;
+  distance_meters: number | null;
+  duration_seconds: number | null;
+  fare_estimate_npr: number | null;
+  waiting_charge_npr: number;
+  fare_final_npr: number | null;
+  passenger_notified_at: Date | null;
   created_at: Date;
   pickup_name: string | null;
   pickup_address: string;
@@ -30,8 +36,10 @@ export interface TripRow {
 }
 
 const SELECT = `
-  SELECT t.id, t.passenger_id, t.driver_id, t.status, t.arrived_at, t.started_at, t.ended_at,
-         t.created_at,
+  SELECT t.id, t.passenger_id, t.driver_id, t.status, t.requested_at, t.matched_at, t.arrived_at,
+         t.started_at, t.ended_at, t.search_deadline_at, t.cancel_reason, t.cancelled_by,
+         t.distance_meters, t.duration_seconds, t.fare_estimate_npr, t.waiting_charge_npr,
+         t.fare_final_npr, t.passenger_notified_at, t.created_at,
          pl.place_name AS pickup_name, pl.address AS pickup_address,
          pl.latitude AS pickup_lat, pl.longitude AS pickup_lng,
          dl.place_name AS dest_name, dl.address AS dest_address,
@@ -40,6 +48,7 @@ const SELECT = `
   JOIN locations pl ON pl.id = t.pickup_location_id
   JOIN locations dl ON dl.id = t.destination_location_id`;
 
+/** SQL `IN` list derived from the shared constant — the statuses are defined once, in @yatri/types. */
 export const ACTIVE_SQL = sqlIn(ACTIVE_TRIP_STATUSES);
 
 export async function getTrip(id: string): Promise<TripRow | null> {
@@ -56,11 +65,14 @@ export async function getActiveTripFor(userId: string): Promise<TripRow | null> 
   return r.rows[0] ?? null;
 }
 
-export async function createTrip(input: {
+export async function createTripRequest(input: {
   passengerId: string;
-  driverId: string;
   pickup: LocationFields;
   destination: LocationFields;
+  distanceMeters: number;
+  durationSeconds: number | null;
+  fareEstimateNpr: number;
+  searchTimeoutSeconds: number;
 }): Promise<TripRow> {
   const client = await pool.connect();
   try {
@@ -68,13 +80,23 @@ export async function createTrip(input: {
     const pickupId = await insertLocation(client, input.pickup);
     const destId = await insertLocation(client, input.destination);
     const ins = await client.query<{ id: string }>(
-      `INSERT INTO trips (passenger_id, driver_id, pickup_location_id, destination_location_id)
-       VALUES ($1, $2, $3, $4) RETURNING id`,
-      [input.passengerId, input.driverId, pickupId, destId],
+      `INSERT INTO trips
+         (passenger_id, pickup_location_id, destination_location_id, status,
+          distance_meters, duration_seconds, fare_estimate_npr, search_deadline_at)
+       VALUES ($1, $2, $3, 'SEARCHING', $4, $5, $6, now() + ($7::int * interval '1 second'))
+       RETURNING id`,
+      [
+        input.passengerId,
+        pickupId,
+        destId,
+        Math.round(input.distanceMeters),
+        input.durationSeconds === null ? null : Math.round(input.durationSeconds),
+        input.fareEstimateNpr,
+        input.searchTimeoutSeconds,
+      ],
     );
     await client.query('COMMIT');
-    const row = await getTrip(ins.rows[0]?.id as string);
-    return row as TripRow;
+    return (await getTrip(ins.rows[0]?.id as string)) as TripRow;
   } catch (err) {
     await client.query('ROLLBACK').catch(() => undefined);
     throw err;
@@ -83,22 +105,70 @@ export async function createTrip(input: {
   }
 }
 
-/** Guarded transition: only applies when the trip is currently in one of `from`. */
-export async function transitionTrip(
+/** Columns a transition may set. A whitelist: the SQL below is assembled from these names only. */
+export interface TripPatch {
+  driverId?: string | null;
+  matchedAt?: 'now' | null;
+  arrivedAt?: 'now' | null;
+  startedAt?: 'now';
+  endedAt?: 'now';
+  passengerNotifiedAt?: 'now';
+  cancelReason?: string | null;
+  cancelledBy?: 'PASSENGER' | 'DRIVER' | 'SYSTEM';
+  waitingChargeNpr?: number;
+  fareFinalNpr?: number;
+  searchDeadlineSeconds?: number;
+}
+
+const COLUMN_FOR: Record<keyof TripPatch, string> = {
+  driverId: 'driver_id',
+  matchedAt: 'matched_at',
+  arrivedAt: 'arrived_at',
+  startedAt: 'started_at',
+  endedAt: 'ended_at',
+  passengerNotifiedAt: 'passenger_notified_at',
+  cancelReason: 'cancel_reason',
+  cancelledBy: 'cancelled_by',
+  waitingChargeNpr: 'waiting_charge_npr',
+  fareFinalNpr: 'fare_final_npr',
+  searchDeadlineSeconds: 'search_deadline_at',
+};
+
+/**
+ * Compare-and-swap: only applies when the trip is currently in one of `from`, so two racing
+ * requests can never both win a transition. Returns the fresh row, or null when it lost.
+ * `expectDriverId` additionally pins the assigned driver (so a stale driver cannot act).
+ */
+export async function casTripStatus(
   id: string,
-  from: TripStatus[],
+  from: readonly TripStatus[],
   to: TripStatus,
-  extra: { cancelledBy?: string } = {},
+  patch: TripPatch = {},
+  expectDriverId?: string,
 ): Promise<TripRow | null> {
+  const sets: string[] = ['status = $3', 'updated_at = now()'];
+  const params: unknown[] = [id, from as string[], to];
+  for (const key of Object.keys(patch) as Array<keyof TripPatch>) {
+    const value = patch[key];
+    if (value === undefined) continue;
+    const column = COLUMN_FOR[key];
+    if (value === 'now') sets.push(`${column} = now()`);
+    else if (key === 'searchDeadlineSeconds') {
+      params.push(value);
+      sets.push(`${column} = now() + ($${params.length}::int * interval '1 second')`);
+    } else {
+      params.push(value);
+      sets.push(`${column} = $${params.length}`);
+    }
+  }
+  let where = 'id = $1 AND status = ANY($2::text[])';
+  if (expectDriverId) {
+    params.push(expectDriverId);
+    where += ` AND driver_id = $${params.length}`;
+  }
   const r = await query<{ id: string }>(
-    `UPDATE trips SET status = $3, updated_at = now(),
-       arrived_at = CASE WHEN $3 = 'DRIVER_ARRIVED' THEN now() ELSE arrived_at END,
-       started_at = CASE WHEN $3 = 'IN_PROGRESS' THEN now() ELSE started_at END,
-       ended_at = CASE WHEN $3 IN ('COMPLETED', 'CANCELLED') THEN now() ELSE ended_at END,
-       cancelled_by = CASE WHEN $3 = 'CANCELLED' THEN $4 ELSE cancelled_by END
-     WHERE id = $1 AND status = ANY($2::text[])
-     RETURNING id`,
-    [id, from, to, extra.cancelledBy ?? null],
+    `UPDATE trips SET ${sets.join(', ')} WHERE ${where} RETURNING id`,
+    params,
   );
   if (!r.rows[0]) return null;
   return getTrip(id);
@@ -118,18 +188,4 @@ export function pickupOf(t: TripRow): TripPlace {
 }
 export function destinationOf(t: TripRow): TripPlace {
   return place(t.dest_name, t.dest_address, t.dest_lat, t.dest_lng);
-}
-
-export function toTripSummary(t: TripRow, viewerId: string): TripSummary {
-  return {
-    id: t.id,
-    status: t.status,
-    pickup: pickupOf(t),
-    destination: destinationOf(t),
-    createdAt: t.created_at.toISOString(),
-    arrivedAt: t.arrived_at?.toISOString() ?? null,
-    startedAt: t.started_at?.toISOString() ?? null,
-    endedAt: t.ended_at?.toISOString() ?? null,
-    viewerRole: t.passenger_id === viewerId ? 'PASSENGER' : 'DRIVER',
-  };
 }

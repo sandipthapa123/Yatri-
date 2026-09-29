@@ -9,7 +9,7 @@ import type {
   ReverseGeocodeResult,
   SavedPlace,
   SavedPlaceKind,
-  TripSummary,
+  TripEventRecord,
 } from '@yatri/types';
 
 /**
@@ -106,14 +106,15 @@ export const driverLocationApi = {
     }),
 };
 
+/** Live snapshot and event list only; everything else about trips is in @yatri/mobile-ride (rideApi). */
 export const tripsApi = {
-  active: (accessToken: string) =>
-    authApi.request<TripSummary | null>('/trips/active', { accessToken }),
   /** REST snapshot: first paint and fallback while the socket connects. */
   live: (accessToken: string, tripId: string) =>
     authApi.request<LiveTripSnapshot>(`/trips/${tripId}/live`, { accessToken }),
-  act: (accessToken: string, tripId: string, action: 'arrived' | 'start' | 'complete' | 'cancel') =>
-    authApi.request<TripSummary>(`/trips/${tripId}/${action}`, { method: 'POST', accessToken }),
+  events: (accessToken: string, tripId: string, afterSeq: number) =>
+    authApi.request<TripEventRecord[]>(`/trips/${tripId}/events?after=${afterSeq}`, {
+      accessToken,
+    }),
 };
 
 export const driverAvailabilityApi = {

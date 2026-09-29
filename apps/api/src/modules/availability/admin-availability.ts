@@ -9,17 +9,8 @@ import type {
 
 import { query } from '../../lib/db';
 import { HttpError } from '../../middleware/errorHandler';
+import { hasPermission, recordAdminAccess } from '../admin/permissions';
 import { availabilityConfig } from './availability.service';
-
-export const LOCATION_VIEW_PERMISSION = 'DRIVER_LOCATION_VIEW';
-
-async function hasPermission(adminId: string, permission: string): Promise<boolean> {
-  const r = await query<{ ok: boolean }>(
-    "SELECT $2 = ANY(admin_permissions) AS ok FROM users WHERE id = $1 AND role = 'ADMIN'",
-    [adminId, permission],
-  );
-  return r.rows[0]?.ok === true;
-}
 
 interface Row {
   id: string;
@@ -60,7 +51,7 @@ export async function listAvailabilityHandler(
     pageSize: number;
   };
   const cfg = availabilityConfig();
-  const canViewLocation = await hasPermission(req.auth.userId, LOCATION_VIEW_PERMISSION);
+  const canViewLocation = await hasPermission(req.auth.userId, 'DRIVER_LOCATION_VIEW');
   const slack = cfg.freshSeconds + cfg.persistSeconds;
 
   const from = `
@@ -114,13 +105,7 @@ export async function listAvailabilityHandler(
 
   if (canViewLocation) {
     const disclosed = items.filter((i) => i.location).map((i) => i.driverId);
-    if (disclosed.length > 0) {
-      await query(
-        `INSERT INTO driver_availability_events (driver_id, actor_id, event_type)
-         SELECT d, $2, 'ADMIN_LOCATION_VIEW' FROM unnest($1::uuid[]) AS d`,
-        [disclosed, req.auth.userId],
-      );
-    }
+    await recordAdminAccess(req.auth.userId, 'VIEW_DRIVER_LOCATION', 'driver', disclosed);
   }
 
   res.json({

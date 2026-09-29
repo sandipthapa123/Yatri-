@@ -37,7 +37,8 @@ export default async function DashboardPage() {
         Signed in as {admin.fullName ?? admin.id}.
       </p>
       <p style={{ color: 'var(--color-text-secondary)', maxWidth: 420, margin: 0 }}>
-        Fleet, trip, and payout views ship in a later phase.
+        Rides, reported problems and driver availability are below. Payout views ship in a later
+        phase.
       </p>
       <Link
         href="/drivers"
@@ -72,6 +73,40 @@ export default async function DashboardPage() {
         }}
       >
         Driver availability
+      </Link>
+      <Link
+        href="/rides"
+        style={{
+          minHeight: 44,
+          display: 'inline-flex',
+          alignItems: 'center',
+          padding: '0 20px',
+          borderRadius: 999,
+          border: '2px solid var(--color-primary)',
+          color: 'var(--color-primary)',
+          fontSize: 15,
+          fontWeight: 700,
+          textDecoration: 'none',
+        }}
+      >
+        Rides
+      </Link>
+      <Link
+        href="/disputes"
+        style={{
+          minHeight: 44,
+          display: 'inline-flex',
+          alignItems: 'center',
+          padding: '0 20px',
+          borderRadius: 999,
+          border: '2px solid var(--color-primary)',
+          color: 'var(--color-primary)',
+          fontSize: 15,
+          fontWeight: 700,
+          textDecoration: 'none',
+        }}
+      >
+        Reported problems
       </Link>
       <form action={logoutAction}>
         <button

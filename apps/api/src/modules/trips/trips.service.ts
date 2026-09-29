@@ -20,20 +20,29 @@ import { endLiveCallForTrip } from '../calls/calls.service';
 import { setDriverTrip } from '../availability/presence.state';
 import { cancelAcceptedOffer, cancelOpenOffersForTrip } from '../dispatch/offers.repository';
 import { calculateDistance } from '../location/location.service';
-import { getActiveCategoryByCode, listActiveCategories, pricingFor } from '../pricing/categories';
-import { estimateFare, waitingCharge } from '../pricing/pricing';
+import {
+  getActiveCategoryByCode,
+  getCategoryById,
+  listActiveCategories,
+  pricingFor,
+} from '../pricing/categories';
+import { estimateFare, finalFare, waitingCharge } from '../pricing/pricing';
 import { pricingConfig } from '../pricing/pricing.config';
 import { isCategoryAvailable } from '../dispatch/matching';
 import { decidePassengerCancellation, requireCancellationAllowed } from './cancellation';
 import { estimateEta } from '../tracking/eta';
+import { trackingConfig } from '../tracking/tracking.config';
+import { freshnessOf } from '../tracking/tracking.rules';
 import {
   bumpTripVersion,
   getDriverFix,
   onTripStatusChanged,
+  readOdometerMeters,
   saveMeta,
   type TripMeta,
 } from '../tracking/tracking.service';
 import { createPendingPayment } from './payments.service';
+import { measuredRideDistance, rideDurationSeconds } from './ride-actuals';
 import { averageRating } from './ratings.service';
 import { recordTripEvent } from './trip-events.service';
 import { statusesLeadingTo } from './trip-machine';
@@ -80,9 +89,10 @@ async function counterpartOf(
 ): Promise<TripCounterpart | null> {
   const otherId = viewerIsPassenger ? t.driver_id : t.passenger_id;
   if (!otherId) return null;
-  const u = await query<{ full_name: string | null }>('SELECT full_name FROM users WHERE id = $1', [
-    otherId,
-  ]);
+  const u = await query<{ full_name: string | null; profile_picture_url: string | null }>(
+    'SELECT full_name, profile_picture_url FROM users WHERE id = $1',
+    [otherId],
+  );
   let vehicle: TripCounterpart['vehicle'] = null;
   if (viewerIsPassenger) {
     const v = await query<{
@@ -103,7 +113,13 @@ async function counterpartOf(
       };
     }
   }
-  return { name: u.rows[0]?.full_name ?? null, vehicle, rating: await averageRating(otherId) };
+  return {
+    name: u.rows[0]?.full_name ?? null,
+    vehicle,
+    rating: await averageRating(otherId),
+    // The passenger sees the driver's photo; the driver is only given the passenger's name.
+    photoUrl: viewerIsPassenger ? (u.rows[0]?.profile_picture_url ?? null) : null,
+  };
 }
 
 /** THE trip summary: built once, here, for whoever asks (passenger, driver, history). */
@@ -136,6 +152,8 @@ export async function buildTripSummary(t: TripRow, viewerId: string): Promise<Tr
             waitingChargeNpr: t.waiting_charge_npr,
             finalNpr: t.fare_final_npr,
             distanceMeters: t.distance_meters ?? 0,
+            actualDistanceMeters: t.actual_distance_meters,
+            actualDurationSeconds: t.actual_duration_seconds,
           },
     counterpart,
     viewerRole: viewerIsPassenger ? 'PASSENGER' : 'DRIVER',
@@ -338,9 +356,26 @@ export async function driverArrived(tripId: string, driverId: string): Promise<T
   });
 }
 
+/**
+ * The driver's last accepted position, required to start or finish a ride: the ride's start and end
+ * are recorded from what the SERVER saw, never from a coordinate a client sends with the request.
+ */
+async function requireDriverFix(tripId: string) {
+  const fix = await getDriverFix(tripId);
+  if (!fix || freshnessOf(fix.receivedAtMs, Date.now(), trackingConfig()) === 'lost') {
+    throw new HttpError(
+      409,
+      'LOCATION_UNAVAILABLE',
+      'We cannot see your location right now. Check that location sharing is on, then try again.',
+    );
+  }
+  return fix;
+}
+
 export async function startTrip(tripId: string, driverId: string): Promise<TripRow> {
   const trip = await getTrip(tripId);
   if (!trip || trip.driver_id !== driverId) throw notFound();
+  const at = await requireDriverFix(tripId);
   // Waiting is priced once, from server timestamps, at the moment the ride starts.
   const waitedSeconds = trip.arrived_at ? (Date.now() - trip.arrived_at.getTime()) / 1000 : 0;
   const { chargeNpr } = waitingCharge(waitedSeconds, pricingConfig());
@@ -348,7 +383,12 @@ export async function startTrip(tripId: string, driverId: string): Promise<TripR
     to: 'IN_PROGRESS',
     from: ['DRIVER_ARRIVED'],
     expectDriverId: driverId,
-    patch: { startedAt: 'now', waitingChargeNpr: chargeNpr },
+    patch: {
+      startedAt: 'now',
+      waitingChargeNpr: chargeNpr,
+      startedLatitude: at.latitude,
+      startedLongitude: at.longitude,
+    },
     event: {
       type: 'TRIP_STARTED',
       actorId: driverId,
@@ -357,18 +397,49 @@ export async function startTrip(tripId: string, driverId: string): Promise<TripR
   });
 }
 
+/**
+ * Finish the ride. The final fare is the one fare service applied to what the ride ACTUALLY measured
+ * (distance driven, time taken) plus the waiting charge fixed at the start; the estimate is left as it was.
+ */
 export async function completeTrip(tripId: string, driverId: string): Promise<TripRow> {
   const trip = await getTrip(tripId);
   if (!trip || trip.driver_id !== driverId) throw notFound();
-  const finalFare = (trip.fare_estimate_npr ?? 0) + trip.waiting_charge_npr;
+  const end = await requireDriverFix(tripId);
+  // Read before the transition: ending the ride clears the live state the odometer lives in.
+  const odometer = await readOdometerMeters(tripId);
+  const start =
+    trip.started_latitude !== null && trip.started_longitude !== null
+      ? { latitude: Number(trip.started_latitude), longitude: Number(trip.started_longitude) }
+      : null;
+  const distanceMeters = measuredRideDistance(odometer, start, end);
+  const durationSeconds = rideDurationSeconds(trip.started_at, Date.now());
+  const category = trip.vehicle_category_id
+    ? await getCategoryById(trip.vehicle_category_id)
+    : null;
+  const { totalNpr: finalNpr } = finalFare(
+    { distanceMeters, durationSeconds },
+    pricingFor(category),
+    trip.waiting_charge_npr,
+  );
   const done = await transition(tripId, {
     to: 'COMPLETED',
     from: ['IN_PROGRESS'],
     expectDriverId: driverId,
-    patch: { endedAt: 'now', fareFinalNpr: finalFare },
-    event: { type: 'TRIP_COMPLETED', actorId: driverId, payload: { fareNpr: finalFare } },
+    patch: {
+      endedAt: 'now',
+      fareFinalNpr: finalNpr,
+      endedLatitude: end.latitude,
+      endedLongitude: end.longitude,
+      actualDistanceMeters: distanceMeters,
+      actualDurationSeconds: durationSeconds,
+    },
+    event: {
+      type: 'TRIP_COMPLETED',
+      actorId: driverId,
+      payload: { fareNpr: finalNpr, distanceMeters, durationSeconds },
+    },
   });
-  await createPendingPayment(tripId, finalFare);
+  await createPendingPayment(tripId, finalNpr);
   return done;
 }
 

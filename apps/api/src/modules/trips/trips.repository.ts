@@ -29,6 +29,12 @@ export interface TripRow {
   vehicle_category_label: string | null;
   cancelled_from_status: TripStatus | null;
   cancellation_fee_npr: number;
+  started_latitude: string | null;
+  started_longitude: string | null;
+  ended_latitude: string | null;
+  ended_longitude: string | null;
+  actual_distance_meters: number | null;
+  actual_duration_seconds: number | null;
   created_at: Date;
   pickup_name: string | null;
   pickup_address: string;
@@ -47,6 +53,8 @@ const SELECT = `
          t.fare_final_npr, t.passenger_notified_at, t.created_at,
          t.vehicle_category_id, vc.code AS vehicle_category_code, vc.label AS vehicle_category_label,
          t.cancelled_from_status, t.cancellation_fee_npr,
+         t.started_latitude, t.started_longitude, t.ended_latitude, t.ended_longitude,
+         t.actual_distance_meters, t.actual_duration_seconds,
          pl.place_name AS pickup_name, pl.address AS pickup_address,
          pl.latitude AS pickup_lat, pl.longitude AS pickup_lng,
          dl.place_name AS dest_name, dl.address AS dest_address,
@@ -127,6 +135,12 @@ export interface TripPatch {
   cancelledBy?: 'PASSENGER' | 'DRIVER' | 'SYSTEM';
   waitingChargeNpr?: number;
   cancellationFeeNpr?: number;
+  startedLatitude?: number;
+  startedLongitude?: number;
+  endedLatitude?: number;
+  endedLongitude?: number;
+  actualDistanceMeters?: number;
+  actualDurationSeconds?: number;
   fareFinalNpr?: number;
   searchDeadlineSeconds?: number;
 }
@@ -142,6 +156,12 @@ const COLUMN_FOR: Record<keyof TripPatch, string> = {
   cancelledBy: 'cancelled_by',
   waitingChargeNpr: 'waiting_charge_npr',
   cancellationFeeNpr: 'cancellation_fee_npr',
+  startedLatitude: 'started_latitude',
+  startedLongitude: 'started_longitude',
+  endedLatitude: 'ended_latitude',
+  endedLongitude: 'ended_longitude',
+  actualDistanceMeters: 'actual_distance_meters',
+  actualDurationSeconds: 'actual_duration_seconds',
   fareFinalNpr: 'fare_final_npr',
   searchDeadlineSeconds: 'search_deadline_at',
 };

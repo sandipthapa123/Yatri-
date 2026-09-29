@@ -4,6 +4,7 @@ import {
   RATING_MIN,
   DISPUTE_REASON_MAX,
   formatDistance,
+  formatDuration,
   formatNpr,
   type TripRole,
   type TripSummary,
@@ -49,13 +50,28 @@ export function PostRidePanel(
         <Fact {...ui} label="To" value={trip.destination.name} />
         {fare ? (
           <>
-            <Fact {...ui} label="Distance" value={formatDistance(fare.distanceMeters)} />
-            <Fact {...ui} label="Fare estimate" value={formatNpr(fare.estimateNpr)} />
+            {fare.actualDistanceMeters !== null ? (
+              <Fact
+                {...ui}
+                label="Distance travelled"
+                value={formatDistance(fare.actualDistanceMeters)}
+              />
+            ) : (
+              <Fact
+                {...ui}
+                label="Estimated distance"
+                value={formatDistance(fare.distanceMeters)}
+              />
+            )}
+            {fare.actualDurationSeconds !== null ? (
+              <Fact {...ui} label="Ride time" value={formatDuration(fare.actualDurationSeconds)} />
+            ) : null}
+            <Fact {...ui} label="Estimated fare" value={formatNpr(fare.estimateNpr)} />
             {fare.waitingChargeNpr > 0 ? (
               <Fact {...ui} label="Waiting charge" value={formatNpr(fare.waitingChargeNpr)} />
             ) : null}
             {fare.finalNpr !== null ? (
-              <Fact {...ui} label="Total fare" value={formatNpr(fare.finalNpr)} />
+              <Fact {...ui} label="Final fare" value={formatNpr(fare.finalNpr)} />
             ) : null}
           </>
         ) : null}

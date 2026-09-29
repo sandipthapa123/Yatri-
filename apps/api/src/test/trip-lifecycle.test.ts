@@ -17,6 +17,7 @@ import {
   backdate,
   currentOffer,
   driverAt,
+  finalFareFor,
   forceDriverOnline,
   north,
   requestRide,
@@ -415,7 +416,7 @@ describe('the ride lifecycle', () => {
     expect(seqs).toEqual([1, 2, 3, 4, 5, 6, 7]); // gap-free for participants
     const t = (await get(w.passenger.accessToken, `/${w.tripId}`)).body.data;
     expect(t.status).toBe('COMPLETED');
-    expect(t.fare.finalNpr).toBe(t.fare.estimateNpr + t.fare.waitingChargeNpr);
+    expect(t.fare.finalNpr).toBe(finalFareFor(t.fare));
     expect(t.paymentStatus).toBe('PENDING');
     expect((await post(w.driver.accessToken, `/${w.tripId}/complete`)).status).toBe(409);
   });
@@ -544,7 +545,8 @@ describe('waiting', () => {
     const started = await post(w.driver.accessToken, `/${w.tripId}/start`);
     expect(started.body.data.fare.waitingChargeNpr).toBe(25); // (480-180)s = 5 min x NPR 5
     const done = await post(w.driver.accessToken, `/${w.tripId}/complete`);
-    expect(done.body.data.fare.finalNpr).toBe(done.body.data.fare.estimateNpr + 25);
+    expect(done.body.data.fare.waitingChargeNpr).toBe(25);
+    expect(done.body.data.fare.finalNpr).toBe(finalFareFor(done.body.data.fare));
     const payment = (await get(w.passenger.accessToken, `/${w.tripId}/payment`)).body.data;
     expect(payment.amountNpr).toBe(done.body.data.fare.finalNpr);
   });

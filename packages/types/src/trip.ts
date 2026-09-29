@@ -75,6 +75,9 @@ export interface TripFare {
   finalNpr: number | null;
   /** The distance the estimate was based on (server-calculated). */
   distanceMeters: number;
+  /** What the ride actually measured — the inputs of the final fare. Null until the ride completes. */
+  actualDistanceMeters: number | null;
+  actualDurationSeconds: number | null;
 }
 
 export interface TripCounterpart {
@@ -83,6 +86,8 @@ export interface TripCounterpart {
   vehicle: { description: string; registrationNumber: string } | null;
   /** Average of received ratings (1–5), null until they have at least one. */
   rating: number | null;
+  /** The counterpart's profile photo, for the passenger only (a driver sees the passenger's name, not a photo). */
+  photoUrl: string | null;
 }
 
 export type TripPaymentStatus = 'NONE' | 'PENDING' | 'PAID' | 'FAILED' | 'VOID';

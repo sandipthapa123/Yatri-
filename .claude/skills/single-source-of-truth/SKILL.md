@@ -19,4 +19,7 @@ Yatri-specific reminders:
   one function in one service module (`dispatch/matching.ts`, `trips/cancellation.ts`,
   `pricing/`). Controllers call it, apps display what the server returns, and a new rule is a new
   strategy or config value there — never a branch in a controller or a screen.
+- Groups of states (active, assigned, terminal) are constants in `@yatri/types`. An app never re-lists
+  statuses with `||`; it imports the group. A fare is only ever produced by `pricing/` (estimate and
+  final use the same function); an app displays it and never sends one.
 - If you discover a duplicate, consolidate it or add it to "Known duplication" in the doc.

@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import type { ChatController, ChatEntry, ChatState, MessageStatus } from '../chatController';
+import { formatClockTime } from '../rideText';
 import { ActionButton, type UiProps } from './RideUi';
 
 const STATUS_WORDS: Record<MessageStatus, string> = {
@@ -13,16 +14,9 @@ const STATUS_WORDS: Record<MessageStatus, string> = {
   read: 'Read',
 };
 
-const clock = (iso: string) => {
-  const d = new Date(iso);
-  return Number.isNaN(d.getTime())
-    ? ''
-    : d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-};
-
 /** The spoken form of one entry: who, when, delivery state, then the words themselves. */
 export function entryLabel(e: ChatEntry, role: TripRole): string {
-  const time = clock(e.at);
+  const time = formatClockTime(e.at);
   if (e.kind === 'system') return `Ride update${time ? `, ${time}` : ''}: ${e.text}`;
   const other = role === 'PASSENGER' ? 'Your driver' : 'The passenger';
   return e.mine
@@ -121,7 +115,7 @@ export function ChatPanel(
                     fontSize: 12,
                   }}
                 >
-                  {clock(e.at)}
+                  {formatClockTime(e.at)}
                   {e.mine ? ` · ${STATUS_WORDS[e.status]}` : ''}
                 </Text>
                 {e.mine && e.status === 'failed' ? (

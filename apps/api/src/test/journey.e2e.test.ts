@@ -10,6 +10,7 @@ import {
   auth,
   backdate,
   currentOffer,
+  finalFareFor,
   forceDriverOnline,
   north,
   requestRide,
@@ -153,11 +154,16 @@ describe('the whole ride, from passenger, driver and admin', () => {
     ).toBe(200);
     const started = await seen(pc, event('TRIP_STARTED'));
     expect(describeTripEvent(started.event, 'PASSENGER')).toBe('Your ride has started.');
-    dc.send(fix(north(THAMEL, 800)));
+    await new Promise((r) => setTimeout(r, 1100)); // the socket allows a few messages per second
+    dc.send(fix(north(THAMEL, 60))); // a short step: the simulated device clock must not run ahead of real time
     const inRide = snap(
       await seen(
         pc,
-        (m) => m.type === 'snapshot' && m.snapshot.status === 'IN_PROGRESS' && !!m.snapshot.trip,
+        (m) =>
+          m.type === 'snapshot' &&
+          m.snapshot.status === 'IN_PROGRESS' &&
+          !!m.snapshot.trip &&
+          m.snapshot.driver?.latitude > north(THAMEL, 50).latitude,
       ),
     );
     expect(inRide.trip!.distanceRemainingMeters).toBeGreaterThan(0);
@@ -165,7 +171,8 @@ describe('the whole ride, from passenger, driver and admin', () => {
     const done = await api.post(`/api/v1/trips/${tripId}/complete`).set(auth(driver.accessToken));
     expect(done.status).toBe(200);
     const fare = done.body.data.fare;
-    expect(fare.finalNpr).toBe(fare.estimateNpr + fare.waitingChargeNpr);
+    expect(fare.finalNpr).toBe(finalFareFor(fare)); // priced from what the ride measured
+    expect(fare.actualDistanceMeters).toBeGreaterThan(0);
     expect(fare.waitingChargeNpr).toBeGreaterThan(0);
 
     // ---- payment (cash, confirmed by the driver) then ratings

@@ -223,6 +223,8 @@ export async function tripDetailHandler(req: Request, res: Response<ApiResponse<
               waitingChargeNpr: trip.waiting_charge_npr,
               finalNpr: trip.fare_final_npr,
               distanceMeters: trip.distance_meters ?? 0,
+              actualDistanceMeters: trip.actual_distance_meters,
+              actualDurationSeconds: trip.actual_duration_seconds,
             },
       passenger: { id: trip.passenger_id, name: nameOf(trip.passenger_id) },
       driver: trip.driver_id ? { id: trip.driver_id, name: nameOf(trip.driver_id) } : null,

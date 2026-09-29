@@ -140,7 +140,13 @@ export function describeTripEvent(
       return isDriver || viewer === 'ADMIN' ? 'Ride started.' : 'Your ride has started.';
     case 'TRIP_COMPLETED': {
       const fare = num(p.fareNpr);
-      return `Ride has ended.${fare !== null ? ` Fare: ${formatNpr(fare)}.` : ''}`;
+      const done =
+        viewer === 'PASSENGER'
+          ? 'Your ride is complete.'
+          : viewer === 'ADMIN'
+            ? 'Ride completed.'
+            : 'Ride has ended.';
+      return `${done}${fare !== null ? ` Fare: ${formatNpr(fare)}.` : ''}`;
     }
     case 'TRIP_CANCELLED': {
       const by = str(p.by);

@@ -30,6 +30,20 @@ export function estimateFare(
   };
 }
 
+/**
+ * The FINAL fare: the very same fare rules as the estimate, applied to what the ride actually
+ * measured (distance driven, time taken), plus the waiting charge fixed when the ride started.
+ * There is one fare implementation; this only chooses its inputs.
+ */
+export function finalFare(
+  actual: { distanceMeters: number; durationSeconds: number },
+  cfg: PricingConfig,
+  waitingChargeNpr: number,
+): { fare: FareBreakdown; totalNpr: number } {
+  const fare = estimateFare({ ...actual, routeBased: false }, cfg);
+  return { fare, totalNpr: fare.totalNpr + waitingChargeNpr };
+}
+
 export function waitingRule(cfg: PricingConfig): WaitingRule {
   return {
     freeSeconds: cfg.waitingFreeSeconds,

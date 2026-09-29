@@ -8,13 +8,11 @@ import type {
   TripRole,
 } from '@yatri/types';
 
-import { QualityTracker, type CallQuality } from './callQuality';
-import type { PeerConnectionState, RtcFactory, RtcPeer } from './rtc';
+import type { SpokenMessage } from '@yatri/mobile-location';
 
-export interface SpokenMessage {
-  id: number;
-  text: string;
-}
+import { QualityTracker, type CallQuality } from './callQuality';
+import type { RideSocket } from './rideSocket';
+import type { PeerConnectionState, RtcFactory, RtcPeer } from './rtc';
 
 /** What the call screen shows. Derived from the server's call state plus this device's media. */
 export type CallPhase = 'idle' | 'calling' | 'incoming' | 'connecting' | 'connected' | 'ended';
@@ -43,11 +41,7 @@ export interface CallState {
   assertive: SpokenMessage | null;
 }
 
-export interface CallSocket {
-  send(message: object): void;
-  onMessage(listener: (m: ServerRealtimeMessage) => void): () => void;
-  onConnectionChange(listener: (c: string) => void): () => void;
-}
+export type CallSocket = RideSocket;
 
 export interface CallControllerOptions {
   tripId: string;

@@ -6,11 +6,9 @@ import {
   type TripOfferInfo,
   type TripSummary,
 } from '@yatri/types';
+import type { SpokenMessage } from '@yatri/mobile-location';
 
-export interface SpokenMessage {
-  id: number;
-  text: string;
-}
+import type { ServerMessageBus } from './rideSocket';
 
 export interface OfferState {
   offer: TripOfferInfo | null;
@@ -22,10 +20,7 @@ export interface OfferState {
   polite: SpokenMessage | null;
 }
 
-export interface OfferSocket {
-  onMessage(listener: (m: ServerRealtimeMessage) => void): () => void;
-  onConnectionChange(listener: (c: string) => void): () => void;
-}
+export type OfferSocket = ServerMessageBus;
 
 export interface OfferControllerOptions {
   socket: OfferSocket;

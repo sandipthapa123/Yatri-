@@ -5,7 +5,13 @@ import {
   useLiveTrip,
   useLocationBroadcast,
 } from '@yatri/mobile-location';
-import type { TripRole, TripSummary } from '@yatri/types';
+import {
+  ACTIVE_TRIP_STATUSES,
+  ASSIGNED_TRIP_STATUSES,
+  TERMINAL_TRIP_STATUSES,
+  type TripRole,
+  type TripSummary,
+} from '@yatri/types';
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -13,6 +19,8 @@ import { useCall, useChat } from '../hooks';
 import { rideActions, type RideActionId } from '../rideActions';
 import { rideApi } from '../rideApi';
 import { CallPanel } from './CallPanel';
+import { CounterpartCard } from './CounterpartCard';
+import { NavigateButton } from './NavigateButton';
 import { ChatPanel } from './ChatPanel';
 import { PostRidePanel } from './PostRidePanel';
 import { ActionButton, Announcer, type RideColors } from './RideUi';
@@ -77,13 +85,9 @@ export function RideRoom(props: RideRoomProps) {
     if (incoming) setTab('call');
   }, [incoming]);
 
-  const active =
-    status === 'SEARCHING' ||
-    status === 'DRIVER_EN_ROUTE' ||
-    status === 'DRIVER_ARRIVED' ||
-    status === 'IN_PROGRESS';
-  const assigned =
-    status === 'DRIVER_EN_ROUTE' || status === 'DRIVER_ARRIVED' || status === 'IN_PROGRESS';
+  // The groups of states are defined once, in @yatri/types.
+  const active = status !== null && ACTIVE_TRIP_STATUSES.includes(status);
+  const assigned = status !== null && ASSIGNED_TRIP_STATUSES.includes(status);
   const canShare = role === 'PASSENGER' && status === 'DRIVER_EN_ROUTE';
   const broadcast = useLocationBroadcast({
     client: live.client,
@@ -153,7 +157,7 @@ export function RideRoom(props: RideRoomProps) {
     }
   };
 
-  const ended = status === 'COMPLETED' || status === 'CANCELLED' || status === 'NO_DRIVERS';
+  const ended = status !== null && TERMINAL_TRIP_STATUSES.includes(status);
   const unread = chat.state.unreadCount;
   const chatLabel =
     unread > 0 ? `Chat, ${unread} unread ${unread === 1 ? 'message' : 'messages'}` : 'Chat';
@@ -223,6 +227,9 @@ export function RideRoom(props: RideRoomProps) {
 
           {tab === 'trip' ? (
             <View style={styles.block}>
+              {trip?.counterpart && !ended ? (
+                <CounterpartCard {...ui} counterpart={trip.counterpart} viewer={role} />
+              ) : null}
               <LiveTripView
                 live={live}
                 viewer={role}
@@ -251,6 +258,21 @@ export function RideRoom(props: RideRoomProps) {
                       if (share) live.client?.stopSharing();
                       setShare(!share);
                     }}
+                  />
+                ) : null}
+
+                {role === 'DRIVER' && live.snapshot && status === 'DRIVER_EN_ROUTE' ? (
+                  <NavigateButton
+                    {...ui}
+                    target={live.snapshot.pickup}
+                    label="Navigate to the pickup"
+                  />
+                ) : null}
+                {role === 'DRIVER' && live.snapshot && status === 'IN_PROGRESS' ? (
+                  <NavigateButton
+                    {...ui}
+                    target={live.snapshot.destination}
+                    label="Navigate to the destination"
                   />
                 ) : null}
 

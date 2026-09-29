@@ -45,6 +45,12 @@ export async function listActiveCategories(): Promise<CategoryRow[]> {
   return r.rows.map(map);
 }
 
+/** A category by id, active or not: a ride keeps the rates of the category it was requested in. */
+export async function getCategoryById(id: string): Promise<CategoryRow | null> {
+  const r = await query<Raw>(`SELECT ${COLS} FROM vehicle_categories WHERE id = $1`, [id]);
+  return r.rows[0] ? map(r.rows[0]) : null;
+}
+
 export async function getActiveCategoryByCode(code: string): Promise<CategoryRow | null> {
   const r = await query<Raw>(
     `SELECT ${COLS} FROM vehicle_categories WHERE is_active AND code = $1`,

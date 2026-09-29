@@ -15,6 +15,7 @@ import { getRouteProvider } from '../location/providers';
 import { pricingConfig } from '../pricing/pricing.config';
 import { publishTripChange } from '../realtime/bus';
 import { getLastEventSeq, recordTripEvent } from '../trips/trip-events.service';
+import { ODOMETER_MIN_STEP_METERS } from '../trips/ride-actuals';
 import { computeWaiting } from '../trips/waiting';
 import { computeEta, estimateEta } from './eta';
 import { trackingConfig } from './tracking.config';
@@ -91,6 +92,8 @@ const k = {
   eta: (id: string) => `trk:${id}:eta`,
   version: (id: string) => `trk:${id}:seq`,
   near: (id: string) => `trk:${id}:near`,
+  /** Metres driven since the ride started (sum of the driver's accepted location updates). */
+  odo: (id: string) => `trk:${id}:odo`,
 };
 
 async function getJson<T>(key: string): Promise<T | null> {
@@ -146,6 +149,7 @@ export async function clearLiveState(tripId: string) {
     k.place(tripId, 'passenger'),
     k.eta(tripId),
     k.near(tripId),
+    k.odo(tripId),
   );
 }
 
@@ -154,6 +158,8 @@ export async function onTripStatusChanged(meta: TripMeta): Promise<void> {
   await saveMeta(meta);
   const redis = getRedisClient();
   await redis.del(k.eta(meta.tripId), k.near(meta.tripId)); // target changes (pickup -> destination)
+  if (meta.status === 'IN_PROGRESS')
+    await redis.set(k.odo(meta.tripId), '0', 'EX', STATE_TTL_SECONDS);
   if (!isActive(meta.status) || meta.status === 'SEARCHING') {
     await clearLiveState(meta.tripId); // privacy: positions die with the trip / a released driver
   }
@@ -215,6 +221,13 @@ export async function applyLocationUpdate(input: {
 
     if (party === 'driver') {
       await refreshEta(meta, decision.next, speed, nowMs);
+      // The distance actually driven, for the final fare: only while the ride runs, and only real movement.
+      if (meta.status === 'IN_PROGRESS' && before) {
+        const step = haversineMeters(before, decision.next);
+        if (step >= ODOMETER_MIN_STEP_METERS) {
+          await getRedisClient().incrbyfloat(k.odo(tripId), step);
+        }
+      }
     }
     void refreshPlaceName(tripId, party, decision.next, nowMs); // never blocks the update path
 
@@ -435,6 +448,13 @@ export async function announceStaleness(tripId: string, freshness: Freshness) {
 }
 
 /** The driver's latest accepted position for a trip (server-side use only; never sent as history). */
+/** Metres the driver has covered since the ride started (0 when nothing was measured). */
+export async function readOdometerMeters(tripId: string): Promise<number> {
+  const raw = await getRedisClient().get(k.odo(tripId));
+  const n = raw === null ? 0 : Number(raw);
+  return Number.isFinite(n) ? n : 0;
+}
+
 export async function getDriverFix(
   tripId: string,
 ): Promise<{ latitude: number; longitude: number; receivedAtMs: number } | null> {

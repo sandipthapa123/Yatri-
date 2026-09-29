@@ -198,6 +198,47 @@ same UPDATE as the transition so it cannot disagree) and the **fee**; the `TRIP_
 `driver_last_locations(latitude, longitude)`, and a partial `vehicles(category_id, driver_user_id)` for
 approved vehicles (existing: status/creation, passenger and driver history).
 
+### The live lifecycle after assignment (refinement)
+
+**State names.** The brief's names map onto the one machine (`trips/trip-machine.ts`); nothing was
+renamed because the states, events, SQL and both apps all derive from that single list:
+
+| Brief                            | Here                                                                              |
+| -------------------------------- | --------------------------------------------------------------------------------- |
+| DRIVER_ASSIGNED, DRIVER_ACCEPTED | `DRIVER_EN_ROUTE` (accepting _is_ being assigned: one atomic step)                |
+| DRIVER_ARRIVING                  | `DRIVER_EN_ROUTE` + live distance/ETA in the snapshot, `DRIVER_NEARBY` milestones |
+| DRIVER_WAITING                   | `DRIVER_ARRIVED` + the server waiting timer (`waiting.driver`)                    |
+| RIDE_STARTED / RIDE_COMPLETED    | `IN_PROGRESS` / `COMPLETED`                                                       |
+| CANCELLED                        | `CANCELLED`                                                                       |
+
+**Events** (one model, `TRIP_EVENT_TYPES` in `@yatri/types`): DRIVER_LOCATION_UPDATED and
+RIDE_LOCATION_UPDATED are the _snapshot_ stream (a location update is state, not a numbered event, so
+it cannot flood the log or the screen reader); DRIVER_APPROACHING = `DRIVER_NEARBY`; DRIVER_ARRIVED,
+DRIVER_WAITING, WAITING_TIME_UPDATED (= the `DRIVER_WAITING` milestones plus the ticking `waiting`
+in every snapshot), `TRIP_STARTED`, `TRIP_COMPLETED`, `TRIP_CANCELLED`.
+
+**What a ride actually measured.** On the one ride record: where it started (`started_latitude/longitude`)
+and ended (`ended_*`), the distance driven (`actual_distance_meters`), the time taken
+(`actual_duration_seconds`), and the waiting charge fixed at the start. Start and completion read the
+driver's position from what the **server** last accepted (never from the request) and refuse with
+`LOCATION_UNAVAILABLE` when there is none. The distance is an odometer over the driver's _accepted_
+location updates while the ride runs (movement under `ODOMETER_MIN_STEP_METERS` is jitter and is ignored), and is never less than
+the straight line from start to end (`trips/ride-actuals.ts`).
+
+**Final fare.** `finalFare` in `pricing/pricing.ts` applies the **same** fare rules as the estimate
+(`estimateFare`, with the category's rates) to the measured distance and time, then adds the waiting
+charge. The estimate (`fare_estimate_npr`) is never overwritten; the passenger and driver see
+"Estimated fare" and "Final fare" side by side, with "Distance travelled" and "Ride time". The cash payment
+is created for the final fare. Payment settlement beyond that record and ratings are unchanged.
+
+**Who is who.** The passenger's ride screen shows the driver's name, photo (described in text; a failed
+photo is simply omitted), vehicle, registration and a rating line ("No ratings yet" until the rating
+system feeds it); the driver sees the passenger's name only. The driver can hand the pickup or the
+destination (the server's coordinates) to their own maps app for turn-by-turn directions — Yatri's own
+distance, ETA and place names keep updating from the one presence feed. Profile photos are the signed
+URLs stored at upload (30-day lifetime, a Phase 3 design): they need re-signing on read before that
+window is a problem in production.
+
 ## 3. Accessibility
 
 - Every state is text with a role; no meaning by colour alone (cash/paid/waiting/quality are words).
@@ -250,9 +291,9 @@ start otherwise (`assertUtf8Database`).
   chat with receipts → call signalling → arrival (proximity-checked) → driver waiting (server
   clock, charged) → start → live trip ETA → complete → cash payment → both ratings → history for
   both people → the admin's view of the same ride including the audited chat read. Full suite:
-  333 passed, 1 failed — the failure (`documents.test.ts` "rejects an oversized file") **pre-dates
+  342 passed, 1 failed — the failure (`documents.test.ts` "rejects an oversized file") **pre-dates
   this phase** and is unrelated.
-- **Mobile packages**: `mobile-location` 99 tests, `mobile-ride` 50 (chat, call state machine with a
+- **Mobile packages**: `mobile-location` 99 tests, `mobile-ride` 52 (chat, call state machine with a
   fake WebRTC, quality evaluation, offers, action rules).
 - **Admin**: `next build` succeeds; with the API running in test mode against the journey ride,
   the Rides list, Ride detail, audited chat page, Reported problems and dashboard were fetched with a

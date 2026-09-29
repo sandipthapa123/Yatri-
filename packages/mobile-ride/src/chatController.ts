@@ -8,12 +8,9 @@ import {
   type TripEventRecord,
   type TripRole,
 } from '@yatri/types';
+import type { SpokenMessage } from '@yatri/mobile-location';
 
-/** A spoken message; `id` changes every time so an identical repeat is still announced. */
-export interface SpokenMessage {
-  id: number;
-  text: string;
-}
+import type { ServerMessageBus } from './rideSocket';
 
 export type OutgoingStatus = 'sending' | 'failed';
 /** What the sender can be told about a message: on its way, sent, delivered, or read. */
@@ -43,10 +40,7 @@ export interface ChatState {
   announcement: SpokenMessage | null;
 }
 
-export interface ChatSocket {
-  onMessage(listener: (m: ServerRealtimeMessage) => void): () => void;
-  onConnectionChange(listener: (c: string) => void): () => void;
-}
+export type ChatSocket = ServerMessageBus;
 
 export interface ChatControllerOptions {
   tripId: string;

@@ -1,4 +1,6 @@
 import { pool } from '../config/database';
+import { finalFare } from '../modules/pricing/pricing';
+import { pricingConfig } from '../modules/pricing/pricing.config';
 import { getRedisClient } from '../config/redis';
 import { setLiveFix, setStateMirror } from '../modules/availability/presence.state';
 import { applyLocationUpdate, saveMeta } from '../modules/tracking/tracking.service';
@@ -26,6 +28,18 @@ export const north = (p: { latitude: number; longitude: number }, meters: number
   latitude: p.latitude + meters / 111_195,
   longitude: p.longitude,
 });
+
+/** The final fare the fare service must produce for what a ride measured (the rule, stated once). */
+export const finalFareFor = (fare: {
+  actualDistanceMeters: number;
+  actualDurationSeconds: number;
+  waitingChargeNpr: number;
+}) =>
+  finalFare(
+    { distanceMeters: fare.actualDistanceMeters, durationSeconds: fare.actualDurationSeconds },
+    pricingConfig(),
+    fare.waitingChargeNpr,
+  ).totalNpr;
 
 export const auth = (token: string) => ({ Authorization: `Bearer ${token}` });
 

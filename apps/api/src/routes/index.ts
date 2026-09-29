@@ -6,6 +6,7 @@ import { documentsRouter } from '../modules/documents/documents.routes';
 import { driversRouter } from '../modules/drivers/drivers.routes';
 import { healthRouter } from '../modules/health/health.routes';
 import { storageRouter } from '../modules/storage/storage.routes';
+import { locationRouter } from '../modules/location/location.routes';
 import { usersRouter } from '../modules/users/users.routes';
 import { vehiclesRouter } from '../modules/vehicles/vehicles.routes';
 
@@ -19,6 +20,7 @@ export const apiRouter: RouterType = Router();
 apiRouter.use('/health', healthRouter);
 apiRouter.use('/auth', authRouter);
 apiRouter.use('/users', usersRouter);
+apiRouter.use('/location', locationRouter);
 apiRouter.use('/drivers', driversRouter);
 apiRouter.use('/documents', documentsRouter);
 apiRouter.use('/admin', adminRouter);

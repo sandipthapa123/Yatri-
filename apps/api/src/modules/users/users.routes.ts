@@ -1,6 +1,7 @@
 import { Router, type Router as RouterType } from 'express';
 
 import { authenticate } from '../../middleware/authenticate';
+import { savedPlacesRouter } from '../saved-places/saved-places.routes';
 import { uploadSingleFile } from '../../middleware/upload';
 import { validateBody } from '../../middleware/validate';
 import {
@@ -25,3 +26,4 @@ usersRouter.post(
   uploadProfilePictureHandler,
 );
 usersRouter.post('/me/deactivate', authenticate, deactivateMeHandler);
+usersRouter.use('/me/saved-places', savedPlacesRouter);

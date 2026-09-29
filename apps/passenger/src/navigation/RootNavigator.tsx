@@ -5,8 +5,10 @@ import { useAuth } from '@yatri/mobile-auth';
 import { HomeScreen } from '../screens/HomeScreen';
 import { OtpVerificationScreen } from '../screens/OtpVerificationScreen';
 import { PhoneEntryScreen } from '../screens/PhoneEntryScreen';
+import { PickLocationScreen } from '../screens/PickLocationScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 import { ProfileSetupScreen } from '../screens/ProfileSetupScreen';
+import { SavedPlacesScreen } from '../screens/SavedPlacesScreen';
 import { WelcomeScreen } from '../screens/WelcomeScreen';
 
 export type RootStackParamList = {
@@ -16,6 +18,8 @@ export type RootStackParamList = {
   ProfileSetup: undefined;
   Home: undefined;
   Profile: undefined;
+  PickLocation: { purpose: 'pickup' | 'destination' };
+  SavedPlaces: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -42,6 +46,8 @@ export function RootNavigator() {
             <Stack.Screen name="Home" component={HomeScreen} />
             <Stack.Screen name="ProfileSetup" component={ProfileSetupScreen} />
             <Stack.Screen name="Profile" component={ProfileScreen} />
+            <Stack.Screen name="PickLocation" component={PickLocationScreen} />
+            <Stack.Screen name="SavedPlaces" component={SavedPlacesScreen} />
           </>
         ) : (
           <>

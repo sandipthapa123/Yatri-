@@ -8,6 +8,7 @@ const reactNativeApps = [
   'apps/passenger/**/*.{ts,tsx}',
   'apps/driver/**/*.{ts,tsx}',
   'packages/mobile-auth/**/*.{ts,tsx}',
+  'packages/mobile-location/**/*.{ts,tsx}',
 ];
 const webApps = ['apps/admin/**/*.{ts,tsx}'];
 

@@ -1,11 +1,14 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useAuth } from '@yatri/mobile-auth';
+import { formatDistance, locationApi } from '@yatri/mobile-location';
+import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { APP_TAGLINE } from '@yatri/shared';
 
 import { Logo } from '../components/Logo';
 import type { RootStackParamList } from '../navigation/RootNavigator';
+import { useTripLocations } from '../state/TripLocations';
 import { useTheme } from '../theme/useTheme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
@@ -18,7 +21,36 @@ function greeting(hour: number): string {
 
 export function HomeScreen({ navigation }: Props) {
   const theme = useTheme();
-  const { user } = useAuth();
+  const { user, getAccessToken } = useAuth();
+  const { pickup, destination } = useTripLocations();
+  const [result, setResult] = useState<{ key: string; text: string } | null>(null);
+  const key =
+    pickup && destination
+      ? `${pickup.latitude},${pickup.longitude}>${destination.latitude},${destination.longitude}`
+      : null;
+  const distance = key && result?.key === key ? result.text : null;
+
+  // Distance is computed by the backend from the two chosen coordinates (never on the device).
+  useEffect(() => {
+    if (!pickup || !destination || !key) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const r = await locationApi.calculateDistance(await getAccessToken(), pickup, destination);
+        if (!cancelled) {
+          setResult({
+            key,
+            text: `Straight-line distance from pickup to destination: ${formatDistance(r.distanceMeters)}.`,
+          });
+        }
+      } catch {
+        /* the distance line is optional */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [pickup, destination, key, getAccessToken]);
   const timeGreeting = greeting(new Date().getHours());
   const name = user?.fullName?.trim();
 
@@ -52,19 +84,59 @@ export function HomeScreen({ navigation }: Props) {
             styles.searchCard,
             { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
           ]}
-          accessible
-          accessibilityRole="summary"
-          accessibilityLabel="Where to. Ride booking is coming soon."
         >
-          <Text style={[styles.searchLabel, { color: theme.colors.textPrimary }]}>Where to?</Text>
-          <View
-            style={[
-              styles.searchInputPlaceholder,
-              { borderColor: theme.colors.border, minHeight: theme.minTouchTarget },
-            ]}
+          <Text
+            accessibilityRole="header"
+            style={[styles.searchLabel, { color: theme.colors.textPrimary }]}
           >
-            <Text style={{ color: theme.colors.textSecondary }}>Enter a destination</Text>
-          </View>
+            Plan your trip
+          </Text>
+          {(
+            [
+              ['Pickup', pickup, 'pickup'],
+              ['Destination', destination, 'destination'],
+            ] as const
+          ).map(([title, place, purpose]) => (
+            <Pressable
+              key={purpose}
+              onPress={() => navigation.navigate('PickLocation', { purpose })}
+              accessibilityRole="button"
+              accessibilityLabel={
+                place
+                  ? `${title}: ${place.name}${place.address ? `, ${place.address}` : ''}. Double tap to change.`
+                  : `${title}: not chosen. Double tap to choose.`
+              }
+              style={[
+                styles.searchInputPlaceholder,
+                { borderColor: theme.colors.border, minHeight: theme.minTouchTarget + 16 },
+              ]}
+            >
+              <Text style={{ color: theme.colors.textSecondary, fontSize: 13 }}>{title}</Text>
+              <Text style={{ color: theme.colors.textPrimary, fontWeight: '600' }}>
+                {place ? place.name : purpose === 'pickup' ? 'Choose pickup' : 'Where to?'}
+              </Text>
+              {place?.address ? (
+                <Text style={{ color: theme.colors.textSecondary }}>{place.address}</Text>
+              ) : null}
+            </Pressable>
+          ))}
+
+          {distance ? (
+            <Text accessibilityLiveRegion="polite" style={{ color: theme.colors.textPrimary }}>
+              {distance}
+            </Text>
+          ) : null}
+
+          <Pressable
+            onPress={() => navigation.navigate('SavedPlaces')}
+            accessibilityRole="button"
+            accessibilityLabel="Saved places"
+            style={[styles.profileLink, { minHeight: theme.minTouchTarget }]}
+          >
+            <Text style={[styles.profileLinkText, { color: theme.colors.primary }]}>
+              Saved places
+            </Text>
+          </Pressable>
           <Text style={[styles.comingSoon, { color: theme.colors.textSecondary }]}>
             Ride booking is coming soon.
           </Text>

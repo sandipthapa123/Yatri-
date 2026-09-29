@@ -31,6 +31,12 @@
     },
     "plugins": [
       [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Yatri uses your location only when you ask, to show where you are and share it with Yatri. It is not tracked in the background."
+        }
+      ],
+      [
         "expo-image-picker",
         {
           "photosPermission": "Yatri Driver uses your photo library so you can set a profile picture."

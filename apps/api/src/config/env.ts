@@ -69,6 +69,34 @@ const envSchema = z
         'STORAGE_SIGNING_SECRET looks like a placeholder value',
       ),
     STORAGE_SIGNED_URL_TTL_SECONDS: z.coerce.number().int().positive().default(300),
+    // --- Location / maps ---
+    // Provider-specific code lives in modules/location/providers; the rest
+    // of the app only sees the LocationProvider / RouteProvider interfaces.
+    LOCATION_PROVIDER: z.enum(['nominatim', 'none']).default('nominatim'),
+    LOCATION_PROVIDER_BASE_URL: z.string().url().default('https://nominatim.openstreetmap.org'),
+    // Optional; sent as the `key` query param (LocationIQ-style Nominatim APIs). Never returned to clients.
+    LOCATION_PROVIDER_API_KEY: z.preprocess(
+      (v) => (v === '' ? undefined : v),
+      z.string().optional(),
+    ),
+    LOCATION_PROVIDER_USER_AGENT: z.string().min(1).default('Yatri-API/0.1 (dev)'),
+    // Comma-separated ISO 3166-1 alpha-2 codes results are limited to. Add codes to expand beyond Nepal.
+    LOCATION_COUNTRY_CODES: z
+      .string()
+      .default('np')
+      .transform((v) =>
+        v
+          .split(',')
+          .map((c) => c.trim().toLowerCase())
+          .filter(Boolean),
+      ),
+    LOCATION_REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(4000),
+    LOCATION_SEARCH_CACHE_TTL_SECONDS: z.coerce.number().int().min(0).default(86400),
+    LOCATION_REVERSE_CACHE_TTL_SECONDS: z.coerce.number().int().min(0).default(86400),
+    LOCATION_ROUTING_PROVIDER: z.enum(['haversine', 'osrm']).default('haversine'),
+    LOCATION_ROUTING_BASE_URL: z.string().url().default('https://router.project-osrm.org'),
+    LOCATION_SEARCH_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().positive().default(60),
+
     MAX_UPLOAD_FILE_SIZE_BYTES: z.coerce
       .number()
       .int()
@@ -88,6 +116,18 @@ const envSchema = z
         code: 'custom',
         path: ['SMS_HTTP_ENDPOINT'],
         message: 'SMS_HTTP_ENDPOINT is required when SMS_PROVIDER=http',
+      });
+    }
+    if (
+      data.NODE_ENV === 'production' &&
+      data.LOCATION_PROVIDER === 'nominatim' &&
+      new URL(data.LOCATION_PROVIDER_BASE_URL).hostname.endsWith('nominatim.openstreetmap.org')
+    ) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['LOCATION_PROVIDER_BASE_URL'],
+        message:
+          'The public OpenStreetMap Nominatim server forbids production use; point this at a self-hosted or commercial Nominatim-compatible service',
       });
     }
     if (data.NODE_ENV === 'production' && data.SMS_PROVIDER === 'console') {

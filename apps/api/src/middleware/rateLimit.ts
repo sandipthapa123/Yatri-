@@ -21,3 +21,16 @@ export function ipRateLimit(keyPrefix: string, limit: number, windowSeconds: num
     next();
   };
 }
+
+/** Same as ipRateLimit but keyed by the authenticated user; must run after `authenticate`. */
+export function userRateLimit(keyPrefix: string, limit: number, windowSeconds: number) {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    const id = req.auth?.userId ?? req.ip ?? 'unknown';
+    const result = await checkWindowLimit(`${keyPrefix}:u:${id}`, limit, windowSeconds);
+    if (result.limited) {
+      res.setHeader('Retry-After', String(result.retryAfterSeconds));
+      return next(new HttpError(429, 'RATE_LIMITED', 'Too many requests. Please try again later.'));
+    }
+    next();
+  };
+}

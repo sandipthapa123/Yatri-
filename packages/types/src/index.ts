@@ -10,6 +10,7 @@ export type UserRole = 'PASSENGER' | 'DRIVER' | 'ADMIN';
 export type AccountStatus = 'ACTIVE' | 'SUSPENDED' | 'DEACTIVATED';
 
 export * from './driver-verification';
+export * from './location';
 
 /** Matches the API's PublicProfile response shape (GET/PATCH /users/me). */
 export interface AppUser {

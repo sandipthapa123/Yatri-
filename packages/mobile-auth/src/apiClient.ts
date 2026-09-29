@@ -18,7 +18,7 @@ export class ApiError extends Error {
 /** Exported so other domain-specific API clients (e.g. the driver app's onboarding/vehicles/documents calls) can reuse the same request/error-unwrapping logic instead of duplicating it. */
 export async function request<T>(
   path: string,
-  options: { method?: string; body?: unknown; accessToken?: string } = {},
+  options: { method?: string; body?: unknown; accessToken?: string; signal?: AbortSignal } = {},
 ): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: options.method ?? 'GET',
@@ -27,6 +27,7 @@ export async function request<T>(
       ...(options.accessToken ? { Authorization: `Bearer ${options.accessToken}` } : {}),
     },
     body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+    signal: options.signal,
   });
 
   let payload: ApiResponse<T>;

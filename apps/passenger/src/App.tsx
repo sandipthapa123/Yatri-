@@ -6,6 +6,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { RootNavigator } from './navigation/RootNavigator';
 import { LoadingScreen } from './screens/LoadingScreen';
+import { TripLocationsProvider } from './state/TripLocations';
 import { useTheme } from './theme/useTheme';
 
 function AppContent() {
@@ -28,7 +29,9 @@ export default function App() {
       <SafeAreaProvider>
         <ErrorBoundary>
           <AuthProvider role="PASSENGER">
-            <AppContent />
+            <TripLocationsProvider>
+              <AppContent />
+            </TripLocationsProvider>
           </AuthProvider>
         </ErrorBoundary>
       </SafeAreaProvider>

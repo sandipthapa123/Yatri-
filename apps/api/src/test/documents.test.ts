@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { env } from '../config/env';
 
 import {
   api,
@@ -47,8 +48,11 @@ describe('Documents', () => {
 
   it('rejects an oversized file', async () => {
     const { accessToken } = await onboardUser('DRIVER');
-    // .env.test caps uploads at 1MB.
-    const oversized = Buffer.concat([FIXTURES.jpeg, Buffer.alloc(2 * 1024 * 1024, 0)]);
+    // Sized from the configured cap, not from an assumption about what .env.test says.
+    const oversized = Buffer.concat([
+      FIXTURES.jpeg,
+      Buffer.alloc(env.MAX_UPLOAD_FILE_SIZE_BYTES + 1024, 0),
+    ]);
     const res = await uploadDocument(accessToken, 'DRIVING_LICENSE', oversized, 'big.jpg');
     expect(res.status).toBe(413);
     expect(res.body.error.code).toBe('FILE_TOO_LARGE');

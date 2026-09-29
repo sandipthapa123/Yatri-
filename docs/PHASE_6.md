@@ -235,9 +235,10 @@ is created for the final fare. Payment settlement beyond that record and ratings
 photo is simply omitted), vehicle, registration and a rating line ("No ratings yet" until the rating
 system feeds it); the driver sees the passenger's name only. The driver can hand the pickup or the
 destination (the server's coordinates) to their own maps app for turn-by-turn directions — Yatri's own
-distance, ETA and place names keep updating from the one presence feed. Profile photos are the signed
-URLs stored at upload (30-day lifetime, a Phase 3 design): they need re-signing on read before that
-window is a problem in production.
+distance, ETA and place names keep updating from the one presence feed. Profile picture links are signed and expire, so the server
+re-issues a fresh link every time a picture is shown (`users/profile-picture.ts`, used by the profile and
+the ride), and the apps turn the server's host-relative path into a loadable URL in one place
+(`resolveMediaUrl` in `mobile-auth`).
 
 ## 3. Accessibility
 
@@ -291,8 +292,7 @@ start otherwise (`assertUtf8Database`).
   chat with receipts → call signalling → arrival (proximity-checked) → driver waiting (server
   clock, charged) → start → live trip ETA → complete → cash payment → both ratings → history for
   both people → the admin's view of the same ride including the audited chat read. Full suite:
-  342 passed, 1 failed — the failure (`documents.test.ts` "rejects an oversized file") **pre-dates
-  this phase** and is unrelated.
+  346 passed, 0 failed.
 - **Mobile packages**: `mobile-location` 99 tests, `mobile-ride` 52 (chat, call state machine with a
   fake WebRTC, quality evaluation, offers, action rules).
 - **Admin**: `next build` succeeds; with the API running in test mode against the journey ride,

@@ -1,4 +1,5 @@
 import type { TripCounterpart, TripRole } from '@yatri/types';
+import { resolveMediaUrl } from '@yatri/mobile-auth';
 import { useState } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 
@@ -26,7 +27,7 @@ export function CounterpartCard(
       <View style={styles.row}>
         {showPhoto ? (
           <Image
-            source={{ uri: counterpart.photoUrl as string }}
+            source={{ uri: resolveMediaUrl(counterpart.photoUrl) ?? undefined }}
             accessible
             accessibilityRole="image"
             accessibilityLabel={`Photo of ${isPassenger ? 'your driver' : 'the passenger'}, ${name}`}

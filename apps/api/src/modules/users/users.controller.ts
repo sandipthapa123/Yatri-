@@ -15,15 +15,14 @@ import {
   updateProfile,
   type ProfileUpdate,
 } from './users.repository';
-import { toPublicProfile, type PublicProfile } from './users.types';
-
-const PROFILE_PICTURE_URL_TTL_SECONDS = 30 * 24 * 60 * 60; // 30 days
+import { PROFILE_PICTURE_URL_TTL_SECONDS, publicProfileWithPicture } from './profile-picture';
+import type { PublicProfile } from './users.types';
 
 export async function getMeHandler(req: Request, res: Response<ApiResponse<PublicProfile>>) {
   if (!req.auth) throw new HttpError(401, 'UNAUTHENTICATED', 'Authentication required.');
   const user = await findUserById(req.auth.userId);
   if (!user) throw new HttpError(404, 'NOT_FOUND', 'User not found.');
-  res.json({ success: true, data: toPublicProfile(user) });
+  res.json({ success: true, data: await publicProfileWithPicture(user) });
 }
 
 export async function updateMeHandler(req: Request, res: Response<ApiResponse<PublicProfile>>) {
@@ -35,7 +34,7 @@ export async function updateMeHandler(req: Request, res: Response<ApiResponse<Pu
 
   const user = await updateProfile(req.auth.userId, update);
   if (!user) throw new HttpError(404, 'NOT_FOUND', 'User not found.');
-  res.json({ success: true, data: toPublicProfile(user) });
+  res.json({ success: true, data: await publicProfileWithPicture(user) });
 }
 
 export async function uploadProfilePictureHandler(
@@ -75,7 +74,7 @@ export async function uploadProfilePictureHandler(
 
   const user = await updateProfile(req.auth.userId, { profilePictureUrl: url });
   if (!user) throw new HttpError(404, 'NOT_FOUND', 'User not found.');
-  res.status(201).json({ success: true, data: toPublicProfile(user) });
+  res.status(201).json({ success: true, data: await publicProfileWithPicture(user) });
 }
 
 export async function deactivateMeHandler(

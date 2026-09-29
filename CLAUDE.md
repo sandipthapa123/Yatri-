@@ -29,4 +29,5 @@ pnpm --filter @yatri/types build          # compiled shared package (needed to r
 pnpm --filter @yatri/api migrate:test:up && pnpm --filter @yatri/api test   # needs Postgres + Redis
 pnpm --filter @yatri/mobile-location test
 pnpm --filter @yatri/mobile-ride test
+pnpm --filter @yatri/mobile-auth test
 ```

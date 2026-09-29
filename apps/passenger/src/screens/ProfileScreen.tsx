@@ -1,5 +1,5 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useAuth } from '@yatri/mobile-auth';
+import { resolveMediaUrl, useAuth } from '@yatri/mobile-auth';
 import type { AccountStatus } from '@yatri/types';
 import * as ImagePicker from 'expo-image-picker';
 import { useState } from 'react';
@@ -165,7 +165,7 @@ export function ProfileScreen({ navigation }: Props) {
           >
             {user?.profilePictureUrl ? (
               <Image
-                source={{ uri: user.profilePictureUrl }}
+                source={{ uri: resolveMediaUrl(user.profilePictureUrl) ?? undefined }}
                 style={[styles.avatarImage, { borderColor: theme.colors.border }]}
                 accessible={false}
               />

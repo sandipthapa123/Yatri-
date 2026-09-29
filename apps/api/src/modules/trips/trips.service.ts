@@ -41,6 +41,7 @@ import {
   saveMeta,
   type TripMeta,
 } from '../tracking/tracking.service';
+import { freshProfilePictureUrl } from '../users/profile-picture';
 import { createPendingPayment } from './payments.service';
 import { measuredRideDistance, rideDurationSeconds } from './ride-actuals';
 import { averageRating } from './ratings.service';
@@ -118,7 +119,9 @@ async function counterpartOf(
     vehicle,
     rating: await averageRating(otherId),
     // The passenger sees the driver's photo; the driver is only given the passenger's name.
-    photoUrl: viewerIsPassenger ? (u.rows[0]?.profile_picture_url ?? null) : null,
+    photoUrl: viewerIsPassenger
+      ? await freshProfilePictureUrl(u.rows[0]?.profile_picture_url ?? null)
+      : null,
   };
 }
 

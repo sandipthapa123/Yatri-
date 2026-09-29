@@ -1,4 +1,4 @@
-import { useAuth } from '@yatri/mobile-auth';
+import { resolveMediaUrl, useAuth } from '@yatri/mobile-auth';
 import type { DriverDetails } from '@yatri/types';
 import * as ImagePicker from 'expo-image-picker';
 import { useState } from 'react';
@@ -169,7 +169,7 @@ export function PersonalInfoStep({ initialValues, onContinue }: Props) {
         >
           {user?.profilePictureUrl ? (
             <Image
-              source={{ uri: user.profilePictureUrl }}
+              source={{ uri: resolveMediaUrl(user.profilePictureUrl) ?? undefined }}
               style={[styles.avatarImage, { borderColor: theme.colors.border }]}
               accessible={false}
             />

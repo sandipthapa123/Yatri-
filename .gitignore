@@ -48,5 +48,15 @@ coverage/
 ios/
 android/
 
+# Locally stored uploaded documents (local dev StorageProvider only — never commit
+# real or test document content, even placeholder files used in tests)
+apps/api/storage/
+apps/api/storage-test/
+
 # Misc
 .turbo/
+
+# Next.js auto-generates these on `next dev`/`next build` (agent guidance for
+# the framework version) — regenerated locally, not repository content.
+apps/admin/AGENTS.md
+apps/admin/CLAUDE.md

@@ -28,7 +28,7 @@ export function DriverProfileSetupScreen({ navigation }: Props) {
     setErrorMessage(undefined);
     try {
       await updateProfile({ fullName: trimmed });
-      navigation.replace('VerificationPending');
+      navigation.replace('Onboarding');
     } catch {
       const message = 'Could not save your profile. Please try again.';
       setErrorMessage(message);

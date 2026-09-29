@@ -3,13 +3,13 @@ import { describe, expect, it } from 'vitest';
 import { api, onboardUser } from './helpers';
 
 describe('Driver profile — GET/PATCH /drivers/me', () => {
-  it('retrieves the driver profile with PENDING_VERIFICATION status by default', async () => {
+  it('retrieves the driver profile with NOT_STARTED status by default', async () => {
     const { accessToken } = await onboardUser('DRIVER');
     const res = await api.get('/api/v1/drivers/me').set('Authorization', `Bearer ${accessToken}`);
 
     expect(res.status).toBe(200);
     expect(res.body.data.role).toBe('DRIVER');
-    expect(res.body.data.driverStatus).toBe('PENDING_VERIFICATION');
+    expect(res.body.data.driverStatus).toBe('NOT_STARTED');
   });
 
   it('updates the driver profile', async () => {
@@ -21,7 +21,7 @@ describe('Driver profile — GET/PATCH /drivers/me', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.data.fullName).toBe('Driver Person');
-    expect(res.body.data.driverStatus).toBe('PENDING_VERIFICATION');
+    expect(res.body.data.driverStatus).toBe('NOT_STARTED');
   });
 
   it('rejects an empty update body', async () => {

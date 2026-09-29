@@ -11,7 +11,7 @@ import {
 } from 'react';
 
 import * as api from './apiClient';
-import { ApiError } from './apiClient';
+import { ApiError, type PickedFile } from './apiClient';
 import { clearTokens, loadTokens, saveTokens, type StoredTokens } from './tokenStorage';
 import type { RequestOtpResponse, UserRole, VerifyOtpResponse } from './types';
 
@@ -30,6 +30,9 @@ export interface AuthContextValue {
     fullName?: string;
     profilePictureUrl?: string | null;
   }) => Promise<void>;
+  uploadProfilePicture: (file: PickedFile) => Promise<void>;
+  /** Sets the account to DEACTIVATED and signs the device out. Irreversible from the app. */
+  deactivateAccount: () => Promise<void>;
   /** Returns a currently-valid access token, transparently refreshing if needed. */
   getAccessToken: () => Promise<string>;
 }
@@ -162,6 +165,21 @@ export function AuthProvider({ role, children }: { role: UserRole; children: Rea
     [getAccessToken, role],
   );
 
+  const uploadProfilePicture = useCallback(
+    async (file: PickedFile) => {
+      const token = await getAccessToken();
+      const updated = await api.uploadProfilePicture(token, file);
+      setUser(updated);
+    },
+    [getAccessToken],
+  );
+
+  const deactivateAccount = useCallback(async () => {
+    const token = await getAccessToken();
+    await api.deactivateAccount(token);
+    await signOut();
+  }, [getAccessToken, signOut]);
+
   const value = useMemo<AuthContextValue>(
     () => ({
       status,
@@ -172,6 +190,8 @@ export function AuthProvider({ role, children }: { role: UserRole; children: Rea
       verifyOtp,
       logout,
       updateProfile,
+      uploadProfilePicture,
+      deactivateAccount,
       getAccessToken,
     }),
     [
@@ -183,6 +203,8 @@ export function AuthProvider({ role, children }: { role: UserRole; children: Rea
       verifyOtp,
       logout,
       updateProfile,
+      uploadProfilePicture,
+      deactivateAccount,
       getAccessToken,
     ],
   );

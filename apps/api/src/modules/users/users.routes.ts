@@ -1,8 +1,14 @@
 import { Router, type Router as RouterType } from 'express';
 
 import { authenticate } from '../../middleware/authenticate';
+import { uploadSingleFile } from '../../middleware/upload';
 import { validateBody } from '../../middleware/validate';
-import { getMeHandler, updateMeHandler } from './users.controller';
+import {
+  deactivateMeHandler,
+  getMeHandler,
+  updateMeHandler,
+  uploadProfilePictureHandler,
+} from './users.controller';
 import { updateProfileSchema } from './users.validators';
 
 export const usersRouter: RouterType = Router();
@@ -12,3 +18,10 @@ export const usersRouter: RouterType = Router();
 // (e.g. /drivers/me).
 usersRouter.get('/me', authenticate, getMeHandler);
 usersRouter.patch('/me', authenticate, validateBody(updateProfileSchema), updateMeHandler);
+usersRouter.post(
+  '/me/profile-picture',
+  authenticate,
+  uploadSingleFile,
+  uploadProfilePictureHandler,
+);
+usersRouter.post('/me/deactivate', authenticate, deactivateMeHandler);

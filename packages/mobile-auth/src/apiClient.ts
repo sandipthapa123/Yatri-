@@ -15,7 +15,8 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(
+/** Exported so other domain-specific API clients (e.g. the driver app's onboarding/vehicles/documents calls) can reuse the same request/error-unwrapping logic instead of duplicating it. */
+export async function request<T>(
   path: string,
   options: { method?: string; body?: unknown; accessToken?: string } = {},
 ): Promise<T> {
@@ -26,6 +27,43 @@ async function request<T>(
       ...(options.accessToken ? { Authorization: `Bearer ${options.accessToken}` } : {}),
     },
     body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+  });
+
+  let payload: ApiResponse<T>;
+  try {
+    payload = await response.json();
+  } catch {
+    throw new ApiError(
+      response.status,
+      'INVALID_RESPONSE',
+      'The server returned an invalid response.',
+    );
+  }
+
+  if (!payload.success) {
+    const error: ApiErrorShape = payload.error;
+    throw new ApiError(response.status, error.code, error.message, error.details);
+  }
+  return payload.data;
+}
+
+/** A file selected on-device (e.g. via expo-image-picker), ready to attach to a FormData upload. */
+export interface PickedFile {
+  uri: string;
+  name: string;
+  type: string;
+}
+
+export async function requestMultipart<T>(
+  path: string,
+  accessToken: string,
+  form: FormData,
+): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method: 'POST',
+    // No Content-Type here — fetch sets the multipart boundary itself.
+    headers: { Authorization: `Bearer ${accessToken}` },
+    body: form,
   });
 
   let payload: ApiResponse<T>;
@@ -84,6 +122,18 @@ export function updateMe(
   update: { fullName?: string; profilePictureUrl?: string | null },
 ): Promise<AppUser> {
   return request<AppUser>('/users/me', { method: 'PATCH', accessToken, body: update });
+}
+
+export function uploadProfilePicture(accessToken: string, file: PickedFile): Promise<AppUser> {
+  const form = new FormData();
+  // React Native's FormData accepts { uri, name, type } for file parts; the
+  // DOM lib types don't know that shape, hence the cast.
+  form.append('file', { uri: file.uri, name: file.name, type: file.type } as unknown as Blob);
+  return requestMultipart<AppUser>('/users/me/profile-picture', accessToken, form);
+}
+
+export function deactivateAccount(accessToken: string): Promise<{ deactivated: true }> {
+  return request('/users/me/deactivate', { method: 'POST', accessToken });
 }
 
 export function getDriverMe(accessToken: string): Promise<DriverProfile> {

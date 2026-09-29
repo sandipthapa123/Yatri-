@@ -1,6 +1,14 @@
-import { Pool } from 'pg';
+import { Pool, types } from 'pg';
 
 import { env } from './env';
+
+// Postgres DATE columns (OID 1082) come back as JS Date objects by default,
+// which JSON.stringify() then serializes as a full timestamp
+// ("1995-01-01T00:00:00.000Z") instead of the plain "YYYY-MM-DD" every
+// consumer of this API actually expects (client-side date validation and
+// form prefill, admin display). A date has no time component or timezone,
+// so keep it exactly as the string Postgres sends over the wire.
+types.setTypeParser(1082, (value) => value);
 
 /**
  * A single pooled Postgres connection, shared across the app. `pg` connects

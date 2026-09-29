@@ -5,6 +5,7 @@ import { useAuth } from '@yatri/mobile-auth';
 import { HomeScreen } from '../screens/HomeScreen';
 import { OtpVerificationScreen } from '../screens/OtpVerificationScreen';
 import { PhoneEntryScreen } from '../screens/PhoneEntryScreen';
+import { ProfileScreen } from '../screens/ProfileScreen';
 import { ProfileSetupScreen } from '../screens/ProfileSetupScreen';
 import { WelcomeScreen } from '../screens/WelcomeScreen';
 
@@ -14,6 +15,7 @@ export type RootStackParamList = {
   OtpVerification: { phoneNumber: string };
   ProfileSetup: undefined;
   Home: undefined;
+  Profile: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -39,6 +41,7 @@ export function RootNavigator() {
           <>
             <Stack.Screen name="Home" component={HomeScreen} />
             <Stack.Screen name="ProfileSetup" component={ProfileSetupScreen} />
+            <Stack.Screen name="Profile" component={ProfileScreen} />
           </>
         ) : (
           <>

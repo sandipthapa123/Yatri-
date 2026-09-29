@@ -18,3 +18,8 @@ function loadEnv() {
 }
 
 export const env = loadEnv();
+
+/** The API's scheme+host+port only — signed storage URLs come back as absolute paths (e.g. `/api/v1/storage/content?...`), not full URLs, so this is what resolves them. */
+export function apiOrigin(): string {
+  return new URL(env.API_BASE_URL).origin;
+}

@@ -5,10 +5,12 @@ Yatri (यात्री — "traveller" in Nepali) is a ride-sharing platform 
 This repository is a TypeScript monorepo containing the passenger app, driver app, admin
 dashboard, and backend API that make up the Yatri platform.
 
-> **Status: Phase 2 — authentication & accounts.** Phone+OTP auth (passenger/driver),
-> email+password auth (admin), sessions, and role-based access control are implemented and
-> tested end-to-end. Ride booking and the rest of each app's features land in later phases.
-> See [`docs/PHASE_2.md`](docs/PHASE_2.md) and [`docs/AUTHENTICATION.md`](docs/AUTHENTICATION.md).
+> **Status: Phase 3 — driver onboarding & verification.** Passenger profiles, the full
+> driver onboarding wizard (personal info, vehicle, documents), and an admin verification
+> dashboard are implemented and tested end-to-end — a driver can only become `VERIFIED`
+> once an admin has approved every requirement. Ride booking, matching, tracking, and
+> payments land in later phases. See [`docs/PHASE_3.md`](docs/PHASE_3.md),
+> [`docs/PHASE_2.md`](docs/PHASE_2.md), and [`docs/AUTHENTICATION.md`](docs/AUTHENTICATION.md).
 
 ## Tech stack
 
@@ -117,10 +119,19 @@ Run from the repository root; each fans out to every workspace package via pnpm.
   secure on-device token storage, the `AuthContext`/`useAuth()` state machine, and the
   accessible phone/OTP input components. The passenger and driver apps compose it into their
   own screens/navigation rather than duplicating auth logic.
+- **Driver verification is server-controlled, end to end.** A driver's `VERIFIED` status is
+  set only by a guarded backend state transition after an admin approves every
+  requirement — the mobile apps and admin dashboard both just display and act on that
+  server state, never compute or assume it locally. See
+  [`docs/PHASE_3.md`](docs/PHASE_3.md) for the full driver onboarding, document storage,
+  and admin verification architecture.
+- **Document storage is behind a `StorageProvider` abstraction** (local disk in
+  development, swappable for a production object store) with signed, time-limited access
+  URLs — no identity document is ever served from a predictable or permanent public path.
 - See [`docs/AUTHENTICATION.md`](docs/AUTHENTICATION.md) for the full authentication
   architecture, [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the system overview, and
-  [`docs/PHASE_1.md`](docs/PHASE_1.md)/[`docs/PHASE_2.md`](docs/PHASE_2.md) for what shipped
-  in each phase.
+  [`docs/PHASE_1.md`](docs/PHASE_1.md)/[`docs/PHASE_2.md`](docs/PHASE_2.md)/
+  [`docs/PHASE_3.md`](docs/PHASE_3.md) for what shipped in each phase.
 
 ## License
 

@@ -1,19 +1,17 @@
-import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
+import Link from 'next/link';
 import { APP_NAME } from '@yatri/shared';
 
 import { getAdminMe } from '../lib/apiClient';
-import { ACCESS_COOKIE } from '../lib/session';
+import { requireAdminAccessToken } from '../lib/session';
 import { logoutAction } from './actions';
 
 export default async function DashboardPage() {
-  const cookieStore = await cookies();
-  const accessToken = cookieStore.get(ACCESS_COOKIE)?.value;
+  const accessToken = await requireAdminAccessToken();
 
   // Middleware already checked the JWT's signature/expiry, but not whether
   // the session has since been revoked or the account suspended — this
   // authoritative check against the API is what actually enforces that.
-  if (!accessToken) redirect('/login');
   let admin;
   try {
     admin = await getAdminMe(accessToken);
@@ -39,9 +37,25 @@ export default async function DashboardPage() {
         Signed in as {admin.fullName ?? admin.id}.
       </p>
       <p style={{ color: 'var(--color-text-secondary)', maxWidth: 420, margin: 0 }}>
-        The operations dashboard foundation is set up. Fleet, trip, and payout views ship in a later
-        phase.
+        Fleet, trip, and payout views ship in a later phase.
       </p>
+      <Link
+        href="/drivers"
+        style={{
+          minHeight: 44,
+          display: 'inline-flex',
+          alignItems: 'center',
+          padding: '0 20px',
+          borderRadius: 999,
+          background: 'var(--color-primary)',
+          color: '#fff',
+          fontSize: 15,
+          fontWeight: 700,
+          textDecoration: 'none',
+        }}
+      >
+        Review driver applications
+      </Link>
       <form action={logoutAction}>
         <button
           type="submit"

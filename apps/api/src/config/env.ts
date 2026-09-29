@@ -57,6 +57,23 @@ const envSchema = z
     // --- Admin seed (development only; never a hard-coded default) ---
     ADMIN_SEED_EMAIL: z.string().email().optional(),
     ADMIN_SEED_PASSWORD: z.string().min(12).optional(),
+
+    // --- Document storage ---
+    STORAGE_PROVIDER: z.enum(['local']).default('local'),
+    STORAGE_LOCAL_ROOT: z.string().min(1).default('./storage'),
+    STORAGE_SIGNING_SECRET: z
+      .string()
+      .min(32, 'STORAGE_SIGNING_SECRET must be at least 32 characters')
+      .refine(
+        (val) => !/^(dev|test|change[-_]?me|secret)/i.test(val),
+        'STORAGE_SIGNING_SECRET looks like a placeholder value',
+      ),
+    STORAGE_SIGNED_URL_TTL_SECONDS: z.coerce.number().int().positive().default(300),
+    MAX_UPLOAD_FILE_SIZE_BYTES: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(8 * 1024 * 1024),
   })
   .superRefine((data, ctx) => {
     if (data.NODE_ENV === 'production' && data.OTP_DEV_MODE) {

@@ -1,4 +1,6 @@
 import jwt from 'jsonwebtoken';
+import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
 
 import { env } from './env';
 
@@ -43,6 +45,20 @@ export function verifyAdminAccessToken(token: string): AdminAccessClaims | null 
   } catch {
     return null;
   }
+}
+
+/**
+ * Reads the admin access token cookie for a Server Component/Action, or
+ * redirects to /login if it's missing. Middleware already gates page
+ * navigation, but Server Actions run outside that path, and every page here
+ * needs the raw token anyway to call the API — so this is the one place
+ * that logic lives, rather than each page re-deriving it.
+ */
+export async function requireAdminAccessToken(): Promise<string> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(ACCESS_COOKIE)?.value;
+  if (!token) redirect('/login');
+  return token;
 }
 
 export function baseCookieOptions() {

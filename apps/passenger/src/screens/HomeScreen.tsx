@@ -1,10 +1,14 @@
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useAuth } from '@yatri/mobile-auth';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { APP_TAGLINE } from '@yatri/shared';
 
 import { Logo } from '../components/Logo';
+import type { RootStackParamList } from '../navigation/RootNavigator';
 import { useTheme } from '../theme/useTheme';
+
+type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
 function greeting(hour: number): string {
   if (hour < 12) return 'Good morning';
@@ -12,15 +16,26 @@ function greeting(hour: number): string {
   return 'Good evening';
 }
 
-export function HomeScreen() {
+export function HomeScreen({ navigation }: Props) {
   const theme = useTheme();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const timeGreeting = greeting(new Date().getHours());
   const name = user?.fullName?.trim();
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <ScrollView contentContainerStyle={styles.content} accessibilityRole="none">
+        <View style={styles.topBar}>
+          <Pressable
+            onPress={() => navigation.navigate('Profile')}
+            accessibilityRole="button"
+            accessibilityLabel="Open profile"
+            style={[styles.profileLink, { minHeight: theme.minTouchTarget }]}
+          >
+            <Text style={[styles.profileLinkText, { color: theme.colors.primary }]}>Profile</Text>
+          </Pressable>
+        </View>
+
         <View style={styles.header}>
           <Logo size="lg" />
           <Text
@@ -54,17 +69,6 @@ export function HomeScreen() {
             Ride booking is coming soon.
           </Text>
         </View>
-
-        <Pressable
-          onPress={() => {
-            void logout();
-          }}
-          accessibilityRole="button"
-          accessibilityLabel="Sign out"
-          style={[styles.signOutButton, { minHeight: theme.minTouchTarget }]}
-        >
-          <Text style={[styles.signOutText, { color: theme.colors.textSecondary }]}>Sign out</Text>
-        </Pressable>
       </ScrollView>
     </SafeAreaView>
   );
@@ -111,12 +115,15 @@ const styles = StyleSheet.create({
   comingSoon: {
     fontSize: 13,
   },
-  signOutButton: {
-    alignSelf: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 12,
+  topBar: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
   },
-  signOutText: {
+  profileLink: {
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  profileLinkText: {
     fontSize: 15,
     fontWeight: '600',
   },

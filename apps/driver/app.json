@@ -28,6 +28,14 @@
     "web": {
       "favicon": "./assets/favicon.png",
       "bundler": "metro"
-    }
+    },
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Yatri Driver uses your photo library so you can set a profile picture."
+        }
+      ]
+    ]
   }
 }

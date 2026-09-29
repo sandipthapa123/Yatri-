@@ -28,9 +28,14 @@ src/modules/health/
 └── health.routes.ts
 
 src/modules/auth/            # OTP, sessions, admin login — see docs/AUTHENTICATION.md
-src/modules/users/           # GET/PATCH /users/me (any authenticated role)
-src/modules/drivers/         # GET/PATCH /drivers/me (DRIVER only)
-src/modules/admin/           # GET /admin/me (ADMIN only)
+src/modules/users/           # GET/PATCH /users/me, profile picture, deactivation (any role)
+src/modules/drivers/         # Driver profile + onboarding progress/submission (DRIVER only)
+src/modules/vehicles/        # Vehicle registration + categories (DRIVER only, own vehicles)
+src/modules/documents/       # Document upload/list/delete + signed download URLs
+src/modules/storage/         # Serves signed URLs issued by StorageProvider (public route,
+                              # but every request is signature+expiry verified)
+src/modules/admin/           # Driver review, document/vehicle approval, verification history
+                              # (ADMIN only) — see docs/PHASE_3.md
 ```
 
 `src/routes/index.ts` mounts every module's router under `/api/v1`. Adding a capability means
@@ -48,6 +53,23 @@ by default.
   request-rate limiting (`src/lib/rate-limit.ts`) — its first real job, ahead of the presence/
   location-fanout use cases it was originally reserved for. Still nothing holds an open
   connection until a rate-limit check or cooldown actually runs.
+- **Postgres `DATE` columns come back as plain strings, not JS `Date` objects.** `pg`'s
+  default parser + `JSON.stringify` would otherwise turn a date-only value into a full
+  UTC timestamp — wrong for something with no time component. `src/config/database.ts`
+  overrides the type parser for OID 1082 once, centrally, for every date column.
+
+## File storage
+
+- **`StorageProvider`** (`src/lib/storage/storage-provider.ts`) is the interface every
+  uploaded document goes through: `upload`/`download`/`delete`/`createTemporaryAccessUrl`.
+  `LocalDiskStorageProvider` is the only implementation so far (development), but nothing
+  above the interface assumes a filesystem — swapping in an S3-compatible provider later
+  is a new class, not a rewrite.
+- Access is always via a short-lived, HMAC-signed URL (`src/lib/storage/signed-url.ts`),
+  never a permanent or predictable path — this is what lets `src/modules/storage/` serve
+  identity documents through one public route without exposing them publicly.
+- See [`docs/PHASE_3.md`](PHASE_3.md) for the full driver-verification data model and
+  upload-security details (file-type detection, size limits, replacement rules).
 
 ## Client apps
 
@@ -61,7 +83,12 @@ by default.
   middleware/proxy convention) using the same `JWT_ACCESS_SECRET` as the API — no network
   round trip on every navigation, with a silent-refresh fallback when the access token has
   expired but a valid refresh cookie remains. See `docs/AUTHENTICATION.md` for why the
-  dashboard page still makes one authoritative API call server-side before rendering.
+  dashboard page still makes one authoritative API call server-side before rendering. The
+  driver verification pages (`src/app/drivers/`) are Server Components for data fetching,
+  with small Client Components for the interactive parts (accessible tabs, native
+  `<dialog>`-based reject/suspend forms) driven by Server Actions — `ActionGuard.tsx`
+  serializes those actions on a page so two in-flight submissions can't race each other's
+  `revalidatePath` refresh.
 
 ## Why these choices
 

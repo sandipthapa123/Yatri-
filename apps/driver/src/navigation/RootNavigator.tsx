@@ -3,6 +3,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '@yatri/mobile-auth';
 
 import { DriverProfileSetupScreen } from '../screens/DriverProfileSetupScreen';
+import { OnboardingScreen } from '../screens/onboarding/OnboardingScreen';
 import { OtpVerificationScreen } from '../screens/OtpVerificationScreen';
 import { PhoneEntryScreen } from '../screens/PhoneEntryScreen';
 import { VerificationPendingScreen } from '../screens/VerificationPendingScreen';
@@ -13,6 +14,7 @@ export type RootStackParamList = {
   PhoneEntry: undefined;
   OtpVerification: { phoneNumber: string };
   DriverProfileSetup: undefined;
+  Onboarding: undefined;
   VerificationPending: undefined;
 };
 
@@ -20,9 +22,11 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 /**
  * Same "swap the screen list on auth status" pattern as the passenger app.
- * A verified driver still lands on VerificationPending for now — ride
- * acceptance (the reason verification matters) doesn't exist yet, so
- * there's no "driver home" to show even once VERIFIED.
+ * A returning driver always starts at Onboarding: it fetches live progress
+ * from the server and immediately redirects to VerificationPending itself
+ * once the application has been submitted, so routing never depends on the
+ * AuthContext's `driverStatus` cache (which goes stale after an app restart
+ * — it's only refreshed by login or an explicit profile update).
  */
 export function RootNavigator() {
   const { status, isNewUser } = useAuth();
@@ -32,11 +36,12 @@ export function RootNavigator() {
       <Stack.Navigator
         screenOptions={{ headerShown: false }}
         initialRouteName={
-          status === 'authenticated' && isNewUser ? 'DriverProfileSetup' : undefined
+          status === 'authenticated' ? (isNewUser ? 'DriverProfileSetup' : 'Onboarding') : undefined
         }
       >
         {status === 'authenticated' ? (
           <>
+            <Stack.Screen name="Onboarding" component={OnboardingScreen} />
             <Stack.Screen name="VerificationPending" component={VerificationPendingScreen} />
             <Stack.Screen name="DriverProfileSetup" component={DriverProfileSetupScreen} />
           </>

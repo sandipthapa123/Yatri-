@@ -76,3 +76,13 @@ export async function updateProfile(id: string, update: ProfileUpdate): Promise<
   );
   return result.rows[0] ?? null;
 }
+
+/** Self-service account deactivation — irreversible without support/admin help. */
+export async function deactivateUser(id: string): Promise<UserRow | null> {
+  const result = await query<UserRow>(
+    `UPDATE users SET status = 'DEACTIVATED' WHERE id = $1 AND status = 'ACTIVE'
+     RETURNING ${SELECT_COLUMNS}`,
+    [id],
+  );
+  return result.rows[0] ?? null;
+}

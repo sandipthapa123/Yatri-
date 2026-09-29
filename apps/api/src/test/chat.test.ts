@@ -2,7 +2,7 @@ import { CHAT_MAX_LENGTH, describeTripEvent } from '@yatri/types';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { pool } from '../config/database';
-import { chatWindow } from '../modules/chat/chat.service';
+import { chatWindow, purgeExpiredChats } from '../modules/chat/chat.service';
 import { getTrip } from '../modules/trips/trips.repository';
 import { api, onboardUser } from './helpers';
 import { arriveAtPickup, auth, requestRide, rideWorld } from './rides';
@@ -224,5 +224,66 @@ describe('sending, ordering and receipts over the socket', () => {
     dc.send({ type: 'chat_send', tripId: w.tripId, clientMessageId: cid(), body: 'On my way' });
     await phone.waitFor(isMsg);
     await tablet.waitFor(isMsg);
+  });
+});
+
+describe('retention', () => {
+  const endedAgo = async (tripId: string, days: number) =>
+    pool.query("UPDATE trips SET ended_at = now() - ($2::int * interval '1 day') WHERE id = $1", [
+      tripId,
+      days,
+    ]);
+  const count = async (tripId: string) =>
+    (await pool.query('SELECT count(*)::int AS n FROM trip_messages WHERE trip_id = $1', [tripId]))
+      .rows[0].n as number;
+
+  it('deletes chat text older than the retention period, and only that', async () => {
+    const old = await rideWorld();
+    const recent = await rideWorld();
+    for (const w of [old, recent]) {
+      await send(w.passenger.accessToken, w.tripId, 'hello');
+      await arriveAtPickup(w);
+      await api.post(`/api/v1/trips/${w.tripId}/start`).set(auth(w.driver.accessToken));
+      await api.post(`/api/v1/trips/${w.tripId}/complete`).set(auth(w.driver.accessToken));
+    }
+    await endedAgo(old.tripId, 91);
+    await endedAgo(recent.tripId, 89);
+
+    expect(await purgeExpiredChats()).toBe(1);
+    expect(await count(old.tripId)).toBe(0);
+    expect(await count(recent.tripId)).toBe(1);
+    // the ride itself and its events are untouched
+    const trip = (await api.get(`/api/v1/trips/${old.tripId}`).set(auth(old.passenger.accessToken)))
+      .body.data;
+    expect(trip.status).toBe('COMPLETED');
+  });
+
+  it('keeps the conversation while a dispute on the ride is open, and purges it once resolved', async () => {
+    const w = await rideWorld();
+    await send(w.passenger.accessToken, w.tripId, 'evidence');
+    await arriveAtPickup(w);
+    await api.post(`/api/v1/trips/${w.tripId}/start`).set(auth(w.driver.accessToken));
+    await api.post(`/api/v1/trips/${w.tripId}/complete`).set(auth(w.driver.accessToken));
+    await api
+      .post(`/api/v1/trips/${w.tripId}/disputes`)
+      .set(auth(w.passenger.accessToken))
+      .send({ reason: 'The fare was wrong' });
+    await endedAgo(w.tripId, 200);
+
+    expect(await purgeExpiredChats()).toBe(0);
+    expect(await count(w.tripId)).toBe(1);
+    await pool.query("UPDATE trip_disputes SET status = 'RESOLVED' WHERE trip_id = $1", [w.tripId]);
+    expect(await purgeExpiredChats()).toBe(1);
+    expect(await count(w.tripId)).toBe(0);
+  });
+
+  it('never touches a ride that has not ended', async () => {
+    const w = await rideWorld();
+    await send(w.passenger.accessToken, w.tripId, 'still riding');
+    await pool.query("UPDATE trips SET requested_at = now() - interval '400 days' WHERE id = $1", [
+      w.tripId,
+    ]);
+    expect(await purgeExpiredChats()).toBe(0);
+    expect(await count(w.tripId)).toBe(1);
   });
 });

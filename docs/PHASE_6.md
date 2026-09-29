@@ -156,7 +156,7 @@ presence socket — no second connection) and history.
 `WAITING_NOTIFY_SECONDS`, `NEARBY_NOTIFY_METERS`, `TRIP_ARRIVAL_RADIUS_METERS`,
 `DISPATCH_RADIUS_METERS`, `DISPATCH_OFFER_TTL_SECONDS`, `DISPATCH_SEARCH_TIMEOUT_SECONDS`,
 `DISPATCH_MAX_OFFERS`, `TRIP_DRIVER_LOST_SECONDS`, `CHAT_OPEN_AFTER_TRIP_MINUTES`,
-`CHAT_RATE_LIMIT_PER_MINUTE`, `CALL_RING_TIMEOUT_SECONDS`, `CALL_STUN_URLS`, `CALL_TURN_URLS`,
+`CHAT_RATE_LIMIT_PER_MINUTE`, `CHAT_RETENTION_DAYS`, `CALL_RING_TIMEOUT_SECONDS`, `CALL_STUN_URLS`, `CALL_TURN_URLS`,
 `CALL_TURN_SHARED_SECRET`, `CALL_TURN_CREDENTIAL_TTL_SECONDS`. See `apps/api/.env.example`.
 
 ## 5. Database
@@ -168,9 +168,10 @@ start otherwise (`assertUtf8Database`).
 
 ## 6. Privacy and retention
 
-- Chat text is kept with the trip (needed for disputes) and readable by admins only with
-  `TRIP_CHAT_VIEW`, every read logged. **No retention job exists yet** — a retention period is a
-  business decision that still has to be made and scheduled.
+- Chat text is deleted `CHAT_RETENTION_DAYS` (default 90; 0 = keep forever) days after the ride ends, by an
+  hourly job, except while a dispute on the ride is open (it is evidence). Events, call metadata,
+  payments and ratings are kept. Until then it is readable by admins only with `TRIP_CHAT_VIEW`, every
+  read logged. The 90-day default is a placeholder for the business to confirm.
 - Call media is never stored; only call metadata (who, when, how it ended) is kept.
 - No phone numbers are exposed between passenger and driver; calls and chat are by role.
 - Driver coordinates for a ride are shown to admins only with `DRIVER_LOCATION_VIEW`, logged.
@@ -183,7 +184,7 @@ start otherwise (`assertUtf8Database`).
   chat with receipts → call signalling → arrival (proximity-checked) → driver waiting (server
   clock, charged) → start → live trip ETA → complete → cash payment → both ratings → history for
   both people → the admin's view of the same ride including the audited chat read. Full suite:
-  312 passed, 1 failed — the failure (`documents.test.ts` "rejects an oversized file") **pre-dates
+  315 passed, 1 failed — the failure (`documents.test.ts` "rejects an oversized file") **pre-dates
   this phase** and is unrelated.
 - **Mobile packages**: `mobile-location` 98 tests, `mobile-ride` 48 (chat, call state machine with a
   fake WebRTC, quality evaluation, offers, action rules).
@@ -214,7 +215,7 @@ These are real. Do not treat the feature as finished for them.
 6. **Push notifications** (Expo push) are not implemented; `notify()` records/logs. A closed app is not
    woken for an offer.
 7. **Fare distance** is straight-line unless a routing provider is configured (the estimate says so).
-8. **Chat retention/deletion** policy is not decided or scheduled.
+8. **Chat retention** is implemented (see section 6) but the 90-day default is unconfirmed.
 9. **Admin cannot yet see a live map**, only freshness and (permissioned) coordinates.
 10. **Dispatch is one-at-a-time nearest-driver.** No surge, batching or driver-quality ranking.
 11. **Foreground-only location** (as in Phases 4–5).

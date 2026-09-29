@@ -42,6 +42,7 @@ import {
   passengerStopsSharing,
   type TripMeta,
 } from '../tracking/tracking.service';
+import { purgeExpiredChats } from '../chat/chat.service';
 import { sweepTrips } from '../trips/trip-maintenance';
 import { getTrip } from '../trips/trips.repository';
 import { metaFromRow } from '../trips/trips.service';
@@ -514,6 +515,10 @@ export async function attachRealtimeGateway(server: HttpServer): Promise<Realtim
       sweepTrips().catch((err) => console.error('Trip sweep error', err));
       sweepCalls().catch((err) => console.error('Call sweep error', err));
     }, TRIP_SWEEP_MS),
+    // Retention is slow housekeeping: hourly, and once shortly after start.
+    setInterval(() => {
+      purgeExpiredChats().catch((err) => console.error('Chat retention error', err));
+    }, 60 * 60_000),
   ];
 
   await startBus();

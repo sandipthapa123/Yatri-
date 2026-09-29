@@ -177,6 +177,9 @@ const envSchema = z
     // --- Chat ---
     // Chat stays writable this long after a trip ends (e.g. to arrange a lost item), then read-only.
     CHAT_OPEN_AFTER_TRIP_MINUTES: z.coerce.number().int().min(0).default(15),
+    // Chat text is deleted this many days after the ride ends (rides with an open dispute are kept
+    // until it is resolved). 0 = keep forever.
+    CHAT_RETENTION_DAYS: z.coerce.number().int().min(0).default(90),
     CHAT_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().positive().default(30),
 
     // --- Calls (WebRTC) ---

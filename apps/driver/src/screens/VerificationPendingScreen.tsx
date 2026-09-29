@@ -1,5 +1,6 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useAuth } from '@yatri/mobile-auth';
+import { tripsApi } from '@yatri/mobile-location';
 import type { DriverStatus } from '@yatri/types';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -54,6 +55,7 @@ export function VerificationPendingScreen({ navigation }: Props) {
   const { getAccessToken, logout } = useAuth();
   const [status, setStatus] = useState<DriverStatus | null>(null);
   const [rejectionReason, setRejectionReason] = useState<string | null>(null);
+  const [activeTripId, setActiveTripId] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | undefined>(undefined);
 
   const load = useCallback(async () => {
@@ -63,6 +65,12 @@ export function VerificationPendingScreen({ navigation }: Props) {
       const progress = await driverApi.getOnboarding(token);
       setStatus(progress.status);
       setRejectionReason(progress.rejectionReason);
+      try {
+        const trip = await tripsApi.active(token);
+        setActiveTripId(trip ? trip.id : null);
+      } catch {
+        /* optional entry point */
+      }
     } catch {
       setLoadError('Could not load your verification status.');
     }
@@ -136,6 +144,31 @@ export function VerificationPendingScreen({ navigation }: Props) {
           </Text>
         </Pressable>
       ) : null}
+
+      {activeTripId ? (
+        <Pressable
+          onPress={() => navigation.navigate('DriverTrip', { tripId: activeTripId })}
+          accessibilityRole="button"
+          accessibilityLabel="Open active trip"
+          style={[
+            styles.primaryButton,
+            { backgroundColor: theme.colors.primary, minHeight: theme.minTouchTarget },
+          ]}
+        >
+          <Text style={{ color: theme.colors.textInverse, fontWeight: '700', fontSize: 16 }}>
+            Open active trip
+          </Text>
+        </Pressable>
+      ) : null}
+
+      <Pressable
+        onPress={() => navigation.navigate('DriverLocation')}
+        accessibilityRole="button"
+        accessibilityLabel="My location"
+        style={[styles.signOutButton, { minHeight: theme.minTouchTarget }]}
+      >
+        <Text style={[styles.signOutText, { color: theme.colors.secondary }]}>My location</Text>
+      </Pressable>
 
       <Pressable
         onPress={() => {

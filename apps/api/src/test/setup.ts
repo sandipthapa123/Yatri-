@@ -16,7 +16,7 @@ beforeEach(async () => {
     `TRUNCATE TABLE
        auth_events, otp_requests, auth_sessions,
        driver_verification_events, notifications, documents, vehicles, driver_details,
-       driver_profiles, saved_places, locations, driver_last_locations, users
+       driver_profiles, trips, saved_places, locations, driver_last_locations, users
      RESTART IDENTITY CASCADE`,
   );
   await getRedisClient().flushdb();

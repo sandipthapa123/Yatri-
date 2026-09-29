@@ -72,7 +72,7 @@ const envSchema = z
     // --- Location / maps ---
     // Provider-specific code lives in modules/location/providers; the rest
     // of the app only sees the LocationProvider / RouteProvider interfaces.
-    LOCATION_PROVIDER: z.enum(['nominatim', 'none']).default('nominatim'),
+    LOCATION_PROVIDER: z.enum(['nominatim', 'static', 'none']).default('nominatim'),
     LOCATION_PROVIDER_BASE_URL: z.string().url().default('https://nominatim.openstreetmap.org'),
     // Optional; sent as the `key` query param (LocationIQ-style Nominatim APIs). Never returned to clients.
     LOCATION_PROVIDER_API_KEY: z.preprocess(
@@ -93,8 +93,19 @@ const envSchema = z
     LOCATION_REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(4000),
     LOCATION_SEARCH_CACHE_TTL_SECONDS: z.coerce.number().int().min(0).default(86400),
     LOCATION_REVERSE_CACHE_TTL_SECONDS: z.coerce.number().int().min(0).default(86400),
-    LOCATION_ROUTING_PROVIDER: z.enum(['haversine', 'osrm']).default('haversine'),
+    LOCATION_ROUTING_PROVIDER: z
+      .enum(['haversine', 'osrm', 'graphhopper', 'valhalla'])
+      .default('haversine'),
     LOCATION_ROUTING_BASE_URL: z.string().url().default('https://router.project-osrm.org'),
+    LOCATION_ROUTING_API_KEY: z.preprocess(
+      (v) => (v === '' ? undefined : v),
+      z.string().optional(),
+    ),
+    // --- Live tracking ---
+    // Location updates arriving faster than this (per party) are dropped.
+    // Minimum pause between reverse-geocode lookups for one moving party (cost control).
+    TRACKING_PLACE_REFRESH_MS: z.coerce.number().int().min(0).default(15000),
+    TRACKING_MIN_INTERVAL_MS: z.coerce.number().int().min(0).default(800),
     LOCATION_SEARCH_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().positive().default(60),
 
     MAX_UPLOAD_FILE_SIZE_BYTES: z.coerce

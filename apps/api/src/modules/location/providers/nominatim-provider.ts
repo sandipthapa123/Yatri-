@@ -1,6 +1,7 @@
 import type { PlaceSummary, ReverseGeocodeResult } from '@yatri/types';
 
 import { roundCoordinate, type Coordinate } from '../coordinates';
+import { fetchJson } from './http';
 import {
   LocationProviderError,
   type LocationProvider,
@@ -23,6 +24,8 @@ interface NominatimItem {
   lon?: string;
   name?: string;
   display_name?: string;
+  category?: string;
+  addresstype?: string;
   address?: NominatimAddress;
 }
 
@@ -155,33 +158,17 @@ export class NominatimProvider implements LocationProvider {
       province,
       country,
       postalCode,
+      kind: item.category === 'highway' || item.addresstype === 'road' ? 'road' : 'place',
     };
   }
 
-  private async get<T>(path: string, params: URLSearchParams): Promise<T> {
-    let res: Response;
-    try {
-      res = await this.fetchImpl(`${this.config.baseUrl.replace(/\/$/, '')}${path}?${params}`, {
-        headers: { 'User-Agent': this.config.userAgent, Accept: 'application/json' },
-        signal: AbortSignal.timeout(this.config.timeoutMs),
-      });
-    } catch (err) {
-      const isTimeout =
-        err instanceof Error && (err.name === 'TimeoutError' || err.name === 'AbortError');
-      throw new LocationProviderError(
-        isTimeout ? 'TIMEOUT' : 'UNAVAILABLE',
-        'nominatim request failed',
-      );
-    }
-    if (res.status === 429) throw new LocationProviderError('RATE_LIMITED', 'nominatim 429');
-    if (res.status === 401 || res.status === 403) {
-      throw new LocationProviderError('QUOTA', `nominatim ${res.status}`);
-    }
-    if (!res.ok) throw new LocationProviderError('UNAVAILABLE', `nominatim ${res.status}`);
-    try {
-      return (await res.json()) as T;
-    } catch {
-      throw new LocationProviderError('BAD_RESPONSE', 'nominatim returned non-JSON');
-    }
+  private get<T>(path: string, params: URLSearchParams): Promise<T> {
+    return fetchJson<T>(
+      this.fetchImpl,
+      `${this.config.baseUrl.replace(/\/$/, '')}${path}?${params}`,
+      { headers: { 'User-Agent': this.config.userAgent, Accept: 'application/json' } },
+      this.config.timeoutMs,
+      'nominatim',
+    );
   }
 }

@@ -18,3 +18,23 @@ export type { SearchState } from './searchController';
 export * as locationApi from './locationApi';
 export { driverLocationApi, savedPlacesApi } from './locationApi';
 export type { SavedPlaceInput } from './locationApi';
+export { LiveTripView } from './components/LiveTripView';
+export type { LiveTripViewProps } from './components/LiveTripView';
+export { useLiveTrip } from './useLiveTrip';
+export { LiveTripController } from './liveTripController';
+export type { LiveTripState, SpokenMessage } from './liveTripController';
+export { useLocationBroadcast, BROADCAST_MESSAGES } from './useLocationBroadcast';
+export type { BroadcastStatus } from './useLocationBroadcast';
+export { TripRealtimeClient, realtimeUrlFrom } from './realtimeClient';
+export type { ConnectionState } from './realtimeClient';
+export { decideAnnouncement, INITIAL_ANNOUNCE_STATE } from './announcementPolicy';
+export {
+  summaryRows,
+  liveSentence,
+  formatDuration,
+  distancePhrase,
+  etaPhrase,
+  placePhrase,
+} from './tripText';
+export type { Viewer } from './tripText';
+export { tripsApi } from './locationApi';

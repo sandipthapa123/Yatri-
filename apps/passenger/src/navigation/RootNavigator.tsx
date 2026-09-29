@@ -9,6 +9,7 @@ import { PickLocationScreen } from '../screens/PickLocationScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 import { ProfileSetupScreen } from '../screens/ProfileSetupScreen';
 import { SavedPlacesScreen } from '../screens/SavedPlacesScreen';
+import { TripTrackingScreen } from '../screens/TripTrackingScreen';
 import { WelcomeScreen } from '../screens/WelcomeScreen';
 
 export type RootStackParamList = {
@@ -20,6 +21,7 @@ export type RootStackParamList = {
   Profile: undefined;
   PickLocation: { purpose: 'pickup' | 'destination' };
   SavedPlaces: undefined;
+  TripTracking: { tripId: string };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -48,6 +50,7 @@ export function RootNavigator() {
             <Stack.Screen name="Profile" component={ProfileScreen} />
             <Stack.Screen name="PickLocation" component={PickLocationScreen} />
             <Stack.Screen name="SavedPlaces" component={SavedPlacesScreen} />
+            <Stack.Screen name="TripTracking" component={TripTrackingScreen} />
           </>
         ) : (
           <>

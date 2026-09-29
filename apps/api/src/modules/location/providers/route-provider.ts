@@ -1,5 +1,6 @@
 import type { Coordinate } from '../coordinates';
 import { haversineMeters } from '../geo';
+import { fetchJson } from './http';
 import { LocationProviderError } from './location-provider';
 
 export interface RouteResult {
@@ -13,7 +14,7 @@ export interface RouteResult {
 }
 
 /**
- * Route abstraction. Fare calculation and driver matching (later phases)
+ * Route abstraction. Fare calculation, driver matching and live-trip ETA
  * depend on this interface, not on a vendor.
  */
 export interface RouteProvider {
@@ -40,28 +41,44 @@ export class HaversineRouteProvider implements RouteProvider {
   }
 }
 
-export interface OsrmConfig {
+interface HttpRouteConfig {
   baseUrl: string;
+  apiKey?: string;
   timeoutMs: number;
   fetchImpl?: typeof fetch;
 }
 
-interface OsrmBody {
-  code?: string;
-  routes?: Array<{
-    distance?: number;
-    duration?: number;
-    geometry?: { coordinates?: Array<[number, number]> };
-  }>;
+function usable(distance: unknown, duration: unknown, label: string) {
+  if (typeof distance !== 'number' || typeof duration !== 'number') {
+    throw new LocationProviderError('BAD_RESPONSE', `${label}: no usable route`);
+  }
+  if (!Number.isFinite(distance) || !Number.isFinite(duration) || distance < 0 || duration < 0) {
+    throw new LocationProviderError('BAD_RESPONSE', `${label}: invalid numbers`);
+  }
 }
 
-export class OsrmRouteProvider implements RouteProvider {
-  readonly name = 'osrm';
-  private readonly fetchImpl: typeof fetch;
-
-  constructor(private readonly config: OsrmConfig) {
+abstract class HttpRouteProvider implements RouteProvider {
+  abstract readonly name: string;
+  protected readonly fetchImpl: typeof fetch;
+  constructor(protected readonly config: HttpRouteConfig) {
     this.fetchImpl = config.fetchImpl ?? fetch;
   }
+  protected base(): string {
+    return this.config.baseUrl.replace(/\/$/, '');
+  }
+  abstract calculateRoute(
+    from: Coordinate,
+    to: Coordinate,
+    opts?: { geometry?: boolean },
+  ): Promise<RouteResult>;
+  async calculateETA(from: Coordinate, to: Coordinate): Promise<number | null> {
+    return (await this.calculateRoute(from, to)).durationSeconds;
+  }
+}
+
+/** OSRM: GET /route/v1/driving/{lng,lat;lng,lat}. */
+export class OsrmRouteProvider extends HttpRouteProvider {
+  readonly name = 'osrm';
 
   async calculateRoute(
     from: Coordinate,
@@ -70,30 +87,25 @@ export class OsrmRouteProvider implements RouteProvider {
   ): Promise<RouteResult> {
     const coords = `${from.longitude},${from.latitude};${to.longitude},${to.latitude}`;
     const qs = `overview=${opts.geometry ? 'full' : 'false'}&geometries=geojson`;
-    let res: Response;
-    try {
-      res = await this.fetchImpl(
-        `${this.config.baseUrl.replace(/\/$/, '')}/route/v1/driving/${coords}?${qs}`,
-        { signal: AbortSignal.timeout(this.config.timeoutMs) },
-      );
-    } catch (err) {
-      const isTimeout =
-        err instanceof Error && (err.name === 'TimeoutError' || err.name === 'AbortError');
-      throw new LocationProviderError(isTimeout ? 'TIMEOUT' : 'UNAVAILABLE', 'osrm request failed');
-    }
-    if (res.status === 429) throw new LocationProviderError('RATE_LIMITED', 'osrm 429');
-    if (!res.ok) throw new LocationProviderError('UNAVAILABLE', `osrm ${res.status}`);
-
-    const body = (await res.json().catch(() => null)) as OsrmBody | null;
+    const body = await fetchJson<{
+      code?: string;
+      routes?: Array<{
+        distance?: number;
+        duration?: number;
+        geometry?: { coordinates?: Array<[number, number]> };
+      }>;
+    }>(
+      this.fetchImpl,
+      `${this.base()}/route/v1/driving/${coords}?${qs}`,
+      {},
+      this.config.timeoutMs,
+      'osrm',
+    );
     const route = body?.routes?.[0];
-    if (
-      body?.code !== 'Ok' ||
-      !route ||
-      !Number.isFinite(route.distance) ||
-      !Number.isFinite(route.duration)
-    ) {
+    if (body?.code !== 'Ok' || !route) {
       throw new LocationProviderError('BAD_RESPONSE', 'osrm: no usable route');
     }
+    usable(route.distance, route.duration, 'osrm');
     return {
       distanceMeters: route.distance as number,
       durationSeconds: route.duration as number,
@@ -103,8 +115,73 @@ export class OsrmRouteProvider implements RouteProvider {
         : {}),
     };
   }
+}
 
-  async calculateETA(from: Coordinate, to: Coordinate): Promise<number | null> {
-    return (await this.calculateRoute(from, to)).durationSeconds;
+/** GraphHopper: GET /route?point=lat,lng&point=lat,lng (distance m, time ms). */
+export class GraphHopperRouteProvider extends HttpRouteProvider {
+  readonly name = 'graphhopper';
+
+  async calculateRoute(
+    from: Coordinate,
+    to: Coordinate,
+    opts: { geometry?: boolean } = {},
+  ): Promise<RouteResult> {
+    const qs = new URLSearchParams({ profile: 'car', points_encoded: 'false' });
+    qs.append('point', `${from.latitude},${from.longitude}`);
+    qs.append('point', `${to.latitude},${to.longitude}`);
+    qs.set('calc_points', opts.geometry ? 'true' : 'false');
+    if (this.config.apiKey) qs.set('key', this.config.apiKey);
+    const body = await fetchJson<{
+      paths?: Array<{
+        distance?: number;
+        time?: number;
+        points?: { coordinates?: Array<[number, number]> };
+      }>;
+    }>(this.fetchImpl, `${this.base()}/route?${qs}`, {}, this.config.timeoutMs, 'graphhopper');
+    const path = body?.paths?.[0];
+    if (!path) throw new LocationProviderError('BAD_RESPONSE', 'graphhopper: no path');
+    usable(path.distance, path.time, 'graphhopper');
+    return {
+      distanceMeters: path.distance as number,
+      durationSeconds: (path.time as number) / 1000,
+      method: 'route',
+      ...(opts.geometry && path.points?.coordinates ? { geometry: path.points.coordinates } : {}),
+    };
   }
 }
+
+/** Valhalla: POST /route (summary.length km, summary.time s). */
+export class ValhallaRouteProvider extends HttpRouteProvider {
+  readonly name = 'valhalla';
+
+  async calculateRoute(from: Coordinate, to: Coordinate): Promise<RouteResult> {
+    const body = await fetchJson<{ trip?: { summary?: { length?: number; time?: number } } }>(
+      this.fetchImpl,
+      `${this.base()}/route${this.config.apiKey ? `?api_key=${encodeURIComponent(this.config.apiKey)}` : ''}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          locations: [
+            { lat: from.latitude, lon: from.longitude },
+            { lat: to.latitude, lon: to.longitude },
+          ],
+          costing: 'auto',
+          units: 'kilometers',
+        }),
+      },
+      this.config.timeoutMs,
+      'valhalla',
+    );
+    const s = body?.trip?.summary;
+    if (!s) throw new LocationProviderError('BAD_RESPONSE', 'valhalla: no summary');
+    usable(s.length, s.time, 'valhalla');
+    return {
+      distanceMeters: (s.length as number) * 1000,
+      durationSeconds: s.time as number,
+      method: 'route',
+    };
+  }
+}
+
+export type { HttpRouteConfig };

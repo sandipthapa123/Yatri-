@@ -2,10 +2,12 @@ import { authApi } from '@yatri/mobile-auth';
 import type {
   DistanceResult,
   DriverLocation,
+  LiveTripSnapshot,
   PlaceSummary,
   ReverseGeocodeResult,
   SavedPlace,
   SavedPlaceKind,
+  TripSummary,
 } from '@yatri/types';
 
 /**
@@ -100,4 +102,14 @@ export const driverLocationApi = {
       method: 'DELETE',
       accessToken,
     }),
+};
+
+export const tripsApi = {
+  active: (accessToken: string) =>
+    authApi.request<TripSummary | null>('/trips/active', { accessToken }),
+  /** REST snapshot: first paint and fallback while the socket connects. */
+  live: (accessToken: string, tripId: string) =>
+    authApi.request<LiveTripSnapshot>(`/trips/${tripId}/live`, { accessToken }),
+  act: (accessToken: string, tripId: string, action: 'arrived' | 'start' | 'complete' | 'cancel') =>
+    authApi.request<TripSummary>(`/trips/${tripId}/${action}`, { method: 'POST', accessToken }),
 };

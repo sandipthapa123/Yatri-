@@ -6,6 +6,8 @@ export interface AccessTokenClaims {
   sub: string; // user id
   sid: string; // auth_sessions.id
   role: 'PASSENGER' | 'DRIVER' | 'ADMIN';
+  /** Expiry (seconds since epoch); present on verified tokens. */
+  exp?: number;
 }
 
 export function signAccessToken(claims: AccessTokenClaims): string {
@@ -33,8 +35,13 @@ export function verifyAccessToken(token: string): AccessTokenClaims {
     ) {
       throw new InvalidAccessTokenError();
     }
-    const { sub, sid, role } = decoded as { sub: string; sid: string; role: string };
-    return { sub, sid, role: role as AccessTokenClaims['role'] };
+    const { sub, sid, role, exp } = decoded as {
+      sub: string;
+      sid: string;
+      role: string;
+      exp?: number;
+    };
+    return { sub, sid, role: role as AccessTokenClaims['role'], exp };
   } catch {
     throw new InvalidAccessTokenError();
   }

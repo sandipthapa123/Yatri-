@@ -3,6 +3,7 @@ import type { PoolClient } from 'pg';
 
 import { pool } from '../../config/database';
 import { query } from '../../lib/db';
+import { insertLocation } from '../location/locations.repository';
 
 interface Row {
   id: string;
@@ -101,27 +102,21 @@ export async function createSavedPlace(
   } & PlaceFields,
 ): Promise<SavedPlace> {
   return inTransaction(async (c) => {
-    const loc = await c.query<{ id: string }>(
-      `INSERT INTO locations
-         (latitude, longitude, address, place_name, city, province, country, postal_code, provider_metadata)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb)
-       RETURNING id`,
-      [
-        input.latitude,
-        input.longitude,
-        input.address,
-        input.name,
-        input.city ?? null,
-        input.province ?? null,
-        input.country ?? null,
-        input.postalCode ?? null,
-        JSON.stringify({ provider: input.provider }),
-      ],
-    );
+    const locationId = await insertLocation(c, {
+      latitude: input.latitude,
+      longitude: input.longitude,
+      address: input.address,
+      placeName: input.name,
+      city: input.city,
+      province: input.province,
+      country: input.country,
+      postalCode: input.postalCode,
+      provider: input.provider,
+    });
     const sp = await c.query<{ id: string }>(
       `INSERT INTO saved_places (user_id, location_id, kind, name, label)
        VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-      [userId, loc.rows[0]?.id, input.kind, input.name, input.label],
+      [userId, locationId, input.kind, input.name, input.label],
     );
     const row = await c.query<Row>(`${SELECT} WHERE sp.id = $1`, [sp.rows[0]?.id]);
     return toSavedPlace(row.rows[0] as Row);

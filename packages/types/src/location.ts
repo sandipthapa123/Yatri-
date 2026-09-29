@@ -15,6 +15,8 @@ export interface PlaceSummary {
   province: string | null;
   country: string | null;
   postalCode: string | null;
+  /** Whether the place is a street/road or a named place; lets spoken text say "on New Road" vs "near Thamel". */
+  kind?: 'road' | 'place';
 }
 
 export interface ReverseGeocodeResult extends PlaceSummary {

@@ -1,6 +1,6 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useAuth } from '@yatri/mobile-auth';
-import { formatDistance, locationApi } from '@yatri/mobile-location';
+import { formatDistance, locationApi, tripsApi } from '@yatri/mobile-location';
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -23,6 +23,24 @@ export function HomeScreen({ navigation }: Props) {
   const theme = useTheme();
   const { user, getAccessToken } = useAuth();
   const { pickup, destination } = useTripLocations();
+  const [activeTripId, setActiveTripId] = useState<string | null>(null);
+
+  // Is there a trip in progress? Checked whenever this screen regains focus.
+  useEffect(() => {
+    const check = () => {
+      void (async () => {
+        try {
+          const t = await tripsApi.active(await getAccessToken());
+          setActiveTripId(t ? t.id : null);
+        } catch {
+          /* optional entry point */
+        }
+      })();
+    };
+    check();
+    return navigation.addListener('focus', check);
+  }, [navigation, getAccessToken]);
+
   const [result, setResult] = useState<{ key: string; text: string } | null>(null);
   const key =
     pickup && destination
@@ -85,6 +103,26 @@ export function HomeScreen({ navigation }: Props) {
             { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
           ]}
         >
+          {activeTripId ? (
+            <Pressable
+              onPress={() => navigation.navigate('TripTracking', { tripId: activeTripId })}
+              accessibilityRole="button"
+              accessibilityLabel="Open live trip status"
+              style={[
+                styles.searchInputPlaceholder,
+                {
+                  borderColor: theme.colors.primary,
+                  borderWidth: 2,
+                  minHeight: theme.minTouchTarget + 16,
+                },
+              ]}
+            >
+              <Text style={{ color: theme.colors.textPrimary, fontWeight: '700' }}>
+                You have a trip in progress
+              </Text>
+              <Text style={{ color: theme.colors.textSecondary }}>Open live trip status</Text>
+            </Pressable>
+          ) : null}
           <Text
             accessibilityRole="header"
             style={[styles.searchLabel, { color: theme.colors.textPrimary }]}

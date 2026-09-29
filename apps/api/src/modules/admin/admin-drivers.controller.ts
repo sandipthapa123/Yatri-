@@ -1,3 +1,4 @@
+import { forceSuspend } from '../availability/availability.service';
 import type { Request, Response } from 'express';
 import type {
   AdminDriverDetail,
@@ -240,6 +241,7 @@ export async function suspendDriverHandler(
     );
   }
 
+  await forceSuspend(driverId, req.auth.userId); // leaves availability immediately
   await recordVerificationEvent({
     driverUserId: driverId,
     actorUserId: req.auth.userId,

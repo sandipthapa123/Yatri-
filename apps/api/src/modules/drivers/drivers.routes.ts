@@ -19,6 +19,12 @@ import {
   getLocationHandler,
   putLocationHandler,
 } from './driver-location';
+import {
+  getAvailabilityHandler,
+  goOfflineHandler,
+  goOnlineHandler,
+} from '../availability/availability.controller';
+import { driverLocationSampleSchema } from '../availability/availability.validators';
 import { updateOnboardingSchema } from './drivers.validators';
 
 export const driversRouter: RouterType = Router();
@@ -45,3 +51,17 @@ driversRouter.put(
 );
 driversRouter.get('/me/location', getLocationHandler);
 driversRouter.delete('/me/location', deleteLocationHandler);
+
+// Availability. Eligibility is decided by the server; the client only asks.
+driversRouter.get('/me/availability', getAvailabilityHandler);
+driversRouter.post(
+  '/me/availability/online',
+  ipRateLimit('drv-online', 20, 60),
+  validateBody(driverLocationSampleSchema),
+  goOnlineHandler,
+);
+driversRouter.post(
+  '/me/availability/offline',
+  ipRateLimit('drv-offline', 20, 60),
+  goOfflineHandler,
+);

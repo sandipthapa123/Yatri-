@@ -19,12 +19,26 @@ export interface LocationSample {
   deviceTimeMs: number;
 }
 
+/** One driver-presence GPS reading (matches the API's DriverLocationSample). */
+export interface PresenceSample {
+  latitude: number;
+  longitude: number;
+  accuracyMeters?: number | null;
+  headingDegrees?: number | null;
+  speedMps?: number | null;
+  deviceTimeMs: number;
+  mockLocation?: boolean;
+}
+
 export interface RealtimeClientOptions {
   url: string;
-  tripId: string;
+  /** Trip mode: subscribe to this trip. Omit for driver PRESENCE mode (the server identifies the driver from the connection). */
+  tripId?: string;
   /** Returns a currently valid access token (refreshing if needed); throws when signed out. */
   getToken: () => Promise<string>;
-  onSnapshot: (snapshot: LiveTripSnapshot) => void;
+  onSnapshot?: (snapshot: LiveTripSnapshot) => void;
+  /** Every server message, after the client has handled connection concerns. */
+  onMessage?: (message: ServerRealtimeMessage) => void;
   onEvent?: (e: { event: TripEventName; important: boolean; eventId: number }) => void;
   onConnection: (state: ConnectionState) => void;
   onRejected?: (reason: string) => void;
@@ -64,10 +78,7 @@ export class TripRealtimeClient {
   private tokenTimer: ReturnType<typeof setInterval> | null = null;
   private lastMessageAt = 0;
   private lastSentAt = 0;
-  private pending: {
-    kind: 'driver_location' | 'passenger_location';
-    sample: LocationSample;
-  } | null = null;
+  private pending: { message: Record<string, unknown>; deviceTimeMs: number } | null = null;
   private state: ConnectionState = 'connecting';
 
   constructor(private readonly opts: RealtimeClientOptions) {}
@@ -109,8 +120,34 @@ export class TripRealtimeClient {
 
   /** Latest-wins: while offline only the newest sample is kept, and it expires. */
   sendLocation(kind: 'driver_location' | 'passenger_location', sample: LocationSample) {
-    this.pending = { kind, sample };
+    this.pending = {
+      deviceTimeMs: sample.deviceTimeMs,
+      message: {
+        type: kind,
+        tripId: this.opts.tripId,
+        latitude: sample.latitude,
+        longitude: sample.longitude,
+        accuracyMeters: sample.accuracyMeters,
+        deviceTimeMs: sample.deviceTimeMs,
+      },
+    };
     this.flush();
+  }
+
+  /** Driver presence: no driverId, no tripId — the connection is the identity. */
+  sendPresenceLocation(sample: PresenceSample) {
+    this.pending = { deviceTimeMs: sample.deviceTimeMs, message: { type: 'location', ...sample } };
+    this.flush();
+  }
+
+  /** Send any client message immediately (dropped if the socket is not open). */
+  send(message: object) {
+    this.raw(message);
+  }
+
+  /** True while the socket is authenticated and ready to carry messages. */
+  isReady(): boolean {
+    return this.subscribed && !!this.socket && this.socket.readyState === OPEN;
   }
 
   stopSharing() {
@@ -120,21 +157,14 @@ export class TripRealtimeClient {
   private flush() {
     const p = this.pending;
     if (!p || !this.subscribed || !this.socket || this.socket.readyState !== OPEN) return;
-    if (this.now() - p.sample.deviceTimeMs > MAX_QUEUED_AGE_MS) {
+    if (this.now() - p.deviceTimeMs > MAX_QUEUED_AGE_MS) {
       this.pending = null; // too old to be useful; the server would reject it as stale anyway
       return;
     }
     if (this.now() - this.lastSentAt < MIN_SEND_INTERVAL_MS) return; // next sample supersedes
     this.lastSentAt = this.now();
     this.pending = null;
-    this.raw({
-      type: p.kind,
-      tripId: this.opts.tripId,
-      latitude: p.sample.latitude,
-      longitude: p.sample.longitude,
-      accuracyMeters: p.sample.accuracyMeters,
-      deviceTimeMs: p.sample.deviceTimeMs,
-    });
+    this.raw(p.message);
   }
 
   private raw(message: object) {
@@ -192,10 +222,20 @@ export class TripRealtimeClient {
     } catch {
       return;
     }
+    this.opts.onMessage?.(msg);
     switch (msg.type) {
       case 'authed':
-        if (!this.subscribed)
-          socket.send(JSON.stringify({ type: 'subscribe', tripId: this.opts.tripId }));
+        if (this.opts.tripId) {
+          if (!this.subscribed) {
+            socket.send(JSON.stringify({ type: 'subscribe', tripId: this.opts.tripId }));
+          }
+        } else {
+          // Presence mode has nothing to subscribe to: authenticated == ready.
+          this.subscribed = true;
+          this.attempt = 0;
+          this.setState('live');
+          this.flush();
+        }
         break;
       case 'subscribed':
         this.subscribed = true;
@@ -208,7 +248,7 @@ export class TripRealtimeClient {
         // (place-name enrichment can re-issue the same state), older ones are dropped.
         if (msg.snapshot.eventId < this.lastEventId) return;
         this.lastEventId = msg.snapshot.eventId;
-        this.opts.onSnapshot(msg.snapshot);
+        this.opts.onSnapshot?.(msg.snapshot);
         break;
       }
       case 'event':
@@ -217,8 +257,15 @@ export class TripRealtimeClient {
       case 'rejected':
         this.opts.onRejected?.(msg.reason);
         break;
+      case 'connection':
+        if (msg.status === 'superseded') {
+          // A newer device took over: stop quietly rather than fighting it in a reconnect loop.
+          this.teardown();
+          this.setState('ended');
+        }
+        break;
       case 'error':
-        if (msg.code === 'NOT_FOUND') {
+        if (msg.code === 'NOT_FOUND' && this.opts.tripId) {
           // The trip is over (or was never ours): stop reconnecting.
           this.teardown();
           this.setState('ended');
@@ -273,3 +320,6 @@ export function realtimeUrlFrom(apiBaseUrl: string, override?: string): string {
   const u = apiBaseUrl.replace(/\/api\/v\d+\/?$/, '');
   return `${u.replace(/^http/, 'ws')}/ws/v1/realtime`;
 }
+
+/** The client serves both trips and driver presence; this is its neutral name. */
+export { TripRealtimeClient as RealtimeClient };

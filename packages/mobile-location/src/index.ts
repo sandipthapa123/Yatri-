@@ -38,3 +38,14 @@ export {
 } from './tripText';
 export type { Viewer } from './tripText';
 export { tripsApi } from './locationApi';
+export { useDriverPresence } from './useDriverPresence';
+export { DriverPresenceController } from './driverPresenceController';
+export type { PresenceState } from './driverPresenceController';
+export {
+  describePresence,
+  LOCATION_STATUS_HELP,
+  LOCATION_STATUS_TEXT,
+  locationStatusKey,
+} from './driverPresenceText';
+export { driverAvailabilityApi } from './locationApi';
+export { RealtimeClient } from './realtimeClient';

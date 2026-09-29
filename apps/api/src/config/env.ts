@@ -57,6 +57,17 @@ const envSchema = z
     // --- Admin seed (development only; never a hard-coded default) ---
     ADMIN_SEED_EMAIL: z.string().email().optional(),
     ADMIN_SEED_PASSWORD: z.string().min(12).optional(),
+    // Development only: comma-separated admin permissions granted to the seeded admin
+    // (e.g. DRIVER_LOCATION_VIEW). Real environments grant these deliberately, per admin.
+    ADMIN_SEED_PERMISSIONS: z
+      .string()
+      .default('')
+      .transform((v) =>
+        v
+          .split(',')
+          .map((p) => p.trim())
+          .filter(Boolean),
+      ),
 
     // --- Document storage ---
     STORAGE_PROVIDER: z.enum(['local']).default('local'),
@@ -106,6 +117,21 @@ const envSchema = z
     // Minimum pause between reverse-geocode lookups for one moving party (cost control).
     TRACKING_PLACE_REFRESH_MS: z.coerce.number().int().min(0).default(15000),
     TRACKING_MIN_INTERVAL_MS: z.coerce.number().int().min(0).default(800),
+    // --- Driver availability ---
+    // A location no older than this counts as fresh (usable for matching).
+    DRIVER_LOCATION_FRESH_SECONDS: z.coerce.number().int().positive().default(30),
+    // Online but silent for this long -> the server moves the driver to UNAVAILABLE.
+    DRIVER_STALE_TIMEOUT_SECONDS: z.coerce.number().int().positive().default(180),
+    // Cadence the client is told to use, per driver situation (battery vs. freshness).
+    DRIVER_UPDATE_INTERVAL_IDLE_MS: z.coerce.number().int().min(1000).default(10000),
+    DRIVER_UPDATE_INTERVAL_EN_ROUTE_MS: z.coerce.number().int().min(1000).default(3000),
+    DRIVER_UPDATE_INTERVAL_ON_TRIP_MS: z.coerce.number().int().min(1000).default(3000),
+    // Going online needs a fix at least this accurate.
+    DRIVER_ONLINE_MAX_ACCURACY_METERS: z.coerce.number().int().positive().default(100),
+    // Postgres gets at most one location write per driver per this many seconds.
+    DRIVER_LOCATION_PERSIST_SECONDS: z.coerce.number().int().min(0).default(20),
+    // A GOING_ONLINE / GOING_OFFLINE transition that never completes is rolled back after this.
+    DRIVER_TRANSITION_TIMEOUT_SECONDS: z.coerce.number().int().positive().default(30),
     LOCATION_SEARCH_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().positive().default(60),
 
     MAX_UPLOAD_FILE_SIZE_BYTES: z.coerce

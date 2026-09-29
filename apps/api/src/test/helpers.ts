@@ -190,3 +190,26 @@ export async function approveEverythingAsAdmin(
     if (res.status !== 200) throw new Error(`approve document failed: ${JSON.stringify(res.body)}`);
   }
 }
+
+/** A driver who has passed the real, strict verification flow: documents approved, vehicle approved, admin-VERIFIED. */
+export async function createVerifiedDriver(): Promise<{
+  driver: SubmittableDriver;
+  adminToken: string;
+}> {
+  const driver = await bringDriverToSubmittable();
+  const submit = await api
+    .post('/api/v1/drivers/me/submit-verification')
+    .set('Authorization', `Bearer ${driver.accessToken}`);
+  if (submit.status !== 200) throw new Error(`submit failed: ${JSON.stringify(submit.body)}`);
+  const adminToken = await loginTestAdmin(
+    `verified-${Date.now()}-${randomInt(0, 1e6)}@yatri.local`,
+    'a-strong-test-password-1',
+  );
+  await approveEverythingAsAdmin(adminToken, driver);
+  const verify = await api
+    .post(`/api/v1/admin/drivers/${driver.user.id}/verify`)
+    .set('Authorization', `Bearer ${adminToken}`)
+    .send({});
+  if (verify.status !== 200) throw new Error(`verify failed: ${JSON.stringify(verify.body)}`);
+  return { driver, adminToken };
+}

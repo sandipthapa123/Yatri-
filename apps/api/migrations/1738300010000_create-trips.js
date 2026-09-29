@@ -18,7 +18,12 @@ exports.up = (pgm) => {
     passenger_id: { type: 'uuid', notNull: true, references: 'users', onDelete: 'CASCADE' },
     driver_id: { type: 'uuid', notNull: true, references: 'users', onDelete: 'CASCADE' },
     status: { type: 'text', notNull: true, default: 'DRIVER_EN_ROUTE' },
-    pickup_location_id: { type: 'uuid', notNull: true, references: 'locations', onDelete: 'RESTRICT' },
+    pickup_location_id: {
+      type: 'uuid',
+      notNull: true,
+      references: 'locations',
+      onDelete: 'RESTRICT',
+    },
     destination_location_id: {
       type: 'uuid',
       notNull: true,
@@ -33,7 +38,8 @@ exports.up = (pgm) => {
     updated_at: { type: 'timestamptz', notNull: true, default: pgm.func('now()') },
   });
   pgm.addConstraint('trips', 'trips_status_check', {
-    check: "status IN ('DRIVER_EN_ROUTE', 'DRIVER_ARRIVED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED')",
+    check:
+      "status IN ('DRIVER_EN_ROUTE', 'DRIVER_ARRIVED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED')",
   });
   pgm.addConstraint('trips', 'trips_participants_differ', {
     check: 'passenger_id <> driver_id',

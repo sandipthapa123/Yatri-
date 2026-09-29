@@ -36,7 +36,11 @@ export async function startBus(): Promise<void> {
   if (subscriber) return;
   subscriber = new Redis(env.REDIS_URL, { maxRetriesPerRequest: null });
   subscriber.on('error', (err) => console.error('Realtime bus error', err));
-  subscriber.on('message', (_channel, raw) => {
+  subscriber.on('message', (channel, raw) => {
+    if (channel === DRIVER_CHANNEL) {
+      for (const h of driverHandlers) h(raw);
+      return;
+    }
     try {
       const change = JSON.parse(raw) as TripChange;
       for (const h of handlers) h(change);
@@ -45,7 +49,7 @@ export async function startBus(): Promise<void> {
     }
   });
   // ioredis resubscribes automatically after a reconnect.
-  await subscriber.subscribe(CHANNEL);
+  await subscriber.subscribe(CHANNEL, DRIVER_CHANNEL);
 }
 
 export async function stopBus(): Promise<void> {
@@ -55,4 +59,17 @@ export async function stopBus(): Promise<void> {
     s.removeAllListeners('message');
     await s.quit().catch(() => undefined);
   }
+}
+
+// ---- driver availability changes (same idea: "driver X changed", no coordinates) ----
+const DRIVER_CHANNEL = 'yatri:driver-changes';
+type DriverHandler = (driverId: string) => void;
+const driverHandlers = new Set<DriverHandler>();
+
+export async function publishDriverChange(driverId: string): Promise<void> {
+  await getRedisClient().publish(DRIVER_CHANNEL, driverId);
+}
+export function onDriverChange(handler: DriverHandler): () => void {
+  driverHandlers.add(handler);
+  return () => driverHandlers.delete(handler);
 }

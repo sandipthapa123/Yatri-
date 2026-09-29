@@ -18,7 +18,21 @@ import {
 } from '../tracking/tracking.service';
 import { getTrip } from '../trips/trips.repository';
 import { metaFromRow } from '../trips/trips.service';
-import { onTripChange, startBus, stopBus, type TripChange } from './bus';
+import {
+  getStatus as getAvailabilityStatus,
+  goOffline,
+  goOnline,
+  ingestLocation,
+  sweepDrivers,
+} from '../availability/availability.service';
+import {
+  driverLocationSampleShape,
+  driverLocationSampleSchema,
+} from '../availability/availability.validators';
+import { touchSeen } from '../availability/presence.state';
+import { HttpError } from '../../middleware/errorHandler';
+import { availabilityConfig } from '../availability/availability.service';
+import { onDriverChange, onTripChange, startBus, stopBus, type TripChange } from './bus';
 
 export const REALTIME_PATH = '/ws/v1/realtime';
 
@@ -27,6 +41,7 @@ const TOKEN_GRACE_MS = 30_000;
 const SESSION_RECHECK_MS = 60_000;
 const HEARTBEAT_MS = 25_000;
 const SWEEP_MS = 5_000;
+const DRIVER_SWEEP_MS = 15_000;
 const MAX_MESSAGES_PER_SECOND = 8;
 const MAX_VIOLATIONS = 25;
 const MAX_BUFFERED_BYTES = 256 * 1024;
@@ -45,6 +60,16 @@ const clientMessage = z.discriminatedUnion('type', [
     deviceTimeMs: z.number().finite(),
   }),
   z.object({ type: z.literal('stop_sharing'), tripId: uuid }),
+  // Driver presence. Strict: a stray driverId (or any unknown key) is a protocol error, not ignored.
+  // (0,0 "no fix" readings are rejected downstream by evaluateFix.)
+  z.object({ type: z.literal('location'), ...driverLocationSampleShape }).strict(),
+  z
+    .object({
+      type: z.literal('availability'),
+      action: z.enum(['online', 'offline']),
+      location: driverLocationSampleSchema.optional(),
+    })
+    .strict(),
   z.object({ type: z.literal('ping') }),
 ]);
 
@@ -76,6 +101,16 @@ export async function attachRealtimeGateway(server: HttpServer): Promise<Realtim
   const conns = new Set<Conn>();
   const byTrip = new Map<string, Set<Conn>>();
   const lastFreshness = new Map<string, string>();
+  // One live presence connection per driver. A newer login supersedes the older one, so two
+  // devices can never both believe they are "the" online device.
+  const driverConns = new Map<string, Conn>();
+
+  const currentIntervalMs = () => availabilityConfig().intervals.idle;
+
+  async function pushAvailability(conn: Conn) {
+    if (!conn.auth) return;
+    send(conn, { type: 'availability', status: await getAvailabilityStatus(conn.auth.userId) });
+  }
 
   const subscribe = (conn: Conn, tripId: string) => {
     conn.subs.add(tripId);
@@ -127,7 +162,11 @@ export async function attachRealtimeGateway(server: HttpServer): Promise<Realtim
     }
     const msg = parsed.data;
 
-    if (msg.type === 'ping') return send(conn, { type: 'pong' });
+    if (msg.type === 'ping') {
+      // For a driver a ping is also a liveness heartbeat.
+      if (conn.auth?.role === 'DRIVER') await touchSeen(conn.auth.userId, Date.now());
+      return send(conn, { type: 'pong' });
+    }
 
     if (msg.type === 'auth') {
       const r = await resolveAccessToken(msg.token);
@@ -138,10 +177,27 @@ export async function attachRealtimeGateway(server: HttpServer): Promise<Realtim
       // Token refresh on a live socket must stay the same user.
       if (conn.auth && conn.auth.userId !== r.auth.userId)
         return conn.ws.close(4403, 'user_changed');
+      const firstAuth = !conn.auth;
       conn.auth = r.auth;
       conn.token = msg.token;
       conn.expiresAtMs = r.expiresAtMs;
-      return send(conn, { type: 'authed', userId: r.auth.userId, role: r.auth.role });
+      send(conn, { type: 'authed', userId: r.auth.userId, role: r.auth.role });
+      if (firstAuth && r.auth.role === 'DRIVER') {
+        const previous = driverConns.get(r.auth.userId);
+        driverConns.set(r.auth.userId, conn);
+        if (previous && previous !== conn) {
+          send(previous, { type: 'connection', status: 'superseded', updateIntervalMs: 0 });
+          previous.ws.close(4409, 'superseded');
+        }
+        await touchSeen(r.auth.userId, Date.now());
+        send(conn, {
+          type: 'connection',
+          status: 'connected',
+          updateIntervalMs: currentIntervalMs(),
+        });
+        await pushAvailability(conn);
+      }
+      return;
     }
 
     if (!conn.auth) {
@@ -149,6 +205,51 @@ export async function attachRealtimeGateway(server: HttpServer): Promise<Realtim
       return conn.ws.close(4401, 'unauthenticated');
     }
     const userId = conn.auth.userId;
+
+    if (msg.type === 'location' || msg.type === 'availability') {
+      // The driver is whoever authenticated this socket; nothing in the message can change that.
+      if (conn.auth.role !== 'DRIVER') {
+        return send(conn, {
+          type: 'availability_error',
+          code: 'FORBIDDEN',
+          message: 'Only drivers can do this.',
+        });
+      }
+      if (driverConns.get(userId) !== conn) {
+        return send(conn, {
+          type: 'availability_error',
+          code: 'SUPERSEDED',
+          message: 'This device is no longer the active one.',
+        });
+      }
+      if (msg.type === 'location') {
+        const { type: _t, ...sample } = msg;
+        void _t;
+        const result = await ingestLocation(userId, sample);
+        if (result.accepted) {
+          return send(conn, {
+            type: 'location_ack',
+            receivedAt: result.receivedAt,
+            freshness: result.freshness,
+          });
+        }
+        if (result.reason === 'too_frequent') return;
+        return send(conn, { type: 'rejected', tripId: '', reason: result.reason });
+      }
+      if (msg.action === 'online' && !msg.location) {
+        return send(conn, { type: 'error', code: 'BAD_MESSAGE', message: 'Invalid message.' });
+      }
+      try {
+        const status =
+          msg.action === 'online' && msg.location
+            ? await goOnline(userId, msg.location)
+            : await goOffline(userId);
+        return send(conn, { type: 'availability', status });
+      } catch (err) {
+        if (!(err instanceof HttpError)) throw err;
+        return send(conn, { type: 'availability_error', code: err.code, message: err.message });
+      }
+    }
 
     if (msg.type === 'subscribe') {
       const meta = await loadTripMeta(msg.tripId);
@@ -227,6 +328,10 @@ export async function attachRealtimeGateway(server: HttpServer): Promise<Realtim
     });
     ws.on('close', () => {
       clearTimeout(authTimer);
+      // A dropped socket does NOT flip the driver offline: staleness handling does that on the
+      // configured timeout, so a brief network blip does not cost the driver their shift.
+      if (conn.auth && driverConns.get(conn.auth.userId) === conn)
+        driverConns.delete(conn.auth.userId);
       drop(conn);
     });
     ws.on('error', () => ws.terminate());
@@ -296,6 +401,14 @@ export async function attachRealtimeGateway(server: HttpServer): Promise<Realtim
     }
   }, SWEEP_MS);
 
+  const offDriver = onDriverChange((driverId) => {
+    const conn = driverConns.get(driverId);
+    if (conn) void pushAvailability(conn).catch((err) => console.error('driver push failed', err));
+  });
+  const driverSweeper = setInterval(() => {
+    sweepDrivers().catch((err) => console.error('Driver sweep error', err));
+  }, DRIVER_SWEEP_MS);
+
   await startBus();
 
   return {
@@ -304,7 +417,9 @@ export async function attachRealtimeGateway(server: HttpServer): Promise<Realtim
       clearInterval(heartbeat);
       clearInterval(sessionCheck);
       clearInterval(sweeper);
+      clearInterval(driverSweeper);
       offChange();
+      offDriver();
       for (const conn of conns) conn.ws.terminate();
       await new Promise<void>((resolve) => wss.close(() => resolve()));
       await stopBus();

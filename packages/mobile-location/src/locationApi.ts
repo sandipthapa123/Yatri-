@@ -1,6 +1,8 @@
 import { authApi } from '@yatri/mobile-auth';
 import type {
   DistanceResult,
+  DriverAvailabilityStatus,
+  DriverLocationSample,
   DriverLocation,
   LiveTripSnapshot,
   PlaceSummary,
@@ -112,4 +114,20 @@ export const tripsApi = {
     authApi.request<LiveTripSnapshot>(`/trips/${tripId}/live`, { accessToken }),
   act: (accessToken: string, tripId: string, action: 'arrived' | 'start' | 'complete' | 'cancel') =>
     authApi.request<TripSummary>(`/trips/${tripId}/${action}`, { method: 'POST', accessToken }),
+};
+
+export const driverAvailabilityApi = {
+  status: (accessToken: string) =>
+    authApi.request<DriverAvailabilityStatus>('/drivers/me/availability', { accessToken }),
+  online: (accessToken: string, sample: DriverLocationSample) =>
+    authApi.request<DriverAvailabilityStatus>('/drivers/me/availability/online', {
+      method: 'POST',
+      accessToken,
+      body: sample,
+    }),
+  offline: (accessToken: string) =>
+    authApi.request<DriverAvailabilityStatus>('/drivers/me/availability/offline', {
+      method: 'POST',
+      accessToken,
+    }),
 };

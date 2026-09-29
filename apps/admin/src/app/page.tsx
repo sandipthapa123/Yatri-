@@ -56,6 +56,23 @@ export default async function DashboardPage() {
       >
         Review driver applications
       </Link>
+      <Link
+        href="/availability"
+        style={{
+          minHeight: 44,
+          display: 'inline-flex',
+          alignItems: 'center',
+          padding: '0 20px',
+          borderRadius: 999,
+          border: '2px solid var(--color-primary)',
+          color: 'var(--color-primary)',
+          fontSize: 15,
+          fontWeight: 700,
+          textDecoration: 'none',
+        }}
+      >
+        Driver availability
+      </Link>
       <form action={logoutAction}>
         <button
           type="submit"

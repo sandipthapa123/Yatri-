@@ -12,6 +12,7 @@ export type AccountStatus = 'ACTIVE' | 'SUSPENDED' | 'DEACTIVATED';
 export * from './driver-verification';
 export * from './location';
 export * from './tracking';
+export * from './availability';
 
 /** Matches the API's PublicProfile response shape (GET/PATCH /users/me). */
 export interface AppUser {

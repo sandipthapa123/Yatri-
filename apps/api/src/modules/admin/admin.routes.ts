@@ -5,6 +5,8 @@ import { requireRole } from '../../middleware/requireRole';
 import { validateBody } from '../../middleware/validate';
 import { validateQuery } from '../../middleware/validateQuery';
 import { validateUuidParam } from '../../middleware/validateUuidParam';
+import { listAvailabilityHandler } from '../availability/admin-availability';
+import { adminAvailabilityQuerySchema } from '../availability/availability.validators';
 import { adminCreateTripHandler, createTripSchema } from '../trips/trips.controller';
 import { getMeHandler } from '../users/users.controller';
 import {
@@ -37,6 +39,12 @@ adminRouter.use(authenticate, requireRole('ADMIN'));
 adminRouter.get('/me', getMeHandler);
 // Stand-in for ride matching (a later phase): lets an admin/test create a trip so live tracking can run.
 adminRouter.post('/trips', validateBody(createTripSchema), adminCreateTripHandler);
+
+adminRouter.get(
+  '/availability/drivers',
+  validateQuery(adminAvailabilityQuerySchema),
+  listAvailabilityHandler,
+);
 
 adminRouter.get('/drivers', validateQuery(listDriversQuerySchema), listDriversHandler);
 adminRouter.get('/drivers/:id', validateUuidParam('id'), getDriverDetailHandler);

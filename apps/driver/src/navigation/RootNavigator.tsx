@@ -2,6 +2,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '@yatri/mobile-auth';
 
+import { DriverHomeScreen } from '../screens/DriverHomeScreen';
 import { DriverLocationScreen } from '../screens/DriverLocationScreen';
 import { DriverTripScreen } from '../screens/DriverTripScreen';
 import { DriverProfileSetupScreen } from '../screens/DriverProfileSetupScreen';
@@ -20,6 +21,7 @@ export type RootStackParamList = {
   VerificationPending: undefined;
   DriverLocation: undefined;
   DriverTrip: { tripId: string };
+  DriverHome: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -50,6 +52,7 @@ export function RootNavigator() {
             <Stack.Screen name="DriverProfileSetup" component={DriverProfileSetupScreen} />
             <Stack.Screen name="DriverLocation" component={DriverLocationScreen} />
             <Stack.Screen name="DriverTrip" component={DriverTripScreen} />
+            <Stack.Screen name="DriverHome" component={DriverHomeScreen} />
           </>
         ) : (
           <>

@@ -63,6 +63,10 @@ export function VerificationPendingScreen({ navigation }: Props) {
     try {
       const token = await getAccessToken();
       const progress = await driverApi.getOnboarding(token);
+      if (progress.status === 'VERIFIED') {
+        navigation.replace('DriverHome');
+        return;
+      }
       setStatus(progress.status);
       setRejectionReason(progress.rejectionReason);
       try {
@@ -74,7 +78,7 @@ export function VerificationPendingScreen({ navigation }: Props) {
     } catch {
       setLoadError('Could not load your verification status.');
     }
-  }, [getAccessToken]);
+  }, [getAccessToken, navigation]);
 
   // React Navigation fires 'focus' on initial mount too, so this alone
   // covers both the first load and every time the driver returns here.

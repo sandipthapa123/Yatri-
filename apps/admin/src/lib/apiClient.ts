@@ -1,5 +1,6 @@
 import type {
   AdminDriverDetail,
+  AdminDriverAvailabilityResponse,
   AdminDriverListResponse,
   ApiErrorShape,
   ApiResponse,
@@ -210,4 +211,28 @@ export async function logoutAdminSession(accessToken: string) {
   });
   // Best-effort: the admin's cookies are cleared regardless of the result.
   return response.ok;
+}
+
+export interface ListDriverAvailabilityParams {
+  search?: string;
+  state?: string;
+  freshness?: string;
+  verification?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+/** Server-side filtered + paginated. Coordinates come back only if this admin holds DRIVER_LOCATION_VIEW. */
+export function listDriverAvailability(
+  accessToken: string,
+  params: ListDriverAvailabilityParams,
+): Promise<AdminDriverAvailabilityResponse> {
+  const query = new URLSearchParams();
+  for (const [k, v] of Object.entries(params))
+    if (v !== undefined && v !== '') query.set(k, String(v));
+  const qs = query.toString();
+  return adminRequest<AdminDriverAvailabilityResponse>(
+    `/availability/drivers${qs ? `?${qs}` : ''}`,
+    accessToken,
+  );
 }

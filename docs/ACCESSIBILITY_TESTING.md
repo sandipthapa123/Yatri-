@@ -52,3 +52,22 @@ assertive interrupts, no duplicate speech for a single event.
 Permission denied / blocked / services off each show a plain message; GPS-lost notice
 appears after ~15 s without fixes and sharing resumes automatically; sharing stops when the
 trip ends or the screen closes.
+
+## F. Driver availability (Driver home)
+
+With TalkBack / VoiceOver / NVDA, offline → online → offline:
+
+1. Focus order: status heading ("OFFLINE") → announcements → each text row (Status, Location
+   permission, …) → any problem/eligibility box → **Go online** → secondary buttons.
+2. Deny location: an alert says location is required and you are still offline; blocked shows
+   **Open phone settings**.
+3. Go online in a weak-GPS spot (indoors): refused with the accuracy in meters; still offline.
+4. Go online outside: assertive "You are now online. Your location is being shared with
+   Yatri." exactly once; status heading now reads ONLINE; rows show place, accuracy, last update.
+5. Airplane mode: assertive "Connection lost. Your location is not being shared." and the
+   location row reads "Connection lost"; turn it off → "Connection restored…".
+6. Keep the app in the background for 3+ minutes, return: told you were taken offline because
+   location stopped; **Go online** works again.
+7. Go offline: assertive "You are now offline. Location sharing has stopped."
+8. Confirm the "Last update" row ticking never interrupts speech, and no state is conveyed by
+   colour alone.

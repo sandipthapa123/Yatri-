@@ -4,6 +4,8 @@
  * status, freshness) is here as data — the map is never the source.
  */
 
+import type { DriverAvailabilityStatus, LocationFreshness } from './availability';
+
 export type TripStatus =
   'DRIVER_EN_ROUTE' | 'DRIVER_ARRIVED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
 
@@ -109,7 +111,24 @@ export type ClientRealtimeMessage =
       deviceTimeMs: number;
     }
   | { type: 'stop_sharing'; tripId: string }
+  /** Driver presence: the authenticated connection IS the driver; there is no driverId field. */
+  | ({ type: 'location' } & DriverLocationSample)
+  | { type: 'availability'; action: 'online'; location: DriverLocationSample }
+  | { type: 'availability'; action: 'offline' }
   | { type: 'ping' };
+
+/** One GPS reading from the driver's device. Only what matching and fraud checks need. */
+export interface DriverLocationSample {
+  latitude: number;
+  longitude: number;
+  accuracyMeters?: number | null;
+  headingDegrees?: number | null;
+  speedMps?: number | null;
+  /** Device clock, ms. Used for ordering/staleness only; the server records its own receive time. */
+  deviceTimeMs: number;
+  /** Set when the platform reports a mocked/simulated location. Flagged, never trusted. */
+  mockLocation?: boolean;
+}
 
 /** Server -> client realtime messages. */
 export type ServerRealtimeMessage =
@@ -126,4 +145,12 @@ export type ServerRealtimeMessage =
     }
   | { type: 'rejected'; tripId: string; reason: string }
   | { type: 'error'; code: string; message: string }
-  | { type: 'pong' };
+  | { type: 'pong' }
+  | { type: 'availability'; status: DriverAvailabilityStatus }
+  | { type: 'availability_error'; code: string; message: string }
+  | {
+      type: 'connection';
+      status: 'connected' | 'superseded';
+      updateIntervalMs: number;
+    }
+  | { type: 'location_ack'; receivedAt: string; freshness: LocationFreshness };

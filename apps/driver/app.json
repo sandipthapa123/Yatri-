@@ -33,7 +33,7 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Yatri uses your location only when you ask, to show where you are and share it with Yatri. It is not tracked in the background."
+          "locationWhenInUsePermission": "Yatri Driver uses your location while you are online, and only while the app is open, to share your position with Yatri so you can be matched with riders. Nothing is shared when you are offline."
         }
       ],
       [

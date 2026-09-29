@@ -1,3 +1,4 @@
+import { forceSuspend } from '../availability/availability.service';
 import type { Request, Response } from 'express';
 import type { ApiResponse } from '@yatri/types';
 
@@ -88,6 +89,9 @@ export async function deactivateMeHandler(
     throw new HttpError(409, 'INVALID_STATE_TRANSITION', 'Account is not active.');
   }
   await revokeAllUserSessions(req.auth.userId);
+  if (req.auth.role === 'DRIVER') {
+    await forceSuspend(req.auth.userId, req.auth.userId, 'ACCOUNT_DEACTIVATED');
+  }
   await recordAuthEvent({
     eventType: 'SESSION_REVOKED',
     userId: req.auth.userId,

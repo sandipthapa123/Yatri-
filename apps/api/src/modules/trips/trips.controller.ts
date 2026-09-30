@@ -1,7 +1,6 @@
 import type { Request, Response } from 'express';
 import type {
   ApiResponse,
-  DisputeInfo,
   FareEstimateResponse,
   LiveTripSnapshot,
   PaymentInfo,
@@ -17,7 +16,6 @@ import { HttpError } from '../../middleware/errorHandler';
 import { currentOfferFor, offerNext, respondOffer } from '../dispatch/dispatch.service';
 import { pricingConfig } from '../pricing/pricing.config';
 import { buildSnapshot, isActive, loadMeta } from '../tracking/tracking.service';
-import { openDispute, listMyDisputes } from './disputes.service';
 import { getPaymentFor, settlePayment } from './payments.service';
 import { rateTrip } from './ratings.service';
 import { listTripEvents } from './trip-events.service';
@@ -187,7 +185,7 @@ export async function cancelHandler(req: Request, res: Response<ApiResponse<Trip
   res.json({ success: true, data: await summaryFor(req, id) });
 }
 
-// ---- payment, rating, disputes -----------------------------------------------------------
+// ---- payment, rating -----------------------------------------------------------
 
 export async function getPaymentHandler(req: Request, res: Response<ApiResponse<PaymentInfo>>) {
   res.json({ success: true, data: await getPaymentFor(idParam(req), uid(req)) });
@@ -204,13 +202,4 @@ export async function rateHandler(
   res
     .status(201)
     .json({ success: true, data: await rateTrip(idParam(req), uid(req), req.body as never) });
-}
-
-export async function openDisputeHandler(req: Request, res: Response<ApiResponse<DisputeInfo>>) {
-  const { reason } = req.body as { reason: string };
-  res.status(201).json({ success: true, data: await openDispute(idParam(req), uid(req), reason) });
-}
-
-export async function myDisputesHandler(req: Request, res: Response<ApiResponse<DisputeInfo[]>>) {
-  res.json({ success: true, data: await listMyDisputes(idParam(req), uid(req)) });
 }

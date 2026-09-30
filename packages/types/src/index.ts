@@ -17,6 +17,8 @@ export * from './trip-commerce';
 export * from './trip-comms';
 export * from './trip-share';
 export * from './safety';
+export * from './support';
+export * from './compliance';
 export * from './realtime';
 export * from './format';
 export * from './admin';

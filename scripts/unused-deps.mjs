@@ -14,6 +14,7 @@ const roots = [
   'packages/mobile-auth',
   'packages/mobile-location',
   'packages/mobile-ride',
+  'packages/mobile-support',
   'packages/mobile-ui',
   'packages/config',
 ];

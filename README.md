@@ -131,6 +131,10 @@ Run from the repository root; each fans out to every workspace package via pnpm.
 - **Document storage is behind a `StorageProvider` abstraction** (local disk in
   development, swappable for a production object store) with signed, time-limited access
   URLs — no identity document is ever served from a predictable or permanent public path.
+- **Support, disputes and privacy** (`docs/PHASE_14.md`): one ticket system for questions and ride problems, refunds
+  that record what was paid back, accessible screens in both apps and a support workspace in the console, policy
+  acceptance records, account-deletion and data-access requests, and retention rules kept as configuration.
+  `packages/mobile-support` is the shared client. Rides, payments and the audit log are never deleted by it.
 - Running it for real: [`docs/OPERATIONS.md`](docs/OPERATIONS.md) (architecture, deployment, backups,
   monitoring, incident recovery, release and rollback) and [`docs/SECURITY.md`](docs/SECURITY.md) (the controls,
   what was audited, what is still open). Container images and a full local stack are in [`deploy/`](deploy/).

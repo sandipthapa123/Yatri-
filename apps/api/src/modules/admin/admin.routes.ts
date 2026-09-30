@@ -17,6 +17,47 @@ import {
   sosAcknowledgeSchema,
   sosResolveSchema,
 } from '../safety/safety.validators';
+import {
+  adminAssignSchema,
+  adminNoteSchema,
+  adminPrioritySchema,
+  adminRefundActionSchema,
+  adminRefundCreateSchema,
+  adminReplySchema,
+  adminStatusSchema,
+  adminTicketsQuerySchema,
+  assigneesHandler,
+  attachmentUrlHandler,
+  categoryPatchSchema,
+  listSupportConfigHandler,
+  listTicketsHandler,
+  priorityPatchSchema,
+  refundActionHandler,
+  refundCreateHandler,
+  ticketAssignHandler,
+  ticketAttachmentHandler,
+  ticketDetailHandler,
+  ticketNoteHandler,
+  ticketPriorityHandler,
+  ticketReplyHandler,
+  ticketStatusHandler,
+  updateSupportCategoryHandler,
+  updatePriorityHandler,
+} from './admin-support';
+import {
+  dataRequestActionHandler,
+  dataRequestActionSchema,
+  dataRequestsQuerySchema,
+  listDataRequestsHandler,
+  listPoliciesHandler,
+  listRetentionHandler,
+  publishPolicyHandler,
+  publishPolicySchema,
+  retentionSchema,
+  updateRetentionHandler,
+  userRecordsHandler,
+} from './admin-compliance';
+import { uploadSingleFile } from '../../middleware/upload';
 import { adminAdminsRoutes } from './admin-admins.routes';
 import { analyticsHandler } from './admin-analytics';
 import { adminAuditQuerySchema, listAuditHandler } from './admin-audit';
@@ -24,12 +65,8 @@ import { dashboardHandler } from './admin-dashboard';
 import {
   adminCancelHandler,
   adminCancelSchema,
-  adminDisputesQuerySchema,
-  adminResolveSchema,
   adminTripsQuerySchema,
-  listDisputesHandler,
   listTripsHandler,
-  resolveDisputeHandler,
   tripChatHandler,
   tripDetailHandler,
 } from './admin-trips';
@@ -133,7 +170,7 @@ adminRouter.get(
   listAvailabilityHandler,
 );
 
-// ---- rides and disputes
+// ---- rides
 adminRouter.get(
   '/trips',
   requirePermission('OPERATIONS_VIEW'),
@@ -160,21 +197,6 @@ adminRouter.post(
   auditAdminAction('TRIP_CANCELLED_BY_ADMIN', 'trip'),
   adminCancelHandler,
 );
-adminRouter.get(
-  '/disputes',
-  requirePermission('DISPUTES_MANAGE'),
-  validateQuery(adminDisputesQuerySchema),
-  listDisputesHandler,
-);
-adminRouter.post(
-  '/disputes/:id/resolve',
-  requirePermission('DISPUTES_MANAGE'),
-  validateUuidParam('id'),
-  validateBody(adminResolveSchema),
-  auditAdminAction('DISPUTE_RESOLVED', 'dispute'),
-  resolveDisputeHandler,
-);
-
 // ---- safety: alerts, incident reports and the signals around them
 adminRouter.use(['/sos', '/incidents', '/ratings'], requirePermission('SAFETY_REVIEW'));
 adminRouter.get('/sos', validateQuery(adminSosQuerySchema), listSosHandler);
@@ -361,3 +383,125 @@ adminRouter.get(
   listAuditHandler,
 );
 adminRouter.use('/admins', requirePermission('ADMINS_MANAGE'), adminAdminsRoutes);
+
+// ---- support: tickets, ride disputes and refunds
+// A ticket route needs DISPUTES_MANAGE at least; tickets that are not ride problems are narrowed to
+// SUPPORT_MANAGE in the service. Raising a refund needs SUPPORT_MANAGE; deciding one, REFUNDS_MANAGE.
+adminRouter.get(
+  '/support/tickets',
+  requirePermission('DISPUTES_MANAGE'),
+  validateQuery(adminTicketsQuerySchema),
+  listTicketsHandler,
+);
+adminRouter.get('/support/assignees', requirePermission('DISPUTES_MANAGE'), assigneesHandler);
+adminRouter.get(
+  '/support/tickets/:id',
+  requirePermission('DISPUTES_MANAGE'),
+  validateUuidParam('id'),
+  ticketDetailHandler,
+);
+adminRouter.post(
+  '/support/tickets/:id/reply',
+  requirePermission('DISPUTES_MANAGE'),
+  validateUuidParam('id'),
+  validateBody(adminReplySchema),
+  ticketReplyHandler,
+);
+adminRouter.post(
+  '/support/tickets/:id/attachments',
+  requirePermission('DISPUTES_MANAGE'),
+  validateUuidParam('id'),
+  uploadSingleFile,
+  ticketAttachmentHandler,
+);
+adminRouter.post(
+  '/support/tickets/:id/notes',
+  requirePermission('DISPUTES_MANAGE'),
+  validateUuidParam('id'),
+  validateBody(adminNoteSchema),
+  ticketNoteHandler,
+);
+adminRouter.post(
+  '/support/tickets/:id/status',
+  requirePermission('DISPUTES_MANAGE'),
+  validateUuidParam('id'),
+  validateBody(adminStatusSchema),
+  ticketStatusHandler,
+);
+adminRouter.post(
+  '/support/tickets/:id/assign',
+  requirePermission('DISPUTES_MANAGE'),
+  validateUuidParam('id'),
+  validateBody(adminAssignSchema),
+  auditAdminAction('TICKET_ASSIGNED', 'ticket'),
+  ticketAssignHandler,
+);
+adminRouter.post(
+  '/support/tickets/:id/priority',
+  requirePermission('DISPUTES_MANAGE'),
+  validateUuidParam('id'),
+  validateBody(adminPrioritySchema),
+  auditAdminAction('TICKET_PRIORITY_CHANGED', 'ticket'),
+  ticketPriorityHandler,
+);
+adminRouter.post(
+  '/support/tickets/:id/refunds',
+  requirePermission('SUPPORT_MANAGE'),
+  validateUuidParam('id'),
+  validateBody(adminRefundCreateSchema),
+  refundCreateHandler,
+);
+adminRouter.post(
+  '/support/refunds/:id/action',
+  requirePermission('REFUNDS_MANAGE'),
+  validateUuidParam('id'),
+  validateBody(adminRefundActionSchema),
+  refundActionHandler,
+);
+adminRouter.get(
+  '/support/attachments/:id/download-url',
+  requirePermission('DISPUTES_MANAGE'),
+  validateUuidParam('id'),
+  auditAdminAction('VIEW_SUPPORT_ATTACHMENT', 'support_attachment'),
+  attachmentUrlHandler,
+);
+adminRouter.get('/support/config', requirePermission('SETTINGS_VIEW'), listSupportConfigHandler);
+adminRouter.patch(
+  '/support/categories/:code',
+  requirePermission('SETTINGS_MANAGE'),
+  validateBody(categoryPatchSchema),
+  updateSupportCategoryHandler,
+);
+adminRouter.patch(
+  '/support/priorities/:code',
+  requirePermission('SETTINGS_MANAGE'),
+  validateBody(priorityPatchSchema),
+  updatePriorityHandler,
+);
+
+// ---- compliance: policies, data requests, retention
+adminRouter.use('/compliance', requirePermission('COMPLIANCE_MANAGE'));
+adminRouter.get('/compliance/policies', listPoliciesHandler);
+adminRouter.post(
+  '/compliance/policies/:key/publish',
+  validateBody(publishPolicySchema),
+  publishPolicyHandler,
+);
+adminRouter.get(
+  '/compliance/data-requests',
+  validateQuery(dataRequestsQuerySchema),
+  listDataRequestsHandler,
+);
+adminRouter.post(
+  '/compliance/data-requests/:id/action',
+  validateUuidParam('id'),
+  validateBody(dataRequestActionSchema),
+  dataRequestActionHandler,
+);
+adminRouter.get('/compliance/retention', listRetentionHandler);
+adminRouter.patch(
+  '/compliance/retention/:type',
+  validateBody(retentionSchema),
+  updateRetentionHandler,
+);
+adminRouter.get('/compliance/users/:id/records', validateUuidParam('id'), userRecordsHandler);

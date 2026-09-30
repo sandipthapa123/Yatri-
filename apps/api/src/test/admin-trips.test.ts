@@ -29,7 +29,9 @@ describe('admin trips: access', () => {
     const p = await onboardUser('PASSENGER');
     expect((await api.get('/api/v1/admin/trips')).status).toBe(401);
     expect((await api.get('/api/v1/admin/trips').set(auth(p.accessToken))).status).toBe(403);
-    expect((await api.get('/api/v1/admin/disputes').set(auth(p.accessToken))).status).toBe(403);
+    expect((await api.get('/api/v1/admin/support/tickets').set(auth(p.accessToken))).status).toBe(
+      403,
+    );
   });
 });
 
@@ -153,35 +155,31 @@ describe('admin trips: intervention', () => {
     expect(t).toMatchObject({ status: 'CANCELLED', cancelledBy: 'SYSTEM' });
   });
 
-  it('lists disputes and resolves one exactly once', async () => {
+  it('shows a ride problem on the ride and lists it in the support queue', async () => {
     const w = await rideWorld();
     await arriveAtPickup(w);
     await api.post(`/api/v1/trips/${w.tripId}/start`).set(auth(w.driver.accessToken));
     await api.post(`/api/v1/trips/${w.tripId}/complete`).set(auth(w.driver.accessToken));
     const raised = await api
-      .post(`/api/v1/trips/${w.tripId}/disputes`)
+      .post('/api/v1/support/tickets')
       .set(auth(w.passenger.accessToken))
-      .send({ reason: 'The fare was higher than the estimate' });
+      .send({
+        categoryCode: 'RIDE_FARE',
+        subject: 'Fare was too high',
+        body: 'The fare was higher than the estimate',
+        tripId: w.tripId,
+      });
     expect(raised.status).toBe(201);
     const a = await admin();
 
-    const open = await api.get('/api/v1/admin/disputes?status=OPEN').set(auth(a.token));
+    const open = await api
+      .get('/api/v1/admin/support/tickets?kind=dispute&group=open')
+      .set(auth(a.token));
     const row = open.body.data.items.find((i: { id: string }) => i.id === raised.body.data.id);
-    expect(row).toMatchObject({ raisedByRole: 'PASSENGER', tripId: w.tripId, status: 'OPEN' });
+    expect(row).toMatchObject({ requesterRole: 'PASSENGER', tripId: w.tripId, status: 'OPEN' });
     const detail = (await api.get(`/api/v1/admin/trips/${w.tripId}`).set(auth(a.token))).body.data;
     expect(detail.disputes).toHaveLength(1);
-
-    const resolve = () =>
-      api
-        .post(`/api/v1/admin/disputes/${raised.body.data.id}/resolve`)
-        .set(auth(a.token))
-        .send({ status: 'RESOLVED', resolution: 'Waiting charge explained to the passenger' });
-    expect((await resolve()).status).toBe(200);
-    expect((await resolve()).status).toBe(409);
-    const mine = await api
-      .get(`/api/v1/trips/${w.tripId}/disputes`)
-      .set(auth(w.passenger.accessToken));
-    expect(mine.body.data[0]).toMatchObject({ status: 'RESOLVED' });
+    expect(detail.disputes[0]).toMatchObject({ raisedByRole: 'PASSENGER', status: 'OPEN' });
     void requestRide;
   });
 });

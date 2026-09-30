@@ -7,13 +7,14 @@ import {
   formatElapsed,
   formatNpr,
   PAYMENT_STATUS_LABELS,
+  TICKET_STATUS_LABELS,
   TRIP_STATUS_LABELS,
 } from '@yatri/types';
 
 import { ApiError, getAdminTrip } from '../../../../lib/apiClient';
 import { requireAdminAccessToken } from '../../../../lib/session';
 import { styles } from '../../drivers/styles';
-import { ResolveDisputeForm, CancelRideForm } from '../ActionForms';
+import { CancelRideForm } from '../ActionForms';
 import { AutoRefresh } from '../AutoRefresh';
 
 interface PageProps {
@@ -296,17 +297,18 @@ export default async function RideDetailPage({ params }: PageProps) {
         {d.disputes.length === 0 ? (
           <p style={{ margin: 0 }}>No problems have been reported.</p>
         ) : (
-          d.disputes.map((x) => (
-            <article key={x.id} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <p style={{ margin: 0 }}>
-                <strong>{x.raisedByRole === 'PASSENGER' ? 'Passenger' : 'Driver'}</strong> reported
-                ({x.status.toLowerCase()}
-                ), {at(x.createdAt)}: {x.reason}
-              </p>
-              {x.resolution ? <p style={{ margin: 0 }}>Decision: {x.resolution}</p> : null}
-              {x.status === 'OPEN' ? <ResolveDisputeForm disputeId={x.id} /> : null}
-            </article>
-          ))
+          <ul style={{ margin: 0, paddingLeft: 20 }}>
+            {d.disputes.map((x) => (
+              <li key={x.id}>
+                <Link href={`/support/${x.id}`}>
+                  Request #{x.number}: {x.categoryLabel}
+                </Link>{' '}
+                · {TICKET_STATUS_LABELS[x.status]} · reported by{' '}
+                {x.raisedByRole === 'PASSENGER' ? 'the passenger' : 'the driver'} on{' '}
+                {at(x.createdAt)}
+              </li>
+            ))}
+          </ul>
         )}
       </section>
 

@@ -1,5 +1,6 @@
 import type { LocationFreshness } from './availability';
-import type { PaymentInfo, DisputeInfo } from './trip-commerce';
+import type { PaymentInfo } from './trip-commerce';
+import type { TripProblemSummary } from './support';
 import type { CallInfo } from './trip-comms';
 import type { TripEventRecord } from './trip-events';
 import type { TripFare, TripPlace, TripStatus, WaitingInfo } from './trip';
@@ -16,6 +17,9 @@ export const ADMIN_PERMISSIONS = [
   'DRIVERS_REVIEW',
   'RIDES_MANAGE',
   'DISPUTES_MANAGE',
+  'SUPPORT_MANAGE',
+  'REFUNDS_MANAGE',
+  'COMPLIANCE_MANAGE',
   'USERS_VIEW',
   'USERS_MANAGE',
   'FINANCE_VIEW',
@@ -42,6 +46,18 @@ export const ADMIN_PERMISSION_LABELS: Record<AdminPermission, { label: string; h
   },
   RIDES_MANAGE: { label: 'Cancel rides', help: 'Cancel a stuck or disputed ride as an operator.' },
   DISPUTES_MANAGE: { label: 'Resolve disputes', help: 'Decide reported problems with a ride.' },
+  SUPPORT_MANAGE: {
+    label: 'Support center',
+    help: 'Answer, assign, prioritise and resolve support tickets and ride disputes; ask for a refund on a ticket.',
+  },
+  REFUNDS_MANAGE: {
+    label: 'Decide refunds',
+    help: 'Review, approve, reject and record the payment of refunds. Every step is audited; you cannot approve one you asked for.',
+  },
+  COMPLIANCE_MANAGE: {
+    label: 'Compliance and data requests',
+    help: 'Publish policy versions, handle data-access and account-deletion requests, and set retention rules.',
+  },
   USERS_VIEW: { label: 'View users', help: 'Search and read user accounts.' },
   USERS_MANAGE: { label: 'Manage users', help: 'Suspend and reactivate accounts.' },
   FINANCE_VIEW: {
@@ -83,6 +99,7 @@ export const PERMISSION_IMPLIES: Partial<Record<AdminPermission, readonly AdminP
   SETTINGS_MANAGE: ['SETTINGS_VIEW'],
   RIDES_MANAGE: ['OPERATIONS_VIEW'],
   DRIVERS_REVIEW: ['OPERATIONS_VIEW'],
+  SUPPORT_MANAGE: ['DISPUTES_MANAGE'],
 };
 
 /** Whether a set of held permissions grants the one needed. The one rule; the API and the app use it. */
@@ -136,11 +153,6 @@ export interface AdminTripDetail {
   chat: { messageCount: number; canViewContent: boolean };
   payment: PaymentInfo | null;
   ratings: Array<{ raterRole: string; stars: number; comment: string | null }>;
-  disputes: Array<DisputeInfo & { raisedByRole: 'PASSENGER' | 'DRIVER' }>;
-}
-
-export interface AdminDisputeRow extends DisputeInfo {
-  raisedByRole: 'PASSENGER' | 'DRIVER';
-  passengerName: string | null;
-  driverName: string | null;
+  /** Ride problems (disputes) raised on this ride: each is a support ticket. */
+  disputes: TripProblemSummary[];
 }

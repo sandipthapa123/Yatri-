@@ -196,3 +196,14 @@ export async function backdate(
 export async function clearRedis() {
   await getRedisClient().flushdb();
 }
+
+/** A ride taken to the end: arrived, started, completed and (when `paid`) the driver confirmed the cash. */
+export async function finishedRide(paid = true): Promise<RideWorld> {
+  const w = await rideWorld();
+  await arriveAtPickup(w);
+  await api.post(`/api/v1/trips/${w.tripId}/start`).set(auth(w.driver.accessToken));
+  await api.post(`/api/v1/trips/${w.tripId}/complete`).set(auth(w.driver.accessToken));
+  if (paid)
+    await api.post(`/api/v1/trips/${w.tripId}/payment/confirm`).set(auth(w.driver.accessToken));
+  return w;
+}

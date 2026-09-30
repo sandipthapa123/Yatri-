@@ -32,7 +32,7 @@ async function truncateAll() {
 const TRUNCATE_SQL = `TRUNCATE TABLE
        auth_events, otp_requests, auth_sessions,
        driver_verification_events, notifications, documents, vehicles, driver_details,
-       driver_profiles, trip_disputes, trip_ratings, trip_payments, trip_calls, trip_messages, trip_offers, trip_events, trips, driver_availability_events, driver_location_flags, driver_availability, saved_places, locations, driver_last_locations, users
+       driver_profiles, trip_ratings, trip_payments, trip_calls, trip_messages, trip_offers, trip_events, trips, driver_availability_events, driver_location_flags, driver_availability, saved_places, locations, driver_last_locations, users
      RESTART IDENTITY CASCADE`;
 
 beforeEach(async () => {

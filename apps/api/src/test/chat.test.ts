@@ -2,7 +2,8 @@ import { CHAT_MAX_LENGTH, describeTripEvent } from '@yatri/types';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { pool } from '../config/database';
-import { chatWindow, purgeExpiredChats } from '../modules/chat/chat.service';
+import { chatWindow } from '../modules/chat/chat.service';
+import { runRetention } from '../modules/compliance/retention.service';
 import { getTrip } from '../modules/trips/trips.repository';
 import { api, onboardUser } from './helpers';
 import { arriveAtPickup, auth, requestRide, rideWorld } from './rides';
@@ -228,6 +229,8 @@ describe('sending, ordering and receipts over the socket', () => {
 });
 
 describe('retention', () => {
+  // The chat rule is the CHAT_MESSAGES retention policy (90 days by seed): the job is the one thing that purges.
+  const purgeExpiredChats = async () => (await runRetention()).CHAT_MESSAGES ?? 0;
   const endedAgo = async (tripId: string, days: number) =>
     pool.query("UPDATE trips SET ended_at = now() - ($2::int * interval '1 day') WHERE id = $1", [
       tripId,
@@ -264,15 +267,19 @@ describe('retention', () => {
     await arriveAtPickup(w);
     await api.post(`/api/v1/trips/${w.tripId}/start`).set(auth(w.driver.accessToken));
     await api.post(`/api/v1/trips/${w.tripId}/complete`).set(auth(w.driver.accessToken));
-    await api
-      .post(`/api/v1/trips/${w.tripId}/disputes`)
-      .set(auth(w.passenger.accessToken))
-      .send({ reason: 'The fare was wrong' });
+    await api.post('/api/v1/support/tickets').set(auth(w.passenger.accessToken)).send({
+      categoryCode: 'RIDE_FARE',
+      subject: 'The fare was wrong',
+      body: 'The fare was wrong',
+      tripId: w.tripId,
+    });
     await endedAgo(w.tripId, 200);
 
     expect(await purgeExpiredChats()).toBe(0);
     expect(await count(w.tripId)).toBe(1);
-    await pool.query("UPDATE trip_disputes SET status = 'RESOLVED' WHERE trip_id = $1", [w.tripId]);
+    await pool.query("UPDATE support_tickets SET status = 'RESOLVED' WHERE trip_id = $1", [
+      w.tripId,
+    ]);
     expect(await purgeExpiredChats()).toBe(1);
     expect(await count(w.tripId)).toBe(0);
   });

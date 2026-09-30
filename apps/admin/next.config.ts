@@ -20,6 +20,8 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // Support replies can carry a photo or PDF through a server action; the API enforces the real limit.
+  experimental: { serverActions: { bodySizeLimit: '10mb' } },
   poweredByHeader: false,
   transpilePackages: ['@yatri/shared', '@yatri/types'],
   // A self-contained server for the container image (see deploy/Dockerfile.admin); the workspace

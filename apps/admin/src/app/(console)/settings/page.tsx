@@ -1,11 +1,16 @@
 import { SETTING_GROUPS, SETTING_GROUP_LABELS } from '@yatri/types';
 
-import { getPlatformSettings, listVehicleCategories } from '../../../lib/apiClient';
+import {
+  getPlatformSettings,
+  getSupportConfig,
+  listVehicleCategories,
+} from '../../../lib/apiClient';
 import { loadOrDenied } from '../../../lib/access';
 import { requireAdminAccessToken } from '../../../lib/session';
 import { styles } from '../drivers/styles';
 import { NoAccess } from '../ui/NoAccess';
 import { CategoryEditor, SettingEditor } from './Editors';
+import { SupportCategoryEditor, SupportPriorityEditor } from './SupportEditors';
 
 /**
  * Platform settings: the one place fares, cancellation, waiting, availability and notification
@@ -16,14 +21,15 @@ import { CategoryEditor, SettingEditor } from './Editors';
 export default async function SettingsPage() {
   const token = await requireAdminAccessToken();
   const { data, denied } = await loadOrDenied(async () => {
-    const [settings, categories] = await Promise.all([
+    const [settings, categories, support] = await Promise.all([
       getPlatformSettings(token),
       listVehicleCategories(token),
+      getSupportConfig(token),
     ]);
-    return { settings, categories };
+    return { settings, categories, support };
   });
   if (denied || !data) return <NoAccess what="platform settings" />;
-  const { settings, categories } = data;
+  const { settings, categories, support } = data;
 
   return (
     <div style={styles.page}>
@@ -60,6 +66,36 @@ export default async function SettingsPage() {
         {categories.map((c) => (
           <div key={c.id} style={{ paddingBottom: 12 }}>
             <CategoryEditor category={c} canManage={settings.canManage} />
+          </div>
+        ))}
+      </section>
+
+      <section aria-labelledby="sup-cat-h" style={styles.section}>
+        <h2 id="sup-cat-h" style={styles.sectionTitle}>
+          Support categories
+        </h2>
+        {support.categories.map((c) => (
+          <div key={c.code} style={{ paddingBottom: 12 }}>
+            <SupportCategoryEditor
+              category={c}
+              priorities={support.priorities}
+              canManage={settings.canManage}
+            />
+          </div>
+        ))}
+      </section>
+
+      <section aria-labelledby="sup-pri-h" style={styles.section}>
+        <h2 id="sup-pri-h" style={styles.sectionTitle}>
+          Support priorities and escalation
+        </h2>
+        {support.priorities.map((p) => (
+          <div key={p.code} style={{ paddingBottom: 12 }}>
+            <SupportPriorityEditor
+              priority={p}
+              higher={support.priorities.filter((x) => x.rank > p.rank)}
+              canManage={settings.canManage}
+            />
           </div>
         ))}
       </section>

@@ -1,4 +1,4 @@
-import { DISPUTE_REASON_MAX, RATING_COMMENT_MAX, RATING_MAX, RATING_MIN } from '@yatri/types';
+import { RATING_COMMENT_MAX, RATING_MAX, RATING_MIN } from '@yatri/types';
 import { z } from 'zod';
 
 import {
@@ -44,10 +44,6 @@ export const ratingSchema = z
     stars: z.number().int().min(RATING_MIN).max(RATING_MAX),
     comment: z.string().trim().max(RATING_COMMENT_MAX).nullable().optional(),
   })
-  .strict();
-
-export const disputeSchema = z
-  .object({ reason: z.string().trim().min(5).max(DISPUTE_REASON_MAX) })
   .strict();
 
 export const historyQuerySchema = z.object({

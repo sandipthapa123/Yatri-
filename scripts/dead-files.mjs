@@ -14,6 +14,7 @@ const roots = [
   'packages/mobile-auth/src',
   'packages/mobile-location/src',
   'packages/mobile-ride/src',
+  'packages/mobile-support/src',
   'packages/mobile-ui/src',
 ];
 const SKIP = new Set(['node_modules', 'dist', '.next']);

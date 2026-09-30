@@ -1,6 +1,6 @@
 import type { TripPlace, TripSummary } from './trip';
 
-/** Payment, rating and dispute definitions — separate axes from trip status. */
+/** Payment and rating definitions (ride problems and disputes are support tickets: see support.ts) — separate axes from trip status. */
 
 export const PAYMENT_METHODS = ['CASH'] as const;
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
@@ -46,20 +46,6 @@ export const RATING_COMMENT_MAX = 500;
 export interface RatingInput {
   stars: number;
   comment?: string | null;
-}
-
-export const DISPUTE_STATUSES = ['OPEN', 'RESOLVED', 'REJECTED'] as const;
-export type DisputeStatus = (typeof DISPUTE_STATUSES)[number];
-export const DISPUTE_REASON_MAX = 1000;
-
-export interface DisputeInfo {
-  id: string;
-  tripId: string;
-  status: DisputeStatus;
-  reason: string;
-  resolution: string | null;
-  createdAt: string;
-  resolvedAt: string | null;
 }
 
 export interface TripRequestBody {

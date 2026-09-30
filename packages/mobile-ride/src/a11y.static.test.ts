@@ -18,6 +18,7 @@ const DIRS = [
   'apps/passenger/src',
   'apps/driver/src',
   'packages/mobile-ride/src',
+  'packages/mobile-support/src',
   'packages/mobile-location/src',
   'packages/mobile-auth/src',
 ];

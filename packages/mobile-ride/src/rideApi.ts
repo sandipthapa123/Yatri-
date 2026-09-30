@@ -3,7 +3,6 @@ import type {
   CallInfo,
   ChatHistory,
   ChatMessage,
-  DisputeInfo,
   EmergencyContact,
   EmergencyContactsResponse,
   FareEstimateResponse,
@@ -64,9 +63,6 @@ export const rideApi = {
   payment: (t: Token, id: string) => get<PaymentInfo>(`/trips/${id}/payment`, t),
   rate: (t: Token, id: string, rating: RatingInput) =>
     post<{ id: string; tripId: string; stars: number }>(`/trips/${id}/rating`, t, rating),
-  dispute: (t: Token, id: string, reason: string) =>
-    post<DisputeInfo>(`/trips/${id}/disputes`, t, { reason }),
-  disputes: (t: Token, id: string) => get<DisputeInfo[]>(`/trips/${id}/disputes`, t),
 
   // ---- chat (REST is the reliable path; the socket pushes what others send)
   chatHistory: (t: Token, id: string) => get<ChatHistory>(`/trips/${id}/chat`, t),

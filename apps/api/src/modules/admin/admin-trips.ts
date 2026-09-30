@@ -1,15 +1,12 @@
 import type { Request, Response } from 'express';
 import {
   ACTIVE_TRIP_STATUSES,
-  DISPUTE_STATUSES,
   TRIP_STATUSES,
-  type AdminDisputeRow,
   type AdminTripDetail,
   type AdminTripRow,
   type ApiResponse,
   type ChatHistory,
-  type DisputeInfo,
-  type DisputeStatus,
+  type TicketStatus,
   type TripStatus,
 } from '@yatri/types';
 import { z } from 'zod';
@@ -23,7 +20,6 @@ import { listCallsForTrip } from '../calls/calls.service';
 import { getChatForAdmin } from '../chat/chat.service';
 import { pricingConfig } from '../pricing/pricing.config';
 import { getDriverFix } from '../tracking/tracking.service';
-import { resolveDispute } from '../trips/disputes.service';
 import { getPayment } from '../trips/payments.service';
 import { listTripEvents } from '../trips/trip-events.service';
 import { destinationOf, getTrip, pickupOf } from '../trips/trips.repository';
@@ -43,18 +39,6 @@ export const adminTripsQuerySchema = z.object({
   pageSize: z.coerce.number().int().min(1).max(50).default(20),
 });
 export const adminCancelSchema = z.object({ reason: z.string().trim().min(3).max(300) }).strict();
-export const adminResolveSchema = z
-  .object({
-    status: z.enum(['RESOLVED', 'REJECTED']),
-    resolution: z.string().trim().min(3).max(1000),
-  })
-  .strict();
-export const adminDisputesQuerySchema = z.object({
-  status: z.enum(DISPUTE_STATUSES).optional(),
-  page: z.coerce.number().int().min(1).default(1),
-  pageSize: z.coerce.number().int().min(1).max(50).default(20),
-});
-
 function adminId(req: Request): string {
   if (!req.auth) throw new HttpError(401, 'UNAUTHENTICATED', 'Authentication required.');
   return req.auth.userId;
@@ -118,7 +102,7 @@ export async function listTripsHandler(
               dl.place_name AS dest_name, dl.address AS dest_address,
               t.requested_at, t.ended_at, COALESCE(t.fare_final_npr, t.fare_estimate_npr) AS fare,
               (SELECT status FROM trip_payments WHERE trip_id = t.id) AS payment_status,
-              (SELECT count(*) FROM trip_disputes WHERE trip_id = t.id AND status = 'OPEN')::text AS open_disputes
+              (SELECT count(*) FROM support_tickets WHERE trip_id = t.id AND is_dispute AND status NOT IN ('RESOLVED', 'CLOSED'))::text AS open_disputes
        ${from}
        ORDER BY ${order}, t.id
        LIMIT $6 OFFSET $7`,
@@ -146,27 +130,6 @@ export async function listTripsHandler(
     },
   });
 }
-
-interface DisputeRow {
-  id: string;
-  trip_id: string;
-  status: DisputeStatus;
-  reason: string;
-  resolution: string | null;
-  created_at: Date;
-  resolved_at: Date | null;
-  raised_by: string;
-}
-const toDispute = (r: DisputeRow, passengerId: string): AdminTripDetail['disputes'][number] => ({
-  id: r.id,
-  tripId: r.trip_id,
-  status: r.status,
-  reason: r.reason,
-  resolution: r.resolution,
-  createdAt: r.created_at.toISOString(),
-  resolvedAt: r.resolved_at?.toISOString() ?? null,
-  raisedByRole: r.raised_by === passengerId ? 'PASSENGER' : 'DRIVER',
-});
 
 export async function tripDetailHandler(req: Request, res: Response<ApiResponse<AdminTripDetail>>) {
   const admin = adminId(req);
@@ -207,9 +170,17 @@ export async function tripDetailHandler(req: Request, res: Response<ApiResponse<
         'SELECT rater_role, stars, comment FROM trip_ratings WHERE trip_id = $1 ORDER BY created_at',
         [trip.id],
       ),
-      query<DisputeRow>(
-        `SELECT id, trip_id, status, reason, resolution, created_at, resolved_at, raised_by
-         FROM trip_disputes WHERE trip_id = $1 ORDER BY created_at`,
+      query<{
+        id: string;
+        number: string;
+        status: TicketStatus;
+        category_label: string;
+        requester_id: string;
+        created_at: Date;
+      }>(
+        `SELECT t.id, t.number::text, t.status, c.label AS category_label, t.requester_id, t.created_at
+         FROM support_tickets t JOIN support_categories c ON c.code = t.category_code
+         WHERE t.trip_id = $1 AND t.is_dispute ORDER BY t.created_at`,
         [trip.id],
       ),
       getDriverFix(trip.id),
@@ -282,7 +253,15 @@ export async function tripDetailHandler(req: Request, res: Response<ApiResponse<
         stars: r.stars,
         comment: r.comment,
       })),
-      disputes: disputes.rows.map((d) => toDispute(d, trip.passenger_id)),
+      disputes: disputes.rows.map((d) => ({
+        id: d.id,
+        number: Number(d.number),
+        status: d.status,
+        categoryLabel: d.category_label,
+        raisedByRole:
+          d.requester_id === trip.passenger_id ? ('PASSENGER' as const) : ('DRIVER' as const),
+        createdAt: d.created_at.toISOString(),
+      })),
     },
   });
 }
@@ -306,52 +285,4 @@ export async function adminCancelHandler(
   const { reason } = req.body as z.infer<typeof adminCancelSchema>;
   const trip = await adminCancelTrip(idParam(req), adminId(req), reason);
   res.json({ success: true, data: { status: trip.status } });
-}
-
-export async function listDisputesHandler(
-  req: Request,
-  res: Response<ApiResponse<{ items: AdminDisputeRow[]; total: number }>>,
-) {
-  const q = req.validatedQuery as z.infer<typeof adminDisputesQuerySchema>;
-  const from = `
-    FROM trip_disputes x
-    JOIN trips t ON t.id = x.trip_id
-    JOIN users p ON p.id = t.passenger_id
-    LEFT JOIN users d ON d.id = t.driver_id
-    WHERE ($1::text IS NULL OR x.status = $1)`;
-  const [rows, count] = await Promise.all([
-    query<
-      DisputeRow & {
-        passenger_id: string;
-        passenger_name: string | null;
-        driver_name: string | null;
-      }
-    >(
-      `SELECT x.id, x.trip_id, x.status, x.reason, x.resolution, x.created_at, x.resolved_at,
-              x.raised_by, t.passenger_id, p.full_name AS passenger_name, d.full_name AS driver_name
-       ${from}
-       ORDER BY (x.status = 'OPEN') DESC, x.created_at DESC LIMIT $2 OFFSET $3`,
-      [q.status ?? null, q.pageSize, (q.page - 1) * q.pageSize],
-    ),
-    query<{ n: string }>(`SELECT count(*)::text AS n ${from}`, [q.status ?? null]),
-  ]);
-  res.json({
-    success: true,
-    data: {
-      total: Number(count.rows[0]?.n ?? 0),
-      items: rows.rows.map((r) => ({
-        ...toDispute(r, r.passenger_id),
-        passengerName: r.passenger_name,
-        driverName: r.driver_name,
-      })),
-    },
-  });
-}
-
-export async function resolveDisputeHandler(req: Request, res: Response<ApiResponse<DisputeInfo>>) {
-  const b = req.body as z.infer<typeof adminResolveSchema>;
-  res.json({
-    success: true,
-    data: await resolveDispute(idParam(req), adminId(req), b.status, b.resolution),
-  });
 }

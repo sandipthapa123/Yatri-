@@ -1,7 +1,27 @@
 import type {
   AdminAccountRow,
+  AdminAssignBody,
+  AdminDataRequestRow,
+  AdminNoteBody,
+  AdminPriorityBody,
+  AdminRefundActionBody,
+  AdminRefundCreateBody,
+  AdminReplyBody,
+  AdminStatusBody,
+  AdminTicketDetail,
+  AdminTicketRow,
+  ComplianceRecordInfo,
+  DataRequestActionBody,
+  DataRequestInfo,
+  PolicyInfo,
+  PublishPolicyBody,
+  RefundInfo,
+  RetentionPolicyInfo,
+  RetentionRecordType,
+  SupportCategory,
+  SupportPriority,
+  UpdateRetentionBody,
   AdminAuditRow,
-  AdminDisputeRow,
   AdminListResponse,
   AdminMe,
   AdminNotificationRow,
@@ -305,27 +325,6 @@ export function adminCancelTrip(accessToken: string, tripId: string, reason: str
     body: { reason },
   });
 }
-export function listAdminDisputes(
-  accessToken: string,
-  params: { status?: string; page?: number; pageSize?: number },
-) {
-  return adminRequest<{ items: AdminDisputeRow[]; total: number }>(
-    `/disputes${toQuery(params)}`,
-    accessToken,
-  );
-}
-export function resolveAdminDispute(
-  accessToken: string,
-  disputeId: string,
-  status: 'RESOLVED' | 'REJECTED',
-  resolution: string,
-) {
-  return adminRequest<unknown>(`/disputes/${disputeId}/resolve`, accessToken, {
-    method: 'POST',
-    body: { status, resolution },
-  });
-}
-
 // ---- safety (SAFETY_REVIEW): SOS alerts, incident reports, low ratings
 export function listAdminSos(
   accessToken: string,
@@ -470,3 +469,99 @@ export const listAdminAudit = (
 export const listAdminAccounts = (t: string) => adminRequest<AdminAccountRow[]>('/admins', t);
 export const setAdminPermissions = (t: string, id: string, body: SetPermissionsBody) =>
   adminRequest<AdminAccountRow>(`/admins/${id}/permissions`, t, { method: 'PUT', body });
+
+// ---- support (DISPUTES_MANAGE; raising refunds SUPPORT_MANAGE; deciding them REFUNDS_MANAGE)
+async function adminUpload<T>(path: string, accessToken: string, form: FormData): Promise<T> {
+  const response = await fetch(`${env.API_BASE_URL}/admin${path}`, {
+    method: 'POST',
+    // No Content-Type: fetch sets the multipart boundary itself.
+    headers: { Authorization: `Bearer ${accessToken}` },
+    body: form,
+    cache: 'no-store',
+  });
+  const payload: ApiResponse<T> = await response.json();
+  if (!payload.success) {
+    const error: ApiErrorShape = payload.error;
+    throw new ApiError(response.status, error.code, error.message, error.details);
+  }
+  return payload.data;
+}
+const post = <T>(path: string, t: string, body?: unknown) =>
+  adminRequest<T>(path, t, { method: 'POST', body });
+
+export interface TicketListParams {
+  status?: string;
+  group?: string;
+  priority?: string;
+  category?: string;
+  kind?: string;
+  assigned?: string;
+  overdue?: string;
+  search?: string;
+  page?: number;
+  pageSize?: number;
+}
+export const listAdminTickets = (t: string, p: TicketListParams) =>
+  adminRequest<{ items: AdminTicketRow[]; total: number }>(`/support/tickets${toQuery(p)}`, t);
+export const getAdminTicket = (t: string, id: string) =>
+  adminRequest<AdminTicketDetail>(`/support/tickets/${id}`, t);
+export const listTicketAssignees = (t: string) =>
+  adminRequest<Array<{ id: string; name: string | null; canHandleGeneral: boolean }>>(
+    '/support/assignees',
+    t,
+  );
+export const replyToTicket = (t: string, id: string, body: AdminReplyBody) =>
+  post<AdminTicketDetail>(`/support/tickets/${id}/reply`, t, body);
+export const attachToTicket = (t: string, id: string, form: FormData) =>
+  adminUpload<AdminTicketDetail>(`/support/tickets/${id}/attachments`, t, form);
+export const addTicketNote = (t: string, id: string, body: AdminNoteBody) =>
+  post<AdminTicketDetail>(`/support/tickets/${id}/notes`, t, body);
+export const setTicketStatus = (t: string, id: string, body: AdminStatusBody) =>
+  post<AdminTicketDetail>(`/support/tickets/${id}/status`, t, body);
+export const assignTicket = (t: string, id: string, body: AdminAssignBody) =>
+  post<AdminTicketDetail>(`/support/tickets/${id}/assign`, t, body);
+export const setTicketPriority = (t: string, id: string, body: AdminPriorityBody) =>
+  post<AdminTicketDetail>(`/support/tickets/${id}/priority`, t, body);
+export const raiseRefund = (t: string, ticketId: string, body: AdminRefundCreateBody) =>
+  post<RefundInfo>(`/support/tickets/${ticketId}/refunds`, t, body);
+export const actOnRefundRequest = (t: string, refundId: string, body: AdminRefundActionBody) =>
+  post<RefundInfo>(`/support/refunds/${refundId}/action`, t, body);
+export const getSupportAttachmentUrl = (t: string, id: string) =>
+  adminRequest<{ url: string; expiresInSeconds: number }>(
+    `/support/attachments/${id}/download-url`,
+    t,
+  );
+export const getSupportConfig = (t: string) =>
+  adminRequest<{ categories: SupportCategory[]; priorities: SupportPriority[] }>(
+    '/support/config',
+    t,
+  );
+export const updateSupportCategory = (t: string, code: string, body: Record<string, unknown>) =>
+  adminRequest<SupportCategory>(`/support/categories/${code}`, t, { method: 'PATCH', body });
+export const updateSupportPriority = (t: string, code: string, body: Record<string, unknown>) =>
+  adminRequest<SupportPriority>(`/support/priorities/${code}`, t, { method: 'PATCH', body });
+
+// ---- compliance (COMPLIANCE_MANAGE)
+export const listPolicies = (t: string) => adminRequest<PolicyInfo[]>('/compliance/policies', t);
+export const publishPolicy = (t: string, key: string, body: PublishPolicyBody) =>
+  post<PolicyInfo>(`/compliance/policies/${key}/publish`, t, body);
+export const listDataRequests = (
+  t: string,
+  p: { status?: string; kind?: string; open?: string; page?: number; pageSize?: number },
+) =>
+  adminRequest<{ items: AdminDataRequestRow[]; total: number }>(
+    `/compliance/data-requests${toQuery(p)}`,
+    t,
+  );
+export const actOnDataRequestById = (t: string, id: string, body: DataRequestActionBody) =>
+  post<DataRequestInfo>(`/compliance/data-requests/${id}/action`, t, body);
+export const listRetention = (t: string) =>
+  adminRequest<RetentionPolicyInfo[]>('/compliance/retention', t);
+export const updateRetentionRule = (
+  t: string,
+  type: RetentionRecordType,
+  body: UpdateRetentionBody,
+) =>
+  adminRequest<RetentionPolicyInfo>(`/compliance/retention/${type}`, t, { method: 'PATCH', body });
+export const getUserComplianceRecords = (t: string, userId: string) =>
+  adminRequest<ComplianceRecordInfo[]>(`/compliance/users/${userId}/records`, t);

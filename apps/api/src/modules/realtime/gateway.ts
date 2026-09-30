@@ -42,7 +42,9 @@ import {
   passengerStopsSharing,
   type TripMeta,
 } from '../tracking/tracking.service';
-import { purgeExpiredChats } from '../chat/chat.service';
+import { env } from '../../config/env';
+import { runRetention } from '../compliance/retention.service';
+import { sweepSupport } from '../support/tickets.service';
 import { expireDueShares } from '../sharing/sharing.service';
 import { sweepTrips } from '../trips/trip-maintenance';
 import { onTripChange, onUserMessage, startBus, stopBus, type TripChange } from './bus';
@@ -509,9 +511,13 @@ export async function attachRealtimeGateway(server: HttpServer): Promise<Realtim
       sweepCalls().catch((err) => log.error('Call sweep error', err));
       expireDueShares().catch((err) => log.error('Share expiry error', err));
     }, TRIP_SWEEP_MS),
-    // Retention is slow housekeeping: hourly, and once shortly after start.
+    // Support escalation and auto-close: every few minutes.
     setInterval(() => {
-      purgeExpiredChats().catch((err) => log.error('Chat retention error', err));
+      sweepSupport().catch((err) => log.error('Support sweep error', err));
+    }, env.SUPPORT_SWEEP_SECONDS * 1000),
+    // Retention is slow housekeeping (each kind of record follows its retention policy): hourly.
+    setInterval(() => {
+      runRetention().catch((err) => log.error('Retention error', err));
     }, 60 * 60_000),
   ];
 

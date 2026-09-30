@@ -2,7 +2,6 @@ import {
   RATING_COMMENT_MAX,
   RATING_MAX,
   RATING_MIN,
-  DISPUTE_REASON_MAX,
   formatDistance,
   formatDuration,
   formatNpr,
@@ -29,10 +28,9 @@ export function PostRidePanel(
     error: string | null;
     onAction: (id: RideAction['id']) => void;
     onRate: (stars: number, comment: string) => Promise<boolean>;
-    onDispute: (reason: string) => Promise<boolean>;
     /** Which follow-up form is open. */
-    form: 'rate' | 'dispute' | null;
-    onForm: (f: 'rate' | 'dispute' | null) => void;
+    form: 'rate' | null;
+    onForm: (f: 'rate' | null) => void;
   },
 ) {
   const { trip, role, colors, minTouchTarget, actions, busy, form } = props;
@@ -90,8 +88,6 @@ export function PostRidePanel(
 
       {form === 'rate' ? (
         <RateForm {...ui} role={role} onSubmit={props.onRate} onCancel={() => props.onForm(null)} />
-      ) : form === 'dispute' ? (
-        <DisputeForm {...ui} onSubmit={props.onDispute} onCancel={() => props.onForm(null)} />
       ) : (
         actions.map((a) => (
           <ActionButton
@@ -169,49 +165,6 @@ function RateForm(
         }}
       />
       <ActionButton {...ui} label="Not now" onPress={props.onCancel} />
-    </Card>
-  );
-}
-
-function DisputeForm(
-  props: UiProps & { onSubmit: (reason: string) => Promise<boolean>; onCancel: () => void },
-) {
-  const { colors, minTouchTarget } = props;
-  const ui = { colors, minTouchTarget };
-  const [reason, setReason] = useState('');
-  const [sending, setSending] = useState(false);
-  const ready = reason.trim().length >= 5;
-  return (
-    <Card {...ui} title="Report a problem" focusOnMount>
-      <Text style={{ color: colors.textSecondary }}>
-        Tell us what went wrong. Our team will look at this ride and get back to you.
-      </Text>
-      <TextInput
-        value={reason}
-        onChangeText={setReason}
-        placeholder="What happened?"
-        placeholderTextColor={colors.textSecondary}
-        accessibilityLabel="What happened?"
-        maxLength={DISPUTE_REASON_MAX}
-        multiline
-        style={[
-          styles.input,
-          { minHeight: minTouchTarget * 2, color: colors.textPrimary, borderColor: colors.border },
-        ]}
-      />
-      <ActionButton
-        {...ui}
-        label="Send report"
-        tone="primary"
-        disabled={!ready}
-        busy={sending}
-        hint={!ready ? 'Write at least five characters' : undefined}
-        onPress={() => {
-          setSending(true);
-          void props.onSubmit(reason.trim()).finally(() => setSending(false));
-        }}
-      />
-      <ActionButton {...ui} label="Cancel" onPress={props.onCancel} />
     </Card>
   );
 }

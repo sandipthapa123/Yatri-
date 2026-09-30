@@ -211,6 +211,16 @@ export function HomeScreen({ navigation }: Props) {
               Emergency contacts
             </Text>
           </Pressable>
+          <Pressable
+            onPress={() => navigation.navigate('Support')}
+            accessibilityRole="button"
+            accessibilityLabel="Help and support"
+            style={[styles.profileLink, { minHeight: theme.minTouchTarget }]}
+          >
+            <Text style={[styles.profileLinkText, { color: theme.colors.primary }]}>
+              Help and support
+            </Text>
+          </Pressable>
         </View>
       </ScrollView>
     </SafeAreaView>

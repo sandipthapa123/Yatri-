@@ -192,3 +192,25 @@ rating form, the report-a-problem form). Check each by hand:
 Still only verifiable by a person with the real tools (nothing in this repository can prove it): how TalkBack,
 VoiceOver and NVDA actually speak each announcement, whether announcements collide when several arrive together,
 and touch-target size on small phones. Run sections F-K of this document with them before each release.
+
+## M. Support, disputes, refunds and privacy (Phase 14)
+
+Automated: the static scan covers `packages/mobile-support`; status sentences come from one function each and are
+unit-tested; the console pages use labelled fields, a status region for every result and in-page confirmations.
+Check by hand with TalkBack or VoiceOver (and NVDA in the console), and with a keyboard:
+
+1. **Ask for help** (passenger and driver): the categories read as a group of options with their help text as a
+   hint; choose one, leave the title empty and press **Send request**: the problem is announced once and shown
+   as text beginning "Problem:" beside the field; nothing is conveyed by colour.
+2. **Report a problem with this ride** from a finished ride: focus lands on the form title; a safety category
+   shows the emergency advice as an alert before the fields.
+3. Open a request: each message is one stop ("Support, 3 Oct, 14:05. ...") and its file buttons are separate
+   stops ("Open screenshot.png (12 KB)"). Reply, then add a photo with the device picker: the result is announced.
+4. Have an administrator reply and change the status while the request is open: within half a minute a polite
+   announcement says so, in the same words as the notification; it does not interrupt speech.
+5. **Ask for a refund** on a paid ride: the money facts read as sentences ("You paid: NPR 320"); radio options
+   state their amount; an invalid amount is explained in words.
+6. **Delete my account**: focus moves to the confirmation, which says what goes and what must be kept; **No, keep
+   my account** returns focus to the start.
+7. Console: the ticket queue table has a caption and headers and works without scripts; in a ticket, resolving,
+   closing and each refund money step open an in-page confirmation and Escape backs out; zoom to 200% and 400%.

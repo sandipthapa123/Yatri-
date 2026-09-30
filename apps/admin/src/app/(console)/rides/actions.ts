@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 
-import { ApiError, adminCancelTrip, resolveAdminDispute } from '../../../lib/apiClient';
+import { ApiError, adminCancelTrip } from '../../../lib/apiClient';
 import { requireAdminAccessToken } from '../../../lib/session';
 
 export interface RideActionState {
@@ -36,24 +36,4 @@ export async function cancelRideAction(
   revalidatePath(`/rides/${tripId}`);
   revalidatePath('/rides');
   return { done: 'The ride was cancelled and both people were told.' };
-}
-
-export async function resolveDisputeAction(
-  _prev: RideActionState,
-  formData: FormData,
-): Promise<RideActionState> {
-  const disputeId = field(formData, 'disputeId');
-  const status = field(formData, 'status');
-  const resolution = field(formData, 'resolution');
-  if (status !== 'RESOLVED' && status !== 'REJECTED') return { error: 'Choose an outcome.' };
-  if (resolution.length < 3) return { error: 'Write the resolution (at least three characters).' };
-  const token = await requireAdminAccessToken();
-  try {
-    await resolveAdminDispute(token, disputeId, status, resolution);
-  } catch (e) {
-    return fail(e);
-  }
-  revalidatePath('/disputes');
-  revalidatePath('/rides');
-  return { done: 'Dispute updated.' };
 }

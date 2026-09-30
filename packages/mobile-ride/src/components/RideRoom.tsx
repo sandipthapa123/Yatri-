@@ -40,6 +40,8 @@ export interface RideRoomProps {
   minTouchTarget: number;
   /** Leave the ride screen (back to home). */
   onExit: () => void;
+  /** Open the support screen for a problem with this ride (ride problems are support tickets). */
+  onReportProblem: (tripId: string) => void;
 }
 
 /** Refetch the trip summary (payment, rating, fare) whenever the ride visibly moves on. */
@@ -66,7 +68,7 @@ function useTripSummary(tripId: string, getAccessToken: () => Promise<string>, k
  * heard whichever tab is showing.
  */
 export function RideRoom(props: RideRoomProps) {
-  const { tripId, role, getAccessToken, colors, minTouchTarget, onExit } = props;
+  const { tripId, role, getAccessToken, colors, minTouchTarget, onExit, onReportProblem } = props;
   const ui = { colors, minTouchTarget };
   const live = useLiveTrip(tripId, getAccessToken, role);
   const status = live.snapshot?.status ?? null;
@@ -82,7 +84,7 @@ export function RideRoom(props: RideRoomProps) {
   const [tab, setTab] = useState<Tab>('trip');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [form, setForm] = useState<'rate' | 'dispute' | 'incident' | null>(null);
+  const [form, setForm] = useState<'rate' | 'incident' | null>(null);
   const [reportNews, setReportNews] = useState<{ id: number; text: string } | null>(null);
   const [share, setShare] = useState(false);
 
@@ -115,7 +117,11 @@ export function RideRoom(props: RideRoomProps) {
   );
 
   const perform = async (id: RideActionId) => {
-    if (id === 'rate' || id === 'dispute' || id === 'incident') {
+    if (id === 'dispute') {
+      onReportProblem(tripId);
+      return;
+    }
+    if (id === 'rate' || id === 'incident') {
       setForm(id);
       return;
     }
@@ -365,9 +371,6 @@ export function RideRoom(props: RideRoomProps) {
                         comment: comment.trim() || null,
                       }),
                     )
-                  }
-                  onDispute={(reason) =>
-                    submit(async () => rideApi.dispute(await getAccessToken(), tripId, reason))
                   }
                 />
               ) : null}

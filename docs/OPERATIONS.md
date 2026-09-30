@@ -210,3 +210,22 @@ The controls and their evidence are in `docs/SECURITY.md`. What operators must d
 - Review the Audit log weekly; remove administrators who have left the same day.
 - Apply dependency updates monthly; CI fails the build on a high-severity vulnerability in a runtime dependency.
 - Keep backups encrypted and test restores (section 4).
+
+## 9. Support, privacy requests and retention
+
+- **Who handles what.** Give `DISPUTES_MANAGE` to people who answer ride problems, `SUPPORT_MANAGE` to those who
+  also answer general requests and raise refunds, `REFUNDS_MANAGE` to the (different) people who approve and
+  record refunds, and `COMPLIANCE_MANAGE` to whoever answers privacy requests and publishes policies.
+- **Service levels are data.** Hours to a first answer, and what an unanswered ticket is raised to, are edited in
+  Settings under "Support priorities and escalation". The sweep runs every `SUPPORT_SWEEP_SECONDS` inside the
+  API process; with several instances it is safe (each move is one guarded statement).
+- **Privacy requests have a due date** (Settings: days to answer). Work the queue under Privacy and compliance;
+  overdue requests are listed first. Completing a deletion is irreversible and is refused while a ride is under
+  way, a payment is unsettled or a refund is being handled; tell the person why if you must reject.
+- **Retention.** Review the rules under Privacy and compliance before launch and with counsel each year. The
+  hourly job deletes only kinds marked DELETE (one-time codes, notifications, sign-in events, ride chat, support
+  files of long-closed tickets) and records how many it removed. Rides, payments, refunds, tickets, safety
+  records, the audit log, policy acceptances and privacy requests are KEEP and no job touches them. Backups keep
+  deleted data until they expire (section 4): count that when you answer a deletion request.
+- **Policy text** lives at the address you publish (a web page you control); Yatri stores only the version and
+  the address. Publishing a new version asks every person to accept it again.

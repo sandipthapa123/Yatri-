@@ -39,6 +39,13 @@ Yatri-specific reminders:
   rule, never a copy in an app. Every admin route names ONE permission (`requirePermission`) and
   audits its action (`auditAdminAction`). Periods come from `resolveRange`; screens never build
   their own date maths, and shared words (roles, statuses, payment states) come from @yatri/types.
+- A problem with a ride is a support ticket (category kind `DISPUTE`, a `trip_id` reference); never a
+  second "dispute" or "complaint" record. A refund refers to `trip_payments`, is worked out by
+  `pricing/refunds.ts` and never edits the payment. Categories, priorities, escalation hours, policy
+  versions and retention periods are rows an admin edits (with a reason, audited), never a list in an
+  app or an env value. Policy words are never stored: only the version and the address. Retention is
+  `retention_policies`; only `runRetention` deletes by age. Files in support use the ONE upload path
+  (sniffed type, random key, signed link).
 - Do not put a backslash inside a SQL string written from a shell command: use `ESCAPE '!'` with
   `likeContains` for searches.
 - If you discover a duplicate, consolidate it or add it to "Known duplication" in the doc.

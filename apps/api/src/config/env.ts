@@ -229,9 +229,6 @@ const envSchema = z
     // --- Chat ---
     // Chat stays writable this long after a trip ends (e.g. to arrange a lost item), then read-only.
     CHAT_OPEN_AFTER_TRIP_MINUTES: z.coerce.number().int().min(0).default(15),
-    // Chat text is deleted this many days after the ride ends (rides with an open dispute are kept
-    // until it is resolved). 0 = keep forever.
-    CHAT_RETENTION_DAYS: z.coerce.number().int().min(0).default(90),
     CHAT_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().positive().default(30),
 
     // --- Calls (WebRTC) ---
@@ -243,6 +240,13 @@ const envSchema = z
     CALL_TURN_CREDENTIAL_TTL_SECONDS: z.coerce.number().int().positive().default(3600),
 
     LOCATION_SEARCH_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().positive().default(60),
+
+    // --- Support and privacy (defaults; an administrator can override them in Settings) ---
+    SUPPORT_AUTO_CLOSE_DAYS: z.coerce.number().int().min(0).max(365).default(7),
+    SUPPORT_MAX_ATTACHMENTS_PER_TICKET: z.coerce.number().int().min(0).max(50).default(6),
+    DATA_REQUEST_RESPONSE_DAYS: z.coerce.number().int().min(1).max(90).default(30),
+    // How often the support sweep (escalations, auto-close) and the retention job run.
+    SUPPORT_SWEEP_SECONDS: z.coerce.number().int().positive().default(300),
 
     MAX_UPLOAD_FILE_SIZE_BYTES: z.coerce
       .number()

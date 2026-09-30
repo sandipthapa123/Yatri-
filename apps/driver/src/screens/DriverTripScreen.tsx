@@ -26,6 +26,7 @@ export function DriverTripScreen({ navigation, route }: Props) {
         colors={theme.colors}
         minTouchTarget={theme.minTouchTarget}
         onExit={() => navigation.popToTop()}
+        onReportProblem={(tripId) => navigation.navigate('Support', { tripId })}
       />
     </SafeAreaView>
   );

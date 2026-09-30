@@ -695,37 +695,32 @@ describe('payment, rating, disputes, history', () => {
     expect(t.counterpart.rating).toBe(5);
   });
 
-  it('lets a participant open one dispute at a time; strangers cannot', async () => {
+  it('lets a participant open one ride problem at a time; strangers cannot', async () => {
     const w = await completedRide();
-    expect(
-      (await post(w.passenger.accessToken, `/${w.tripId}/disputes`, { reason: 'x' })).status,
-    ).toBe(400);
-    const d = await post(w.passenger.accessToken, `/${w.tripId}/disputes`, {
-      reason: 'The fare was higher than quoted',
-    });
+    const open = (token: string, tripId: string, body = 'The fare was higher than quoted') =>
+      api
+        .post('/api/v1/support/tickets')
+        .set({ Authorization: `Bearer ${token}` })
+        .send({ categoryCode: 'RIDE_FARE', subject: 'Fare problem', body, tripId });
+    expect((await open(w.passenger.accessToken, w.tripId, 'x')).status).toBe(400);
+    const d = await open(w.passenger.accessToken, w.tripId);
     expect(d.status).toBe(201);
-    expect(d.body.data).toMatchObject({ status: 'OPEN', tripId: w.tripId });
-    expect(
-      (
-        await post(w.passenger.accessToken, `/${w.tripId}/disputes`, {
-          reason: 'Another problem entirely',
-        })
-      ).status,
-    ).toBe(409);
-    expect((await get(w.passenger.accessToken, `/${w.tripId}/disputes`)).body.data).toHaveLength(1);
-    expect((await get(w.driver.accessToken, `/${w.tripId}/disputes`)).body.data).toHaveLength(0); // yours only
+    expect(d.body.data).toMatchObject({ status: 'OPEN', tripId: w.tripId, isDispute: true });
+    expect((await open(w.passenger.accessToken, w.tripId, 'Another problem entirely')).status).toBe(
+      409,
+    );
+    const mine = (token: string) =>
+      api
+        .get(`/api/v1/support/tickets?tripId=${w.tripId}`)
+        .set({ Authorization: `Bearer ${token}` });
+    expect((await mine(w.passenger.accessToken)).body.data).toHaveLength(1);
+    expect((await mine(w.driver.accessToken)).body.data).toHaveLength(0); // yours only
     const stranger = await onboardUser('DRIVER');
-    expect(
-      (await post(stranger.accessToken, `/${w.tripId}/disputes`, { reason: 'Not my ride at all' }))
-        .status,
-    ).toBe(404);
-    // no dispute on a search that never found a driver
+    expect((await open(stranger.accessToken, w.tripId, 'Not my ride at all')).status).toBe(404);
+    // no problem report on a search that never found a driver
     const p = await onboardUser('PASSENGER');
     const searching = (await requestRide(p.accessToken)).body.data;
-    expect(
-      (await post(p.accessToken, `/${searching.id}/disputes`, { reason: 'Nothing happened yet' }))
-        .status,
-    ).toBe(409);
+    expect((await open(p.accessToken, searching.id, 'Nothing happened yet')).status).toBe(409);
   });
 
   it('lists each person’s finished rides, newest first, paginated', async () => {
@@ -760,7 +755,7 @@ describe('privacy: trips belong to their participants', () => {
     const stranger = await onboardUser('PASSENGER');
     const strangerDriver = await onboardUser('DRIVER');
     for (const token of [stranger.accessToken, strangerDriver.accessToken]) {
-      for (const path of ['', '/live', '/events', '/payment', '/disputes']) {
+      for (const path of ['', '/live', '/events', '/payment']) {
         expect((await get(token, `/${w.tripId}${path}`)).status, path).toBe(404);
       }
       expect((await post(token, `/${w.tripId}/cancel`)).status).toBe(404);

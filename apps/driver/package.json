@@ -18,6 +18,7 @@
     "@yatri/mobile-auth": "workspace:*",
     "@yatri/mobile-location": "workspace:*",
     "@yatri/mobile-ride": "workspace:*",
+    "@yatri/mobile-support": "workspace:*",
     "@yatri/mobile-ui": "workspace:*",
     "@yatri/shared": "workspace:*",
     "@yatri/types": "workspace:*",

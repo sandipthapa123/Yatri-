@@ -15,6 +15,7 @@ export const SETTING_GROUPS = [
   'cancellation',
   'waiting',
   'notifications',
+  'support',
 ] as const;
 export type SettingGroup = (typeof SETTING_GROUPS)[number];
 
@@ -24,6 +25,7 @@ export const SETTING_GROUP_LABELS: Record<SettingGroup, string> = {
   cancellation: 'Cancellation rules',
   waiting: 'Waiting rules',
   notifications: 'Notification settings',
+  support: 'Support and privacy',
 };
 
 export type SettingKind = 'boolean' | 'int' | 'number' | 'intList' | 'text';
@@ -167,6 +169,35 @@ export const PLATFORM_SETTINGS = [
     min: 1,
     max: 50000,
     unit: 'metres',
+  },
+  {
+    key: 'SUPPORT_AUTO_CLOSE_DAYS',
+    group: 'support',
+    label: 'Close resolved tickets after',
+    help: 'A resolved support ticket nobody has replied to is closed after this many days. 0 keeps them open until closed by hand.',
+    kind: 'int',
+    min: 0,
+    max: 365,
+    unit: 'days',
+  },
+  {
+    key: 'SUPPORT_MAX_ATTACHMENTS_PER_TICKET',
+    group: 'support',
+    label: 'Files allowed on one ticket',
+    help: 'The most photos, screenshots or documents one support ticket can hold.',
+    kind: 'int',
+    min: 0,
+    max: 50,
+  },
+  {
+    key: 'DATA_REQUEST_RESPONSE_DAYS',
+    group: 'support',
+    label: 'Days to answer a data or deletion request',
+    help: 'The due date shown on account-deletion and data-access requests. Confirm the legal limit for your country with counsel.',
+    kind: 'int',
+    min: 1,
+    max: 90,
+    unit: 'days',
   },
 ] as const satisfies readonly SettingDef[];
 

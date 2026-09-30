@@ -230,24 +230,6 @@ export async function markRead(tripId: string, readerId: string, upToSeq: number
   return { upToSeq: max };
 }
 
-/**
- * Retention: delete the chat text of rides that ended more than CHAT_RETENTION_DAYS ago, unless a
- * dispute on the ride is still open (the conversation is evidence). Trip events, calls metadata,
- * payments and ratings are not chat and are kept. Returns how many messages were deleted.
- */
-export async function purgeExpiredChats(): Promise<number> {
-  if (env.CHAT_RETENTION_DAYS <= 0) return 0;
-  const r = await query(
-    `DELETE FROM trip_messages m USING trips t
-     WHERE m.trip_id = t.id
-       AND t.ended_at IS NOT NULL
-       AND t.ended_at < now() - ($1::int * interval '1 day')
-       AND NOT EXISTS (SELECT 1 FROM trip_disputes d WHERE d.trip_id = t.id AND d.status = 'OPEN')`,
-    [env.CHAT_RETENTION_DAYS],
-  );
-  return r.rowCount ?? 0;
-}
-
 /** The whole conversation for an admin holding TRIP_CHAT_VIEW (the caller audits the read). */
 export async function getChatForAdmin(tripId: string): Promise<ChatHistory> {
   const trip = await getTrip(tripId);

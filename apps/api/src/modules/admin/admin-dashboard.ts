@@ -62,7 +62,7 @@ export async function dashboardHandler(req: Request, res: Response<ApiResponse<D
     query<{ incidents: number; sos: number; disputes: number }>(
       `SELECT (SELECT count(*)::int FROM incident_reports WHERE status IN ${sqlIn(OPEN_INCIDENT_STATES)}) AS incidents,
               (SELECT count(*)::int FROM sos_events WHERE status IN ('ACTIVE', 'ACKNOWLEDGED')) AS sos,
-              (SELECT count(*)::int FROM trip_disputes WHERE status = 'OPEN') AS disputes`,
+              (SELECT count(*)::int FROM support_tickets WHERE is_dispute AND status NOT IN ('RESOLVED', 'CLOSED')) AS disputes`,
     ),
     query<{ n: number }>(
       `SELECT count(*)::int AS n FROM driver_profiles WHERE status IN ('SUBMITTED', 'UNDER_REVIEW')`,

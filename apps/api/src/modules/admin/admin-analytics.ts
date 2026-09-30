@@ -91,7 +91,7 @@ export async function analyticsHandler(req: Request, res: Response<ApiResponse<A
     }>(
       `SELECT i.category, i.status, count(*)::int AS n,
               (SELECT count(*)::int FROM sos_events WHERE created_at >= $1 AND created_at < $2) AS sos,
-              (SELECT count(*)::int FROM trip_disputes WHERE created_at >= $1 AND created_at < $2) AS disputes,
+              (SELECT count(*)::int FROM support_tickets WHERE is_dispute AND created_at >= $1 AND created_at < $2) AS disputes,
               (SELECT count(*)::int FROM trip_ratings WHERE stars <= 2 AND created_at >= $1 AND created_at < $2) AS low
        FROM (SELECT 1) one
        LEFT JOIN incident_reports i ON i.created_at >= $1 AND i.created_at < $2

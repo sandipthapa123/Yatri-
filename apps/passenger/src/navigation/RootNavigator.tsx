@@ -13,9 +13,11 @@ import { RequestRideScreen } from '../screens/RequestRideScreen';
 import { RideHistoryScreen } from '../screens/RideHistoryScreen';
 import { SavedPlacesScreen } from '../screens/SavedPlacesScreen';
 import { TripTrackingScreen } from '../screens/TripTrackingScreen';
+import { SupportScreen } from '../screens/SupportScreen';
 import { WelcomeScreen } from '../screens/WelcomeScreen';
 
 export type RootStackParamList = {
+  Support: { tripId?: string; ticketId?: string } | undefined;
   Welcome: undefined;
   PhoneEntry: undefined;
   OtpVerification: { phoneNumber: string };
@@ -60,6 +62,7 @@ export function RootNavigator() {
             <Stack.Screen name="RequestRide" component={RequestRideScreen} />
             <Stack.Screen name="RideHistory" component={RideHistoryScreen} />
             <Stack.Screen name="EmergencyContacts" component={EmergencyContactsScreen} />
+            <Stack.Screen name="Support" component={SupportScreen} />
           </>
         ) : (
           <>

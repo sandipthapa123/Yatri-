@@ -172,7 +172,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
           <Stat
             label="Open disputes"
             value={data.safety.openDisputes}
-            href="/disputes?status=OPEN"
+            href="/support?kind=dispute&group=open"
           />
         </dl>
       </section>

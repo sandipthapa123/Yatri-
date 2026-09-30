@@ -32,16 +32,13 @@ import {
   getPaymentHandler,
   getTripHandler,
   historyHandler,
-  myDisputesHandler,
   liveSnapshotHandler,
   offerResponseHandler,
-  openDisputeHandler,
   rateHandler,
   requestHandler,
 } from './trips.controller';
 import {
   cancelSchema,
-  disputeSchema,
   eventsQuerySchema,
   historyQuerySchema,
   ratingSchema,
@@ -160,7 +157,7 @@ for (const [path, action] of [
 tripsRouter.use('/:id/chat', validateUuidParam('id'), chatRouter);
 tripsRouter.use('/:id/calls', validateUuidParam('id'), callsRouter);
 
-// Payment (settled by the driver for cash), rating, disputes.
+// Payment (settled by the driver for cash) and rating. Ride problems are support tickets (/support).
 tripsRouter.get('/:id/payment', validateUuidParam('id'), getPaymentHandler);
 tripsRouter.post(
   '/:id/payment/confirm',
@@ -169,10 +166,3 @@ tripsRouter.post(
   confirmPaymentHandler,
 );
 tripsRouter.post('/:id/rating', validateUuidParam('id'), validateBody(ratingSchema), rateHandler);
-tripsRouter.get('/:id/disputes', validateUuidParam('id'), myDisputesHandler);
-tripsRouter.post(
-  '/:id/disputes',
-  validateUuidParam('id'),
-  validateBody(disputeSchema),
-  openDisputeHandler,
-);

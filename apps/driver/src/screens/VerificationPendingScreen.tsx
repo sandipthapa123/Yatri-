@@ -166,6 +166,17 @@ export function VerificationPendingScreen({ navigation }: Props) {
       ) : null}
 
       <Pressable
+        onPress={() => navigation.navigate('Support')}
+        accessibilityRole="button"
+        accessibilityLabel="Help and support"
+        style={[styles.signOutButton, { minHeight: theme.minTouchTarget }]}
+      >
+        <Text style={[styles.signOutText, { color: theme.colors.secondary }]}>
+          Help and support
+        </Text>
+      </Pressable>
+
+      <Pressable
         onPress={() => navigation.navigate('DriverLocation')}
         accessibilityRole="button"
         accessibilityLabel="My location"

@@ -139,7 +139,12 @@ describe('RBAC: every admin route names a permission', () => {
     ['SETTINGS_VIEW', '/vehicle-categories'],
     ['AUDIT_VIEW', '/audit'],
     ['ADMINS_MANAGE', '/admins'],
-    ['DISPUTES_MANAGE', '/disputes'],
+    ['DISPUTES_MANAGE', '/support/tickets'],
+    ['DISPUTES_MANAGE', '/support/assignees'],
+    ['SETTINGS_VIEW', '/support/config'],
+    ['COMPLIANCE_MANAGE', '/compliance/policies'],
+    ['COMPLIANCE_MANAGE', '/compliance/data-requests'],
+    ['COMPLIANCE_MANAGE', '/compliance/retention'],
     ['SAFETY_REVIEW', '/sos'],
     ['SAFETY_REVIEW', '/incidents'],
   ];
@@ -158,7 +163,7 @@ describe('RBAC: every admin route names a permission', () => {
       }
     }
     expect(bad).toEqual([]);
-  }, 120_000); // sixteen administrators and about three hundred requests
+  }, 120_000); // one administrator per permission and several hundred requests
 
   it('says what an administrator may do, and a removed permission stops working at once', async () => {
     const a = await admin(['USERS_VIEW']);

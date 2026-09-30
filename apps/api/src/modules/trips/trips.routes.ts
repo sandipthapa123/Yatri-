@@ -1,6 +1,11 @@
 import { Router, type Router as RouterType } from 'express';
 
 import { callsRouter } from '../calls/calls.routes';
+import {
+  createShareHandler,
+  listSharesHandler,
+  stopShareHandler,
+} from '../sharing/sharing.controller';
 import { chatRouter } from '../chat/chat.routes';
 import { authenticate } from '../../middleware/authenticate';
 import { userRateLimit } from '../../middleware/rateLimit';
@@ -70,6 +75,28 @@ tripsRouter.post(
   requireRole('DRIVER'),
   validateUuidParam('offerId'),
   offerResponseHandler(false),
+);
+
+// Passenger: share this ride with a trusted contact (link creation is rate limited and audited by events).
+tripsRouter.post(
+  '/:id/shares',
+  requireRole('PASSENGER'),
+  userRateLimit('trip-share', 10, 3600),
+  validateUuidParam('id'),
+  createShareHandler,
+);
+tripsRouter.get(
+  '/:id/shares',
+  requireRole('PASSENGER'),
+  validateUuidParam('id'),
+  listSharesHandler,
+);
+tripsRouter.delete(
+  '/:id/shares/:shareId',
+  requireRole('PASSENGER'),
+  validateUuidParam('id'),
+  validateUuidParam('shareId'),
+  stopShareHandler,
 );
 
 // Everyone in a trip.

@@ -67,6 +67,9 @@ export function waitingRow(w: WaitingInfo | null, viewer: Viewer): SummaryRow | 
   if (!w) return null;
   if (w.driver) {
     const t = formatElapsed(w.driver.seconds);
+    // The driver's screen also says the passenger knows (the server stamps when they were told).
+    const told =
+      viewer === 'DRIVER' && w.driver.notifiedAt ? ' The passenger has been notified.' : '';
     const fare =
       w.chargeNpr > 0
         ? ` Waiting charge so far: NPR ${w.chargeNpr}.`
@@ -75,7 +78,7 @@ export function waitingRow(w: WaitingInfo | null, viewer: Viewer): SummaryRow | 
           : '';
     return {
       label: viewer === 'DRIVER' ? 'You have been waiting' : 'Your driver has been waiting',
-      value: `${t}.${fare}`,
+      value: `${t}.${fare}${told}`,
     };
   }
   if (w.passenger) {

@@ -112,7 +112,7 @@ export async function recordTripEvent(input: RecordEventInput): Promise<TripEven
         publishToUser(userId, { type: 'trip_event', event: record, important: meta.important }),
       ),
     );
-    if (meta.important) {
+    if (meta.notify) {
       // A durable, provider-delivered notification for the moments people must not miss.
       await Promise.all(
         recipients.map((userId) =>

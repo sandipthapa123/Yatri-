@@ -26,6 +26,8 @@ export const TRIP_EVENT_TYPES = [
   'DRIVER_LOCATION_RESTORED',
   'PAYMENT_RECEIVED',
   'CALL_MISSED',
+  'TRIP_SHARE_STARTED',
+  'TRIP_SHARE_STOPPED',
 ] as const;
 export type TripEventType = (typeof TRIP_EVENT_TYPES)[number];
 
@@ -34,11 +36,18 @@ export interface TripEventMeta {
   important: boolean;
   /** Shown to participants as a system message in the trip chat. */
   chatVisible: boolean;
+  /** Also delivered as a durable notification (by default, exactly the important ones). */
+  notify: boolean;
 }
 
-const meta = (important: boolean, chatVisible: boolean): TripEventMeta => ({
+const meta = (
+  important: boolean,
+  chatVisible: boolean,
+  notify: boolean = important,
+): TripEventMeta => ({
   important,
   chatVisible,
+  notify,
 });
 
 export const TRIP_EVENT_META: Record<TripEventType, TripEventMeta> = {
@@ -59,6 +68,9 @@ export const TRIP_EVENT_META: Record<TripEventType, TripEventMeta> = {
   DRIVER_LOCATION_RESTORED: meta(false, false),
   PAYMENT_RECEIVED: meta(false, true),
   CALL_MISSED: meta(false, true),
+  // Sharing the trip is announced politely and notified: it is about the person's own safety.
+  TRIP_SHARE_STARTED: meta(false, false, true),
+  TRIP_SHARE_STOPPED: meta(false, false, true),
 };
 
 export type TripEventPayload = Record<string, unknown>;
@@ -185,6 +197,22 @@ export function describeTripEvent(
     }
     case 'CALL_MISSED':
       return 'Missed call.';
+    case 'TRIP_SHARE_STARTED':
+      return viewer === 'PASSENGER'
+        ? 'You are sharing this trip with a trusted contact.'
+        : viewer === 'ADMIN'
+          ? 'Trip sharing started.'
+          : 'This trip is being shared with a trusted contact.';
+    case 'TRIP_SHARE_STOPPED': {
+      const why = str(p.reason);
+      if (viewer !== 'PASSENGER')
+        return viewer === 'ADMIN' ? 'Trip sharing ended.' : 'Trip sharing has ended.';
+      return why === 'RIDE_ENDED'
+        ? 'Trip sharing ended because the ride is over.'
+        : why === 'EXPIRED'
+          ? 'Trip sharing ended: the sharing period is over.'
+          : 'You stopped sharing this trip.';
+    }
   }
 }
 

@@ -2,7 +2,7 @@ import type { DisputeInfo, DisputeStatus } from '@yatri/types';
 
 import { query } from '../../lib/db';
 import { HttpError } from '../../middleware/errorHandler';
-import { getTrip } from './trips.repository';
+import { requireParticipant } from './access';
 
 interface Row {
   id: string;
@@ -24,21 +24,13 @@ const toInfo = (r: Row): DisputeInfo => ({
   resolvedAt: r.resolved_at?.toISOString() ?? null,
 });
 
-async function participantTrip(tripId: string, userId: string) {
-  const trip = await getTrip(tripId);
-  if (!trip || (trip.passenger_id !== userId && trip.driver_id !== userId)) {
-    throw new HttpError(404, 'NOT_FOUND', 'Trip not found.');
-  }
-  return trip;
-}
-
 /** A participant flags a problem with a trip (fare, behaviour, no-show…). Admins resolve it. */
 export async function openDispute(
   tripId: string,
   userId: string,
   reason: string,
 ): Promise<DisputeInfo> {
-  const trip = await participantTrip(tripId, userId);
+  const { trip } = await requireParticipant(tripId, userId);
   if (trip.status === 'SEARCHING' || trip.status === 'NO_DRIVERS') {
     throw new HttpError(409, 'NOTHING_TO_DISPUTE', 'There is no ride to dispute yet.');
   }
@@ -61,7 +53,7 @@ export async function openDispute(
 }
 
 export async function listMyDisputes(tripId: string, userId: string): Promise<DisputeInfo[]> {
-  await participantTrip(tripId, userId);
+  await requireParticipant(tripId, userId);
   const r = await query<Row>(
     `SELECT ${COLS} FROM trip_disputes WHERE trip_id = $1 AND raised_by = $2 ORDER BY created_at DESC`,
     [tripId, userId],

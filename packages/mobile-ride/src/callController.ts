@@ -1,11 +1,13 @@
-import type {
-  CallEndReason,
-  CallInfo,
-  CallKind,
-  CallSignal,
-  IceServersResponse,
-  ServerRealtimeMessage,
-  TripRole,
+import {
+  counterpartLabel,
+  describeIncomingCall,
+  type CallEndReason,
+  type CallInfo,
+  type CallKind,
+  type CallSignal,
+  type IceServersResponse,
+  type ServerRealtimeMessage,
+  type TripRole,
 } from '@yatri/types';
 
 import type { SpokenMessage } from '@yatri/mobile-location';
@@ -57,8 +59,6 @@ export interface CallControllerOptions {
   /** How long a dropped media link may try to recover before the call is ended. */
   reconnectGraceMs?: number;
 }
-
-const OTHER = { PASSENGER: 'driver', DRIVER: 'passenger' } as const;
 
 /** Sustained poor video before the app pauses it to protect the audio. */
 const VIDEO_PAUSE_AFTER_POOR_READINGS = 3;
@@ -252,8 +252,7 @@ export class CallController {
       return; // a different call while one is live: the server allows only one, ignore stragglers
     }
     const outgoing = call.callerRole === this.opts.role;
-    const who = OTHER[this.opts.role];
-    const kindWord = call.kind === 'VIDEO' ? 'video' : 'audio';
+    const who = counterpartLabel(this.opts.role);
 
     switch (call.state) {
       case 'RINGING':
@@ -265,8 +264,8 @@ export class CallController {
           cameraOn: call.kind === 'VIDEO',
           error: null,
         });
-        if (outgoing) this.say(`Calling your ${who}.`);
-        else this.alert(`Incoming ${kindWord} call from your ${who}. Answer or decline.`);
+        if (outgoing) this.say(`Calling ${who}.`);
+        else this.alert(`${describeIncomingCall(this.opts.role, call.kind)} Answer or decline.`);
         return;
       case 'CONNECTING':
         this.set({ call, outgoing, phase: 'connecting' });
@@ -284,7 +283,7 @@ export class CallController {
   }
 
   private finish(call: CallInfo, outgoing: boolean) {
-    const who = OTHER[this.opts.role];
+    const who = counterpartLabel(this.opts.role);
     this.teardownMedia();
     this.set({
       call,
@@ -506,19 +505,21 @@ export class CallController {
   }
 }
 
+const capitalise = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
+
 /** How a finished call is described to the person on this device. */
 export function endText(
   reason: CallEndReason | null,
   outgoing: boolean,
-  who: 'driver' | 'passenger',
+  who: 'your driver' | 'the passenger',
 ): string {
   switch (reason) {
     case 'DECLINED':
-      return outgoing ? `Your ${who} declined the call.` : 'Call declined.';
+      return outgoing ? `${capitalise(who)} declined the call.` : 'Call declined.';
     case 'MISSED':
-      return outgoing ? `No answer from your ${who}.` : `Missed call from your ${who}.`;
+      return outgoing ? `No answer from ${who}.` : `Missed call from ${who}.`;
     case 'CANCELLED':
-      return outgoing ? 'Call cancelled.' : `Missed call from your ${who}.`;
+      return outgoing ? 'Call cancelled.' : `Missed call from ${who}.`;
     case 'FAILED':
       return 'The call failed.';
     case 'TRIP_ENDED':

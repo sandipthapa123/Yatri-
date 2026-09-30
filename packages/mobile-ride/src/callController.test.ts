@@ -193,7 +193,7 @@ describe('incoming call', () => {
     socket.push(state(call()));
     expect(c.getState()).toMatchObject({ phase: 'incoming', outgoing: false });
     expect(c.getState().assertive?.text).toBe(
-      'Incoming audio call from your passenger. Answer or decline.',
+      'Incoming audio call from the passenger. Answer or decline.',
     );
 
     c.answer();
@@ -231,11 +231,13 @@ describe('incoming call', () => {
     socket.push(state(call({ state: 'ENDED', endReason: 'DECLINED' })));
     expect(c.getState().polite?.text).toBe('Call declined.');
 
-    expect(endText('DECLINED', true, 'driver')).toBe('Your driver declined the call.');
-    expect(endText('MISSED', false, 'passenger')).toBe('Missed call from your passenger.');
-    expect(endText('MISSED', true, 'driver')).toBe('No answer from your driver.');
-    expect(endText('CANCELLED', false, 'driver')).toBe('Missed call from your driver.');
-    expect(endText('TRIP_ENDED', true, 'driver')).toBe('The call ended because the ride ended.');
+    expect(endText('DECLINED', true, 'your driver')).toBe('Your driver declined the call.');
+    expect(endText('MISSED', false, 'the passenger')).toBe('Missed call from the passenger.');
+    expect(endText('MISSED', true, 'your driver')).toBe('No answer from your driver.');
+    expect(endText('CANCELLED', false, 'your driver')).toBe('Missed call from your driver.');
+    expect(endText('TRIP_ENDED', true, 'your driver')).toBe(
+      'The call ended because the ride ended.',
+    );
   });
 });
 

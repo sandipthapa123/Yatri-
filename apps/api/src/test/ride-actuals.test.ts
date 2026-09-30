@@ -10,6 +10,7 @@ import {
   measuredRideDistance,
   rideDurationSeconds,
 } from '../modules/trips/ride-actuals';
+import { secondsSince } from '../modules/trips/waiting';
 import { api, onboardUser } from './helpers';
 import {
   THAMEL,
@@ -27,6 +28,11 @@ const post = (token: string, path: string, body: object = {}) =>
 const get = (token: string, path: string) => api.get(`/api/v1/trips${path}`).set(auth(token));
 
 describe('what a ride measured (pure)', () => {
+  it('measures waiting with one function: whole seconds, never negative', () => {
+    expect(secondsSince(1_000, 61_999)).toBe(60);
+    expect(secondsSince(5_000, 1_000)).toBe(0);
+  });
+
   it('takes the larger of the driven distance and the straight line, and never trusts less than the chord', () => {
     const a = THAMEL;
     const b = north(THAMEL, 1000);

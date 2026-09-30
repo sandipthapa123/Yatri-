@@ -9,6 +9,7 @@ import {
   ACTIVE_TRIP_STATUSES,
   ASSIGNED_TRIP_STATUSES,
   TERMINAL_TRIP_STATUSES,
+  counterpartLabel,
   type TripRole,
   type TripSummary,
 } from '@yatri/types';
@@ -23,6 +24,7 @@ import { CounterpartCard } from './CounterpartCard';
 import { NavigateButton } from './NavigateButton';
 import { ChatPanel } from './ChatPanel';
 import { PostRidePanel } from './PostRidePanel';
+import { TripSharePanel } from './TripSharePanel';
 import { ActionButton, Announcer, type RideColors } from './RideUi';
 
 type Tab = 'trip' | 'chat' | 'call';
@@ -261,6 +263,25 @@ export function RideRoom(props: RideRoomProps) {
                   />
                 ) : null}
 
+                {status === 'DRIVER_ARRIVED' ? (
+                  // The driver is at the pickup: talking to each other is one tap away.
+                  <>
+                    <ActionButton
+                      {...ui}
+                      label={`Message ${counterpartLabel(role)}`}
+                      onPress={() => setTab('chat')}
+                    />
+                    <ActionButton
+                      {...ui}
+                      label={`Call ${counterpartLabel(role)}`}
+                      hint="Opens the call controls"
+                      onPress={() => setTab('call')}
+                    />
+                  </>
+                ) : null}
+                {role === 'PASSENGER' && assigned ? (
+                  <TripSharePanel {...ui} tripId={tripId} getAccessToken={getAccessToken} />
+                ) : null}
                 {role === 'DRIVER' && live.snapshot && status === 'DRIVER_EN_ROUTE' ? (
                   <NavigateButton
                     {...ui}

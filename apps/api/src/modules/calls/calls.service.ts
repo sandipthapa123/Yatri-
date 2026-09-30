@@ -1,12 +1,11 @@
-import { createHmac } from 'node:crypto';
 import {
   ASSIGNED_TRIP_STATUSES,
+  describeIncomingCall,
   type CallEndReason,
   type CallInfo,
   type CallKind,
   type CallSignal,
   type CallState,
-  type IceServer,
   type IceServersResponse,
   type TripRole,
 } from '@yatri/types';
@@ -14,7 +13,10 @@ import {
 import { env } from '../../config/env';
 import { query } from '../../lib/db';
 import { HttpError } from '../../middleware/errorHandler';
+import { notify } from '../../lib/notifications';
 import { publishToUser } from '../realtime/bus';
+import { requireParticipant } from '../trips/access';
+import { activeCallProvider } from './call-provider';
 import { recordTripEvent } from '../trips/trip-events.service';
 import { getTrip, type TripRow } from '../trips/trips.repository';
 
@@ -110,10 +112,7 @@ export async function startCall(
   callerId: string,
   kind: CallKind,
 ): Promise<CallInfo> {
-  const trip = await getTrip(tripId);
-  if (!trip || (trip.passenger_id !== callerId && trip.driver_id !== callerId)) {
-    throw new HttpError(404, 'NOT_FOUND', 'Trip not found.');
-  }
+  const { trip } = await requireParticipant(tripId, callerId);
   if (!ASSIGNED_TRIP_STATUSES.includes(trip.status) || !trip.driver_id) {
     throw new HttpError(
       409,
@@ -127,7 +126,17 @@ export async function startCall(
       `INSERT INTO trip_calls (trip_id, caller_id, callee_id, kind) VALUES ($1, $2, $3, $4) RETURNING ${COLS}`,
       [tripId, callerId, calleeId, kind],
     );
-    return await publishState(r.rows[0] as Row, trip);
+    const call = await publishState(r.rows[0] as Row, trip);
+    // A durable notification for the person being called (the socket reaches only an open app).
+    const calleeRole = calleeId === trip.passenger_id ? 'PASSENGER' : 'DRIVER';
+    await notify({
+      userId: calleeId,
+      type: 'CALL_INCOMING',
+      title: 'Yatri',
+      body: describeIncomingCall(calleeRole, kind),
+      metadata: { tripId, callId: call.id },
+    }).catch(() => undefined);
+    return call;
   } catch (err) {
     if ((err as { code?: string }).code === '23505') {
       throw new HttpError(409, 'CALL_IN_PROGRESS', 'There is already a call on this ride.');
@@ -194,10 +203,7 @@ export async function relaySignal(
 }
 
 export async function activeCallFor(tripId: string, userId: string): Promise<CallInfo | null> {
-  const trip = await getTrip(tripId);
-  if (!trip || (trip.passenger_id !== userId && trip.driver_id !== userId)) {
-    throw new HttpError(404, 'NOT_FOUND', 'Trip not found.');
-  }
+  const { trip } = await requireParticipant(tripId, userId);
   const r = await query<Row>(
     `SELECT ${COLS} FROM trip_calls WHERE trip_id = $1 AND state <> 'ENDED'`,
     [tripId],
@@ -247,10 +253,7 @@ export async function listCallsForTrip(tripId: string): Promise<CallInfo[]> {
 }
 
 export async function iceServersFor(tripId: string, userId: string): Promise<IceServersResponse> {
-  const trip = await getTrip(tripId);
-  if (!trip || (trip.passenger_id !== userId && trip.driver_id !== userId)) {
-    throw new HttpError(404, 'NOT_FOUND', 'Trip not found.');
-  }
+  const { trip } = await requireParticipant(tripId, userId);
   if (!ASSIGNED_TRIP_STATUSES.includes(trip.status)) {
     throw new HttpError(
       409,
@@ -258,15 +261,5 @@ export async function iceServersFor(tripId: string, userId: string): Promise<Ice
       'Calls are only available during an active ride.',
     );
   }
-  const servers: IceServer[] = [];
-  if (env.CALL_STUN_URLS.length) servers.push({ urls: env.CALL_STUN_URLS });
-  if (env.CALL_TURN_URLS.length && env.CALL_TURN_SHARED_SECRET) {
-    const expiry = Math.floor(Date.now() / 1000) + env.CALL_TURN_CREDENTIAL_TTL_SECONDS;
-    const username = `${expiry}:${userId}`;
-    const credential = createHmac('sha1', env.CALL_TURN_SHARED_SECRET)
-      .update(username)
-      .digest('base64');
-    servers.push({ urls: env.CALL_TURN_URLS, username, credential });
-  }
-  return { iceServers: servers, ttlSeconds: env.CALL_TURN_CREDENTIAL_TTL_SECONDS };
+  return activeCallProvider().connectionInfo(userId);
 }

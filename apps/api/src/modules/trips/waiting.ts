@@ -4,6 +4,11 @@ import { waitingCharge } from '../pricing/pricing';
 import type { PricingConfig } from '../pricing/pricing.config';
 import { waitingRule } from '../pricing/pricing';
 
+/** Whole seconds from `sinceMs` to `nowMs`, never negative. The one way waiting time is measured. */
+export function secondsSince(sinceMs: number, nowMs: number): number {
+  return Math.max(0, Math.floor((nowMs - sinceMs) / 1000));
+}
+
 export interface WaitingTimestamps {
   status: TripStatus;
   matchedAtMs: number | null;
@@ -31,7 +36,7 @@ export function computeWaiting(
       driver: null,
       passenger: {
         startedAt: new Date(t.matchedAtMs).toISOString(),
-        seconds: Math.max(0, Math.floor((nowMs - t.matchedAtMs) / 1000)),
+        seconds: secondsSince(t.matchedAtMs, nowMs),
         notifiedAt: t.driverNotifiedAtMs ? new Date(t.driverNotifiedAtMs).toISOString() : null,
       },
       rule,
@@ -41,7 +46,7 @@ export function computeWaiting(
     };
   }
   if (t.status === 'DRIVER_ARRIVED' && t.arrivedAtMs !== null) {
-    const seconds = Math.max(0, Math.floor((nowMs - t.arrivedAtMs) / 1000));
+    const seconds = secondsSince(t.arrivedAtMs, nowMs);
     const charge = waitingCharge(seconds, cfg);
     return {
       driver: {

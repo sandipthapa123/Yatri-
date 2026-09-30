@@ -1,3 +1,4 @@
+import { getRedisClient } from '../../config/redis';
 import { query } from '../db';
 import { ConsoleNotificationProvider } from './console-provider';
 import type { NotificationPayload, NotificationProvider } from './provider';
@@ -31,6 +32,21 @@ export async function notify(payload: NotificationPayload): Promise<void> {
   } catch (err) {
     console.error('Notification delivery failed', payload.type, err);
   }
+}
+
+/**
+ * notify(), at most once per `key` within `windowSeconds`. For bursts (a run of chat messages) where
+ * one nudge is right and ten would be noise. The key decides what counts as "the same" nudge.
+ */
+export async function notifyThrottled(
+  key: string,
+  windowSeconds: number,
+  payload: NotificationPayload,
+): Promise<boolean> {
+  const first = await getRedisClient().set(`notif:${key}`, '1', 'EX', windowSeconds, 'NX');
+  if (first !== 'OK') return false;
+  await notify(payload);
+  return true;
 }
 
 export type { NotificationPayload, NotificationProvider } from './provider';

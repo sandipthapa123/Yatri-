@@ -22,4 +22,7 @@ Yatri-specific reminders:
 - Groups of states (active, assigned, terminal) are constants in `@yatri/types`. An app never re-lists
   statuses with `||`; it imports the group. A fare is only ever produced by `pricing/` (estimate and
   final use the same function); an app displays it and never sends one.
+- "Is this person on this ride?" is `trips/access.ts`. A feature about someone's ride calls
+  `requireParticipant` / `requirePassenger`; it never compares `passenger_id` / `driver_id` itself.
+  Notifications go through `lib/notifications`; nothing sends its own.
 - If you discover a duplicate, consolidate it or add it to "Known duplication" in the doc.

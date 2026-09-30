@@ -4,6 +4,7 @@ import helmet from 'helmet';
 
 import { env } from './config/env';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
+import { shareRouter } from './modules/sharing/share.routes';
 import { apiRouter } from './routes';
 
 export function createApp(): Express {
@@ -18,6 +19,8 @@ export function createApp(): Express {
   app.use(express.json({ limit: '32kb' }));
 
   app.use('/api/v1', apiRouter);
+  // The trusted contact's page: public, and the link itself is the credential.
+  app.use('/share', shareRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

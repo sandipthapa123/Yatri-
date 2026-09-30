@@ -1,6 +1,7 @@
 import {
   CHAT_MAX_LENGTH,
   TRIP_EVENT_META,
+  counterpartLabel,
   describeTripEvent,
   type ChatHistory,
   type ChatMessage,
@@ -227,7 +228,7 @@ export class ChatController {
         this.pending.delete(msg.clientMessageId); // our own echo confirms it
         const theirs = msg.senderRole !== this.opts.role;
         if (theirs) {
-          const who = this.opts.role === 'PASSENGER' ? 'your driver' : 'the passenger';
+          const who = counterpartLabel(this.opts.role);
           this.set({
             unreadCount: this.open ? this.state.unreadCount : this.state.unreadCount + 1,
             announcement: { id: ++this.messageId, text: `Message from ${who}: ${msg.body}` },

@@ -5,7 +5,7 @@ import {
   type ChatHistory,
   type ChatMessage,
   type ChatTimelineItem,
-  type TripRole,
+  describeNewMessage,
 } from '@yatri/types';
 
 import { env } from '../../config/env';
@@ -13,6 +13,8 @@ import { pool } from '../../config/database';
 import { query } from '../../lib/db';
 import { checkWindowLimit } from '../../lib/rate-limit';
 import { HttpError } from '../../middleware/errorHandler';
+import { notifyThrottled } from '../../lib/notifications';
+import { participantRole, requireParticipant } from '../trips/access';
 import { publishToUser } from '../realtime/bus';
 import { listTripEvents } from '../trips/trip-events.service';
 import { getTrip, type TripRow } from '../trips/trips.repository';
@@ -38,12 +40,6 @@ interface Row {
 }
 const COLS =
   'id, trip_id, seq, sender_id, body, client_message_id, created_at, delivered_at, read_at';
-
-function roleOf(trip: TripRow, userId: string): TripRole | null {
-  if (trip.passenger_id === userId) return 'PASSENGER';
-  if (trip.driver_id === userId) return 'DRIVER';
-  return null;
-}
 
 function toMessage(trip: TripRow, r: Row): ChatMessage {
   return {
@@ -92,16 +88,7 @@ export function chatWindow(
   };
 }
 
-async function chatTrip(
-  tripId: string,
-  userId: string,
-): Promise<{ trip: TripRow; role: TripRole }> {
-  const trip = await getTrip(tripId);
-  const role = trip ? roleOf(trip, userId) : null;
-  // Same 404 for "missing" and "not yours": no probing other people's trips.
-  if (!trip || !role) throw new HttpError(404, 'NOT_FOUND', 'Trip not found.');
-  return { trip, role };
-}
+const chatTrip = requireParticipant;
 
 export async function sendMessage(
   tripId: string,
@@ -174,13 +161,25 @@ export async function sendMessage(
   // Both participants (the sender's other devices too) receive it over the one realtime path.
   const recipients = [trip.passenger_id, trip.driver_id].filter((x): x is string => !!x);
   await Promise.all(recipients.map((u) => publishToUser(u, { type: 'chat_message', message })));
+  // A nudge for the OTHER person, for when the app is closed: worded from the shared text (never the
+  // message itself), and at most one a minute per conversation so a burst is one notification.
+  const recipientId = senderId === trip.passenger_id ? trip.driver_id : trip.passenger_id;
+  if (recipientId) {
+    await notifyThrottled(`chat:${trip.id}:${recipientId}`, 60, {
+      userId: recipientId,
+      type: 'CHAT_MESSAGE',
+      title: 'Yatri',
+      body: describeNewMessage(recipientId === trip.passenger_id ? 'PASSENGER' : 'DRIVER'),
+      metadata: { tripId: trip.id },
+    }).catch(() => undefined);
+  }
   return message;
 }
 
 /** Called when a message reaches the recipient's connection. Idempotent; only the first call notifies. */
 export async function markDelivered(tripId: string, recipientId: string, upToSeq: number) {
   const trip = await getTrip(tripId);
-  if (!trip || !roleOf(trip, recipientId)) return;
+  if (!trip || !participantRole(trip, recipientId)) return;
   const r = await query<{ max: number | null }>(
     `WITH u AS (
        UPDATE trip_messages SET delivered_at = now()

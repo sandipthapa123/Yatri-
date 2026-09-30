@@ -328,6 +328,41 @@ describe('announcement policy: informed, not flooded', () => {
   });
 });
 
+describe('waiting rows: who has been told', () => {
+  const rows = (snap: LiveTripSnapshot) =>
+    Object.fromEntries(summaryRows(snap, 'DRIVER').map((r) => [r.label, r.value]));
+  const waiting = (notifiedAt: string | null) => ({
+    ...driverWaiting(60),
+    driver: { startedAt: '2026-01-01T00:00:00.000Z', seconds: 60, notifiedAt },
+  });
+  it('tells the driver the passenger has been notified once the server has stamped it', () => {
+    const told = rows(
+      snapshot({
+        status: 'DRIVER_ARRIVED',
+        driverArrival: null,
+        waiting: waiting('2026-01-01T00:00:01.000Z'),
+      }),
+    );
+    expect(told['You have been waiting']).toContain('The passenger has been notified.');
+    const notYet = rows(
+      snapshot({ status: 'DRIVER_ARRIVED', driverArrival: null, waiting: waiting(null) }),
+    );
+    expect(notYet['You have been waiting']).not.toContain('notified');
+  });
+  it('does not say it to the passenger, who is the one being told', () => {
+    const forPassenger = summaryRows(
+      snapshot({
+        status: 'DRIVER_ARRIVED',
+        driverArrival: null,
+        waiting: waiting('2026-01-01T00:00:01.000Z'),
+      }),
+      'PASSENGER',
+    );
+    const row = forPassenger.find((r) => r.label === 'Your driver has been waiting');
+    expect(row?.value).not.toContain('notified');
+  });
+});
+
 describe('announcement policy: the search', () => {
   it('says "Searching for a driver." once when the screen opens on a search, and nothing more from snapshots', () => {
     const searching = snapshot({

@@ -8,6 +8,8 @@ import type {
   IceServersResponse,
   PaymentInfo,
   RatingInput,
+  ShareCreated,
+  ShareInfo,
   TripHistoryPage,
   TripEstimateBody,
   TripOfferInfo,
@@ -68,6 +70,15 @@ export const rideApi = {
 
   // ---- calls (signalling itself travels over the socket)
   activeCall: (t: Token, id: string) => get<CallInfo | null>(`/trips/${id}/calls/active`, t),
+  // ---- trip sharing (passenger)
+  createShare: (t: Token, id: string) => post<ShareCreated>(`/trips/${id}/shares`, t),
+  shares: (t: Token, id: string) => get<ShareInfo[]>(`/trips/${id}/shares`, t),
+  stopShare: (t: Token, id: string, shareId: string) =>
+    authApi.request<{ stopped: true }>(`/trips/${id}/shares/${shareId}`, {
+      method: 'DELETE',
+      accessToken: t,
+    }),
+
   iceServers: (t: Token, id: string) => get<IceServersResponse>(`/trips/${id}/calls/ice`, t),
 };
 

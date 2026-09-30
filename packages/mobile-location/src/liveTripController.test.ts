@@ -143,6 +143,23 @@ describe('LiveTripController', () => {
     c.stop();
   });
 
+  it('announces trip sharing starting and ending politely, in the shared words, once', () => {
+    const c = make();
+    sock.push({ type: 'trip_event', event: ev(1, 'TRIP_SHARE_STARTED'), important: false });
+    expect(c.getState().polite?.text).toBe('You are sharing this trip with a trusted contact.');
+    expect(c.getState().assertive).toBeNull(); // a calm confirmation, not an alarm
+    const id = c.getState().polite?.id;
+    sock.push({ type: 'trip_event', event: ev(1, 'TRIP_SHARE_STARTED'), important: false }); // duplicate
+    expect(c.getState().polite?.id).toBe(id);
+    sock.push({
+      type: 'trip_event',
+      event: ev(2, 'TRIP_SHARE_STOPPED', { reason: 'RIDE_ENDED' }),
+      important: false,
+    });
+    expect(c.getState().polite?.text).toBe('Trip sharing ended because the ride is over.');
+    c.stop();
+  });
+
   it('speaks waiting milestones politely in the exact server wording, and skips DRIVER_NEARBY', () => {
     const c = make();
     sock.push({

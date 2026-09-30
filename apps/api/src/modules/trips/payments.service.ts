@@ -4,6 +4,7 @@ import { query } from '../../lib/db';
 import { HttpError } from '../../middleware/errorHandler';
 import { recordTripEvent } from './trip-events.service';
 import { getTrip } from './trips.repository';
+import { requireParticipant } from './access';
 
 /**
  * Payment is its own axis (trip_payments), never a trip status. The provider interface is the
@@ -70,10 +71,7 @@ export async function getPayment(tripId: string): Promise<PaymentInfo | null> {
 
 /** Participants may read their trip's payment; anyone else gets the same 404 as a missing trip. */
 export async function getPaymentFor(tripId: string, userId: string): Promise<PaymentInfo> {
-  const trip = await getTrip(tripId);
-  if (!trip || (trip.passenger_id !== userId && trip.driver_id !== userId)) {
-    throw new HttpError(404, 'NOT_FOUND', 'Trip not found.');
-  }
+  await requireParticipant(tripId, userId);
   const p = await getPayment(tripId);
   if (!p) throw new HttpError(404, 'NOT_FOUND', 'No payment is due for this trip yet.');
   return p;

@@ -170,6 +170,15 @@ const envSchema = z
     DISPATCH_RADIUS_METERS: z.coerce.number().int().positive().default(5000),
     DISPATCH_OFFER_TTL_SECONDS: z.coerce.number().int().positive().default(20),
     DISPATCH_SEARCH_TIMEOUT_SECONDS: z.coerce.number().int().positive().default(120),
+    // Trip sharing with a trusted contact. A link works for at most SHARE_DURATION_HOURS, and only
+    // until the ride ends (then it shows the outcome for SHARE_ENDED_GRACE_MINUTES and stops).
+    SHARE_DURATION_HOURS: z.coerce.number().positive().default(6),
+    SHARE_MAX_PER_TRIP: z.coerce.number().int().positive().default(5),
+    SHARE_ENDED_GRACE_MINUTES: z.coerce.number().int().min(0).default(15),
+    // Where share links point (the API host serves the contact's page). No trailing slash.
+    PUBLIC_BASE_URL: z.string().url().default('http://localhost:4000'),
+    // Which call provider carries voice/video. Only "webrtc" (peer-to-peer media, server signalling) exists.
+    CALL_PROVIDER: z.enum(['webrtc']).default('webrtc'),
     // How candidate drivers are ranked. Only "proximity" exists today; add a strategy in
     // dispatch/matching.ts and its name here, never in a controller or an app.
     MATCHING_STRATEGY: z.enum(['proximity']).default('proximity'),

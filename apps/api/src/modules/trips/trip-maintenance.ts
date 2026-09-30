@@ -5,6 +5,7 @@ import { bumpTripVersion, loadMeta, saveMeta } from '../tracking/tracking.servic
 import { recordTripEvent } from './trip-events.service';
 import { driverDropsOut, metaFromRow } from './trips.service';
 import { getTrip } from './trips.repository';
+import { secondsSince } from './waiting';
 
 /**
  * Time-driven trip housekeeping, safe to run on every instance (each write is a guarded
@@ -42,7 +43,7 @@ export async function sweepTrips(nowMs = Date.now()): Promise<TripSweepResult> {
     const arrived = t.status === 'DRIVER_ARRIVED';
     const startedAt = arrived ? t.arrived_at : t.matched_at;
     if (!startedAt) continue;
-    const seconds = Math.floor((nowMs - startedAt.getTime()) / 1000);
+    const seconds = secondsSince(startedAt.getTime(), nowMs);
     const crossed = highestCrossed(seconds, thresholds);
     if (crossed === null) continue;
 

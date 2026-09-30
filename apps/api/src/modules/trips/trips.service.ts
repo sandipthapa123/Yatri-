@@ -41,7 +41,11 @@ import {
   saveMeta,
   type TripMeta,
 } from '../tracking/tracking.service';
+import { endSharesForTrip } from '../sharing/sharing.service';
 import { freshProfilePictureUrl } from '../users/profile-picture';
+import { approvedVehicleOf } from '../vehicles/vehicle-lookup';
+import { requireParticipant } from './access';
+import { secondsSince } from './waiting';
 import { createPendingPayment } from './payments.service';
 import { measuredRideDistance, rideDurationSeconds } from './ride-actuals';
 import { averageRating } from './ratings.service';
@@ -77,9 +81,7 @@ const notFound = () => new HttpError(404, 'NOT_FOUND', 'Trip not found.');
 
 /** Non-participants get the same 404 as a missing trip: there is no way to probe other people's trips. */
 export async function participantTrip(tripId: string, userId: string): Promise<TripRow> {
-  const trip = await getTrip(tripId);
-  if (!trip || (trip.passenger_id !== userId && trip.driver_id !== userId)) throw notFound();
-  return trip;
+  return (await requireParticipant(tripId, userId)).trip;
 }
 
 // ------------------------------------------------------------------ the summary everyone reads
@@ -94,26 +96,7 @@ async function counterpartOf(
     'SELECT full_name, profile_picture_url FROM users WHERE id = $1',
     [otherId],
   );
-  let vehicle: TripCounterpart['vehicle'] = null;
-  if (viewerIsPassenger) {
-    const v = await query<{
-      make: string;
-      model: string;
-      color: string;
-      registration_number: string;
-    }>(
-      `SELECT make, model, color, registration_number FROM vehicles
-       WHERE driver_user_id = $1 AND verification_status = 'APPROVED' ORDER BY created_at LIMIT 1`,
-      [otherId],
-    );
-    const row = v.rows[0];
-    if (row) {
-      vehicle = {
-        description: `${row.color} ${row.make} ${row.model}`,
-        registrationNumber: row.registration_number,
-      };
-    }
-  }
+  const vehicle = viewerIsPassenger ? await approvedVehicleOf(otherId) : null;
   return {
     name: u.rows[0]?.full_name ?? null,
     vehicle,
@@ -311,6 +294,8 @@ async function transition(tripId: string, spec: TransitionSpec): Promise<TripRow
       ? { fromStatus: before.status }
       : {};
   await recordTripEvent({ tripId, ...spec.event, payload: { ...spec.event.payload, ...leftFrom } });
+  // When the ride is over, every trip-sharing link stops sharing.
+  if (TERMINAL_TRIP_STATUSES.includes(spec.to)) await endSharesForTrip(tripId);
   return updated;
 }
 
@@ -380,7 +365,7 @@ export async function startTrip(tripId: string, driverId: string): Promise<TripR
   if (!trip || trip.driver_id !== driverId) throw notFound();
   const at = await requireDriverFix(tripId);
   // Waiting is priced once, from server timestamps, at the moment the ride starts.
-  const waitedSeconds = trip.arrived_at ? (Date.now() - trip.arrived_at.getTime()) / 1000 : 0;
+  const waitedSeconds = trip.arrived_at ? secondsSince(trip.arrived_at.getTime(), Date.now()) : 0;
   const { chargeNpr } = waitingCharge(waitedSeconds, pricingConfig());
   return transition(tripId, {
     to: 'IN_PROGRESS',
@@ -519,7 +504,7 @@ export async function driverNoShow(tripId: string, driverId: string): Promise<Tr
   const trip = await getTrip(tripId);
   if (!trip || trip.driver_id !== driverId) throw notFound();
   const cfg = pricingConfig();
-  const waited = trip.arrived_at ? (Date.now() - trip.arrived_at.getTime()) / 1000 : 0;
+  const waited = trip.arrived_at ? secondsSince(trip.arrived_at.getTime(), Date.now()) : 0;
   if (trip.status !== 'DRIVER_ARRIVED' || waited < cfg.noShowAfterSeconds) {
     throw new HttpError(
       409,

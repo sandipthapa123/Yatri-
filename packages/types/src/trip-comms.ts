@@ -5,6 +5,23 @@ import type { TripRole } from './trip';
 
 export const CHAT_MAX_LENGTH = 1000;
 
+/**
+ * How one side of a ride refers to the other, in words. The one definition: notifications,
+ * announcements and screens all say "your driver" / "the passenger" through this.
+ */
+export function counterpartLabel(viewer: TripRole): 'your driver' | 'the passenger' {
+  return viewer === 'PASSENGER' ? 'your driver' : 'the passenger';
+}
+
+/** The notification/announcement for a message that arrived (the text itself is never in a notification). */
+export function describeNewMessage(recipient: TripRole): string {
+  return `You have a new message from ${counterpartLabel(recipient)}.`;
+}
+
+export function describeIncomingCall(recipient: TripRole, kind: 'AUDIO' | 'VIDEO'): string {
+  return `Incoming ${kind === 'VIDEO' ? 'video' : 'audio'} call from ${counterpartLabel(recipient)}.`;
+}
+
 export interface ChatMessage {
   id: string;
   tripId: string;

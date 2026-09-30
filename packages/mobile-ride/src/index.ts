@@ -25,3 +25,4 @@ export type { RideColors, UiProps } from './components/RideUi';
 export { HistoryList, historyLabel } from './components/HistoryList';
 export { PostRidePanel } from './components/PostRidePanel';
 export type { RideSocket, ServerMessageBus } from './rideSocket';
+export { TripSharePanel } from './components/TripSharePanel';

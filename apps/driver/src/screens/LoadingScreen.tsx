@@ -2,7 +2,7 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Logo } from '../components/Logo';
-import { useTheme } from '../theme/useTheme';
+import { useTheme } from '@yatri/mobile-ui';
 
 export function LoadingScreen() {
   const theme = useTheme();

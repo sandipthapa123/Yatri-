@@ -3,7 +3,7 @@ import { Router, type Router as RouterType } from 'express';
 import { authenticate } from '../../middleware/authenticate';
 import { requireRole } from '../../middleware/requireRole';
 import { validateBody } from '../../middleware/validate';
-import { ipRateLimit } from '../../middleware/rateLimit';
+import { userMutationRateLimit, userRateLimit } from '../../middleware/rateLimit';
 import { updateProfileSchema } from '../users/users.validators';
 import {
   getDriverMeHandler,
@@ -30,6 +30,7 @@ import { updateOnboardingSchema } from './drivers.validators';
 export const driversRouter: RouterType = Router();
 
 driversRouter.use(authenticate, requireRole('DRIVER'));
+driversRouter.use(userMutationRateLimit());
 driversRouter.get('/me', getDriverMeHandler);
 driversRouter.patch('/me', validateBody(updateProfileSchema), updateDriverMeHandler);
 
@@ -45,7 +46,7 @@ driversRouter.post('/me/submit-verification', submitVerificationHandler);
 // Explicit one-shot location share (last known position only; no history, no streaming).
 driversRouter.put(
   '/me/location',
-  ipRateLimit('driver-loc', 30, 60),
+  userRateLimit('driver-loc', 30, 60),
   validateBody(driverLocationSchema),
   putLocationHandler,
 );
@@ -56,12 +57,12 @@ driversRouter.delete('/me/location', deleteLocationHandler);
 driversRouter.get('/me/availability', getAvailabilityHandler);
 driversRouter.post(
   '/me/availability/online',
-  ipRateLimit('drv-online', 20, 60),
+  userRateLimit('drv-online', 20, 60),
   validateBody(driverLocationSampleSchema),
   goOnlineHandler,
 );
 driversRouter.post(
   '/me/availability/offline',
-  ipRateLimit('drv-offline', 20, 60),
+  userRateLimit('drv-offline', 20, 60),
   goOfflineHandler,
 );

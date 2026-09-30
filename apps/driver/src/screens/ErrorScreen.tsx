@@ -3,7 +3,7 @@ import { AccessibilityInfo, Pressable, StyleSheet, Text, View } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Logo } from '../components/Logo';
-import { useTheme } from '../theme/useTheme';
+import { useTheme } from '@yatri/mobile-ui';
 
 interface ErrorScreenProps {
   message?: string;

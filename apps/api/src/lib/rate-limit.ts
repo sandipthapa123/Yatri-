@@ -7,21 +7,33 @@ export interface WindowCounterResult {
 }
 
 /**
- * Fixed-window counter (e.g. "max 5 OTP requests per 15 minutes for this
- * phone number"). Backed by Redis so it works correctly across multiple API
- * processes, unlike an in-memory counter.
+ * Count one hit and (re)arm the window in ONE atomic Redis step. Doing INCR and EXPIRE as two calls
+ * leaves a gap: if the process dies between them the counter has no expiry and the key blocks that
+ * caller forever. This script also repairs a counter that somehow has no expiry.
+ */
+const HIT = `
+local count = redis.call('INCR', KEYS[1])
+local ttl = redis.call('TTL', KEYS[1])
+if count == 1 or ttl < 0 then
+  redis.call('EXPIRE', KEYS[1], ARGV[1])
+  ttl = tonumber(ARGV[1])
+end
+return { count, ttl }
+`;
+
+/**
+ * Fixed-window counter (e.g. "max 5 OTP requests per 15 minutes for this phone number"). Backed by
+ * Redis so it is correct across several API processes, unlike an in-memory counter.
  */
 export async function checkWindowLimit(
   key: string,
   limit: number,
   windowSeconds: number,
 ): Promise<WindowCounterResult> {
-  const redis = getRedisClient();
-  const count = await redis.incr(key);
-  if (count === 1) {
-    await redis.expire(key, windowSeconds);
-  }
-  const ttl = await redis.ttl(key);
+  const [count, ttl] = (await getRedisClient().eval(HIT, 1, key, windowSeconds)) as [
+    number,
+    number,
+  ];
   return {
     count,
     limited: count > limit,

@@ -11,6 +11,8 @@ declare global {
   namespace Express {
     interface Request {
       auth?: AuthContext;
+      /** The request's correlation id (also the X-Request-Id response header). */
+      id?: string;
       /**
        * Set by validateQuery. Express 5 makes `req.query` a read-only
        * getter, so the parsed/coerced/defaulted query data (e.g. page

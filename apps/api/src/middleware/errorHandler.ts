@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from 'express';
 import type { ApiResponse } from '@yatri/types';
+import { log } from '../lib/logger';
 
 export class HttpError extends Error {
   public details?: Record<string, unknown>;
@@ -26,13 +27,26 @@ export function notFoundHandler(req: Request, res: Response<ApiResponse<never>>)
   });
 }
 
+/** Errors thrown by the body parser: the caller's fault, and never a 500. */
+function bodyParserError(err: unknown): HttpError | null {
+  const type = (err as { type?: unknown } | null)?.type;
+  if (type === 'entity.parse.failed') {
+    return new HttpError(400, 'INVALID_JSON', 'The request body is not valid JSON.');
+  }
+  if (type === 'entity.too.large') {
+    return new HttpError(413, 'PAYLOAD_TOO_LARGE', 'The request body is too large.');
+  }
+  return null;
+}
+
 // Express 5 forwards rejected promises from async handlers here automatically.
 export function errorHandler(
-  err: unknown,
-  _req: Request,
+  original: unknown,
+  req: Request,
   res: Response<ApiResponse<never>>,
   _next: NextFunction,
 ) {
+  const err = bodyParserError(original) ?? original;
   const isHttpError = err instanceof HttpError;
   const status = isHttpError ? err.status : 500;
   const code = isHttpError ? err.code : 'INTERNAL_ERROR';
@@ -42,11 +56,17 @@ export function errorHandler(
   const message = isHttpError ? err.message : 'Something went wrong. Please try again.';
 
   if (!isHttpError) {
-    console.error('Unhandled error:', err);
+    // The correlation id lets support match the caller's "something went wrong" to this line.
+    log.error('Unhandled error', { requestId: req.id, route: req.route?.path }, err);
   }
 
   res.status(status).json({
     success: false,
-    error: { code, message, ...(isHttpError && err.details ? { details: err.details } : {}) },
+    error: {
+      code,
+      message,
+      ...(isHttpError && err.details ? { details: err.details } : {}),
+      ...(status >= 500 && req.id ? { requestId: req.id } : {}),
+    },
   });
 }

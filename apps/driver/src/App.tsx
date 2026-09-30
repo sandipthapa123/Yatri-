@@ -3,10 +3,11 @@ import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { ErrorBoundary } from './components/ErrorBoundary';
+import { ErrorBoundary } from '@yatri/mobile-ui';
+import { ErrorScreen } from './screens/ErrorScreen';
 import { RootNavigator } from './navigation/RootNavigator';
 import { LoadingScreen } from './screens/LoadingScreen';
-import { useTheme } from './theme/useTheme';
+import { useTheme } from '@yatri/mobile-ui';
 
 function AppContent() {
   const { status } = useAuth();
@@ -26,7 +27,9 @@ export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <ErrorBoundary>
+        <ErrorBoundary
+          fallback={(error, reset) => <ErrorScreen message={error.message} onRetry={reset} />}
+        >
           <AuthProvider role="DRIVER">
             <AppContent />
           </AuthProvider>

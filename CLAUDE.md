@@ -20,6 +20,13 @@ chat, call and offer clients both apps render).
    `docs/ACCESSIBILITY_TESTING.md`.
 4. **Location is sensitive**: minimum retention, no history tables, RBAC-gated admin views.
 
+## Yatri-independent hygiene that applies here too
+
+Nothing in this repository is a second copy of a rule: the operations procedure is `docs/OPERATIONS.md`,
+the security controls `docs/SECURITY.md`, every API variable `apps/api/.env.example`. Never write
+`console.*` or read `process.env` in the API (use `log` and `config/env.ts`); never put a secret, a token,
+a phone number or a coordinate in a log line or an error message.
+
 ## Commands
 
 ```bash

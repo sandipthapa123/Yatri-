@@ -3,7 +3,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useEffect } from 'react';
 
 import { Logo } from '../components/Logo';
-import { useTheme } from '../theme/useTheme';
+import { useTheme } from '@yatri/mobile-ui';
 
 interface ErrorScreenProps {
   message?: string;

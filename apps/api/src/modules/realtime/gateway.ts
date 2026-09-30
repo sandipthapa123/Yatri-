@@ -45,9 +45,8 @@ import {
 import { purgeExpiredChats } from '../chat/chat.service';
 import { expireDueShares } from '../sharing/sharing.service';
 import { sweepTrips } from '../trips/trip-maintenance';
-import { getTrip } from '../trips/trips.repository';
-import { metaFromRow } from '../trips/trips.service';
 import { onTripChange, onUserMessage, startBus, stopBus, type TripChange } from './bus';
+import { log } from '../../lib/logger';
 
 export const REALTIME_PATH = '/ws/v1/realtime';
 
@@ -179,13 +178,6 @@ export async function attachRealtimeGateway(server: HttpServer): Promise<Realtim
 
   const viewerOf = (meta: TripMeta, userId: string) =>
     meta.passengerId === userId ? ('PASSENGER' as const) : ('DRIVER' as const);
-
-  async function loadTripMeta(tripId: string): Promise<TripMeta | null> {
-    const cached = await loadMeta(tripId);
-    if (cached) return cached;
-    const row = await getTrip(tripId);
-    return row ? metaFromRow(row) : null;
-  }
 
   async function pushSnapshot(conn: Conn, meta: TripMeta) {
     if (!conn.auth) return;
@@ -342,7 +334,7 @@ export async function attachRealtimeGateway(server: HttpServer): Promise<Realtim
 
     // ---- trip subscription and passenger location
     if (msg.type === 'subscribe') {
-      const meta = await loadTripMeta(msg.tripId);
+      const meta = await loadMeta(msg.tripId);
       // Same answer for "missing", "not yours" and "ended": no way to probe other people's trips.
       if (
         !meta ||
@@ -363,7 +355,7 @@ export async function attachRealtimeGateway(server: HttpServer): Promise<Realtim
     }
 
     if (msg.type === 'stop_sharing') {
-      const meta = await loadTripMeta(msg.tripId);
+      const meta = await loadMeta(msg.tripId);
       if (meta?.passengerId === userId) await passengerStopsSharing(msg.tripId);
       return;
     }
@@ -414,7 +406,7 @@ export async function attachRealtimeGateway(server: HttpServer): Promise<Realtim
       }
       const text = data.toString();
       handle(conn, text, Buffer.byteLength(text)).catch((err) => {
-        console.error('Realtime handler error', err);
+        log.error('Realtime handler error', err);
         send(conn, { type: 'error', code: 'INTERNAL_ERROR', message: 'Something went wrong.' });
       });
     });
@@ -435,14 +427,14 @@ export async function attachRealtimeGateway(server: HttpServer): Promise<Realtim
     const set = byTrip.get(change.tripId);
     if (!set || set.size === 0) return;
     void (async () => {
-      const meta = await loadTripMeta(change.tripId);
+      const meta = await loadMeta(change.tripId);
       if (!meta) return;
       for (const conn of [...set]) {
         if (!conn.auth) continue;
         await pushSnapshot(conn, meta);
         if (!isActive(meta.status)) unsubscribe(conn, change.tripId);
       }
-    })().catch((err) => console.error('Realtime fan-out error', err));
+    })().catch((err) => log.error('Realtime fan-out error', err));
   });
 
   // Everything addressed to a person (events, chat, receipts, calls, offers, availability).
@@ -495,31 +487,31 @@ export async function attachRealtimeGateway(server: HttpServer): Promise<Realtim
   const sweeper = setInterval(() => {
     for (const tripId of byTrip.keys()) {
       void (async () => {
-        const meta = await loadTripMeta(tripId);
+        const meta = await loadMeta(tripId);
         if (!meta || !isActive(meta.status) || !meta.driverId) return;
         const f = await driverFreshness(tripId);
         const prev = lastFreshness.get(tripId);
         lastFreshness.set(tripId, f);
         if (prev !== undefined && prev !== f && f !== 'none') await announceStaleness(tripId, f);
-      })().catch((err) => console.error('Staleness sweep error', err));
+      })().catch((err) => log.error('Staleness sweep error', err));
     }
   }, SWEEP_MS);
 
   const timers = [
     setInterval(() => {
-      sweepDrivers().catch((err) => console.error('Driver sweep error', err));
+      sweepDrivers().catch((err) => log.error('Driver sweep error', err));
     }, DRIVER_SWEEP_MS),
     setInterval(() => {
-      sweepDispatch().catch((err) => console.error('Dispatch sweep error', err));
+      sweepDispatch().catch((err) => log.error('Dispatch sweep error', err));
     }, DISPATCH_SWEEP_MS),
     setInterval(() => {
-      sweepTrips().catch((err) => console.error('Trip sweep error', err));
-      sweepCalls().catch((err) => console.error('Call sweep error', err));
-      expireDueShares().catch((err) => console.error('Share expiry error', err));
+      sweepTrips().catch((err) => log.error('Trip sweep error', err));
+      sweepCalls().catch((err) => log.error('Call sweep error', err));
+      expireDueShares().catch((err) => log.error('Share expiry error', err));
     }, TRIP_SWEEP_MS),
     // Retention is slow housekeeping: hourly, and once shortly after start.
     setInterval(() => {
-      purgeExpiredChats().catch((err) => console.error('Chat retention error', err));
+      purgeExpiredChats().catch((err) => log.error('Chat retention error', err));
     }, 60 * 60_000),
   ];
 

@@ -9,7 +9,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as driverApi from '../api/driverApi';
 import { Logo } from '../components/Logo';
 import type { RootStackParamList } from '../navigation/RootNavigator';
-import { useTheme } from '../theme/useTheme';
+import { useTheme } from '@yatri/mobile-ui';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'VerificationPending'>;
 

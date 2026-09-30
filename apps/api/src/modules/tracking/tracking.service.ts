@@ -17,6 +17,8 @@ import { settingList } from '../settings/settings.service';
 import { publishTripChange } from '../realtime/bus';
 import { getLastEventSeq, recordTripEvent } from '../trips/trip-events.service';
 import { ODOMETER_MIN_STEP_METERS } from '../trips/ride-actuals';
+import { metaFromRow } from '../trips/trip-meta';
+import { getTrip } from '../trips/trips.repository';
 import { computeWaiting } from '../trips/waiting';
 import { computeEta, estimateEta } from './eta';
 import { trackingConfig } from './tracking.config';
@@ -28,6 +30,7 @@ import {
   type RejectReason,
   type StoredFix,
 } from './tracking.rules';
+import { log } from '../../lib/logger';
 
 /**
  * Live positions exist only in Redis, only while a trip is active, and are
@@ -131,7 +134,21 @@ export async function saveMeta(meta: TripMeta) {
     isActive(meta.status) ? STATE_TTL_SECONDS : TERMINAL_META_TTL_SECONDS,
   );
 }
-export const loadMeta = (tripId: string) => getJson<TripMeta>(k.meta(tripId));
+/**
+ * The ride's cached facts. Redis holds them for speed, but the database is the record: if the cache
+ * has been lost (Redis restarted or failed over, a key expired mid-ride) they are rebuilt from the trip's
+ * row and put back, so a ride carries on instead of every location update being ignored as "not active".
+ * Rebuilt figures the cache alone knew (the driver's own waiting-notice flag) simply start again.
+ */
+export async function loadMeta(tripId: string): Promise<TripMeta | null> {
+  const cached = await getJson<TripMeta>(k.meta(tripId));
+  if (cached) return cached;
+  const row = await getTrip(tripId);
+  if (!row) return null;
+  const meta = metaFromRow(row);
+  await saveMeta(meta).catch((err) => log.warn('Could not restore the ride cache', err));
+  return meta;
+}
 
 /** Tell every subscribed socket to rebuild its role-specific snapshot. */
 export async function bumpTripVersion(tripId: string): Promise<number> {
@@ -323,7 +340,7 @@ async function refreshPlaceName(tripId: string, party: Party, fix: StoredFix, no
       }
     }
   } catch (err) {
-    console.error('place name refresh failed', err);
+    log.error('place name refresh failed', err);
   }
 }
 

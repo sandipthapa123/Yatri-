@@ -2,6 +2,7 @@ import { getRedisClient } from '../../config/redis';
 import { query } from '../db';
 import { ConsoleNotificationProvider } from './console-provider';
 import type { NotificationPayload, NotificationProvider } from './provider';
+import { log } from '../logger';
 
 let provider: NotificationProvider | undefined;
 
@@ -30,7 +31,7 @@ export async function notify(payload: NotificationPayload): Promise<void> {
   try {
     await getProvider().send(payload);
   } catch (err) {
-    console.error('Notification delivery failed', payload.type, err);
+    log.error('Notification delivery failed', payload.type, err);
   }
 }
 

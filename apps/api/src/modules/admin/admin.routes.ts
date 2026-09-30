@@ -1,6 +1,7 @@
 import { Router, type Router as RouterType } from 'express';
 
 import { authenticate } from '../../middleware/authenticate';
+import { userMutationRateLimit } from '../../middleware/rateLimit';
 import { requireRole } from '../../middleware/requireRole';
 import { validateBody } from '../../middleware/validate';
 import { validateQuery } from '../../middleware/validateQuery';
@@ -108,6 +109,7 @@ import { auditAdminAction, requirePermission } from './permissions';
 export const adminRouter: RouterType = Router();
 
 adminRouter.use(authenticate, requireRole('ADMIN'));
+adminRouter.use(userMutationRateLimit());
 
 adminRouter.get('/me', adminMeHandler);
 

@@ -1,0 +1,85 @@
+# A complete Yatri stack on one machine: local development against real containers, a review
+# environment, or a small staging host. It is NOT the production topology (managed Postgres and Redis
+# with backups, several API instances behind a load balancer: see docs/OPERATIONS.md).
+#
+#   cp deploy/compose.env.example deploy/compose.env      # then fill in every value (no defaults for secrets)
+#   docker compose -f deploy/docker-compose.yml --env-file deploy/compose.env up --build
+#
+# Order matters and is enforced: the database and Redis must be healthy, the migration job must finish,
+# and only then does the API start.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: yatri
+      POSTGRES_USER: yatri
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      # Nepali text needs UTF-8; the API refuses to start against anything else.
+      POSTGRES_INITDB_ARGS: --encoding=UTF8 --locale=C.UTF-8
+    volumes:
+      - yatri-pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U yatri -d yatri']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    # Live positions and realtime fan-out only: nothing here is the record of anything, so no persistence needed.
+    command: ['redis-server', '--save', '', '--appendonly', 'no']
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  migrate:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.api
+      target: migrate
+    environment:
+      DATABASE_URL: postgres://yatri:${POSTGRES_PASSWORD}@postgres:5432/yatri
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: 'no'
+
+  api:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.api
+      target: runtime
+    env_file: compose.env
+    environment:
+      NODE_ENV: ${YATRI_ENV:-staging}
+      DATABASE_URL: postgres://yatri:${POSTGRES_PASSWORD}@postgres:5432/yatri
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    ports:
+      - '4000:4000'
+    restart: unless-stopped
+
+  admin:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.admin
+    environment:
+      API_BASE_URL: http://api:4000/api/v1
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?set JWT_ACCESS_SECRET (the same value the API uses)}
+    depends_on:
+      - api
+    ports:
+      - '3000:3000'
+    restart: unless-stopped
+
+volumes:
+  yatri-pg:

@@ -2,13 +2,13 @@ import { formatElapsed, type TripRole } from '@yatri/types';
 import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import type { CallController, CallState } from '../callController';
+import type { CallController, CallUiState } from '../callController';
 import { describeQuality } from '../callQuality';
 import { useNow } from '../hooks';
 import { getRtcView } from '../webrtcAdapter';
 import { ActionButton, Card, type UiProps } from './RideUi';
 
-const PHASE_TEXT: Record<CallState['phase'], string> = {
+const PHASE_TEXT: Record<CallUiState['phase'], string> = {
   idle: 'No call in progress.',
   calling: 'Calling…',
   incoming: 'Incoming call.',
@@ -25,7 +25,7 @@ const PHASE_TEXT: Record<CallState['phase'], string> = {
  */
 export function CallPanel(
   props: UiProps & {
-    state: CallState;
+    state: CallUiState;
     controller: CallController | null;
     role: TripRole;
     /** Calls are possible while a driver is assigned and the ride is live. */

@@ -1,6 +1,7 @@
 import { Router, type Router as RouterType } from 'express';
 
 import { authenticate } from '../../middleware/authenticate';
+import { userMutationRateLimit } from '../../middleware/rateLimit';
 import { requireRole } from '../../middleware/requireRole';
 import { validateBody } from '../../middleware/validate';
 import { uploadSingleFile } from '../../middleware/upload';
@@ -17,6 +18,7 @@ import { uploadDocumentSchema } from './documents.validators';
 export const documentsRouter: RouterType = Router();
 
 documentsRouter.use(authenticate);
+documentsRouter.use(userMutationRateLimit());
 
 documentsRouter.get('/types', listDocumentTypesHandler);
 

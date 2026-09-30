@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Logo } from '../components/Logo';
 import type { RootStackParamList } from '../navigation/RootNavigator';
-import { useTheme } from '../theme/useTheme';
+import { useTheme } from '@yatri/mobile-ui';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'PhoneEntry'>;
 

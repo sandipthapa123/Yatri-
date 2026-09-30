@@ -3,6 +3,7 @@ import Redis from 'ioredis';
 
 import { env } from '../../config/env';
 import { getRedisClient } from '../../config/redis';
+import { log } from '../../lib/logger';
 
 /**
  * Cross-process fan-out. There are exactly TWO primitives, so chat, calls, offers, events,
@@ -56,7 +57,7 @@ export function onUserMessage(handler: UserHandler): () => void {
 export async function startBus(): Promise<void> {
   if (subscriber) return;
   subscriber = new Redis(env.REDIS_URL, { maxRetriesPerRequest: null });
-  subscriber.on('error', (err) => console.error('Realtime bus error', err));
+  subscriber.on('error', (err) => log.error('Realtime bus error', err));
   subscriber.on('message', (channel, raw) => {
     try {
       if (channel === USER_CHANNEL) {

@@ -10,6 +10,7 @@ import { recordTripEvent } from './trip-events.service';
 import { driverDropsOut, metaFromRow } from './trips.service';
 import { getTrip } from './trips.repository';
 import { secondsSince } from './waiting';
+import { log } from '../../lib/logger';
 
 /**
  * Time-driven trip housekeeping, safe to run on every instance (each write is a guarded
@@ -86,7 +87,7 @@ export async function sweepTrips(nowMs = Date.now()): Promise<TripSweepResult> {
       await offerNext(t.id);
       out.rematched.push(t.id);
     } catch (err) {
-      console.error('re-match after lost driver failed', t.id, err);
+      log.error('re-match after lost driver failed', t.id, err);
     }
   }
   return out;

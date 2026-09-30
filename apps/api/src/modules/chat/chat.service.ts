@@ -136,8 +136,11 @@ export async function sendMessage(
       [tripId],
     );
     const ins = await client.query<Row>(
-      `INSERT INTO trip_messages (trip_id, seq, sender_id, body, client_message_id)
-       VALUES ($1, $2, $3, $4, $5) RETURNING ${COLS}`,
+      // created_at is taken NOW, under the row lock that also handed out the sequence number, so time
+      // and sequence can never disagree (the column default is the transaction's START time, and two
+      // simultaneous sends start their transactions in an order unrelated to who got the lock first).
+      `INSERT INTO trip_messages (trip_id, seq, sender_id, body, client_message_id, created_at)
+       VALUES ($1, $2, $3, $4, $5, clock_timestamp()) RETURNING ${COLS}`,
       [tripId, s.rows[0]?.chat_seq, senderId, body, clientMessageId],
     );
     await client.query('COMMIT');
@@ -257,6 +260,9 @@ export async function getHistory(tripId: string, userId: string): Promise<ChatHi
   return buildHistory(trip, userId);
 }
 
+/** A timeline item's place in its own sequence: the tie-break when two items carry the same instant. */
+const seqOf = (i: ChatTimelineItem) => (i.kind === 'message' ? i.message.seq : i.event.seq);
+
 async function buildHistory(trip: TripRow, userId: string | null): Promise<ChatHistory> {
   const tripId = trip.id;
   const [msgs, events, unread] = await Promise.all([
@@ -279,7 +285,7 @@ async function buildHistory(trip: TripRow, userId: string | null): Promise<ChatH
     ...events
       .filter((e) => TRIP_EVENT_META[e.type].chatVisible)
       .map((event) => ({ kind: 'system' as const, at: event.createdAt, event })),
-  ].sort((a, b) => a.at.localeCompare(b.at));
+  ].sort((a, b) => a.at.localeCompare(b.at) || seqOf(a) - seqOf(b));
   const win = chatWindow(trip);
   return { items, unreadCount: Number(unread.rows[0]?.n ?? 0), ...win };
 }

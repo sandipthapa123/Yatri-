@@ -13,7 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import * as driverApi from '../../api/driverApi';
 import type { RootStackParamList } from '../../navigation/RootNavigator';
-import { useTheme } from '../../theme/useTheme';
+import { useTheme } from '@yatri/mobile-ui';
 import { DocumentsStep } from './steps/DocumentsStep';
 import { DriverInfoStep, type DriverInfoValues } from './steps/DriverInfoStep';
 import { PersonalInfoStep, detailsToPersonalInfoValues } from './steps/PersonalInfoStep';

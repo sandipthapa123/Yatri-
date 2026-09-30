@@ -1,3 +1,5 @@
+import type { VehicleCreateBody, VehicleUpdateBody } from '@yatri/types';
+
 import { query } from '../../lib/db';
 import type { VehicleCategoryRow, VehicleRow } from './vehicles.types';
 
@@ -17,19 +19,7 @@ export async function findVehicleCategoryById(id: string): Promise<VehicleCatego
   return result.rows[0] ?? null;
 }
 
-export interface CreateVehicleInput {
-  categoryId: string;
-  make: string;
-  model: string;
-  year: number;
-  color: string;
-  registrationNumber: string;
-  vin: string | null;
-  registrationExpiryDate: string | null;
-  insuranceProvider: string | null;
-  insurancePolicyNumber: string | null;
-  insuranceExpiryDate: string | null;
-}
+export type CreateVehicleInput = VehicleCreateBody;
 
 export async function createVehicle(
   driverUserId: string,
@@ -50,11 +40,11 @@ export async function createVehicle(
       input.year,
       input.color,
       input.registrationNumber,
-      input.vin,
-      input.registrationExpiryDate,
-      input.insuranceProvider,
-      input.insurancePolicyNumber,
-      input.insuranceExpiryDate,
+      input.vin ?? null,
+      input.registrationExpiryDate ?? null,
+      input.insuranceProvider ?? null,
+      input.insurancePolicyNumber ?? null,
+      input.insuranceExpiryDate ?? null,
     ],
   );
   const row = result.rows[0];
@@ -75,18 +65,7 @@ export async function findVehicleById(id: string): Promise<VehicleRow | null> {
   return result.rows[0] ?? null;
 }
 
-export interface UpdateVehicleInput {
-  make?: string;
-  model?: string;
-  year?: number;
-  color?: string;
-  registrationNumber?: string;
-  vin?: string | null;
-  registrationExpiryDate?: string | null;
-  insuranceProvider?: string | null;
-  insurancePolicyNumber?: string | null;
-  insuranceExpiryDate?: string | null;
-}
+export type UpdateVehicleInput = VehicleUpdateBody;
 
 /**
  * Editing any field resets an already-reviewed vehicle back to PENDING —

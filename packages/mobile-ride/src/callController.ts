@@ -20,7 +20,7 @@ import type { PeerConnectionState, RtcFactory, RtcPeer } from './rtc';
 export type CallPhase = 'idle' | 'calling' | 'incoming' | 'connecting' | 'connected' | 'ended';
 export type MediaState = 'none' | 'connecting' | 'connected' | 'reconnecting' | 'failed';
 
-export interface CallState {
+export interface CallUiState {
   phase: CallPhase;
   call: CallInfo | null;
   /** Whether this device placed the call. */
@@ -75,7 +75,7 @@ const VIDEO_PAUSE_AFTER_POOR_READINGS = 3;
  *  - every state change has words, so nothing depends on seeing the screen.
  */
 export class CallController {
-  private state: CallState;
+  private state: CallUiState;
   private listeners = new Set<() => void>();
   private unsubs: Array<() => void> = [];
   private peer: RtcPeer | null = null;
@@ -211,7 +211,7 @@ export class CallController {
   private async onSocket(m: ServerRealtimeMessage) {
     if (this.disposed) return;
     if (m.type === 'call_state' && m.call.tripId === this.opts.tripId) {
-      await this.onCallState(m.call);
+      await this.onCallUiState(m.call);
     } else if (m.type === 'call_signal') {
       await this.onSignal(m.callId, m.signal);
     } else if (m.type === 'error' || m.type === 'rejected') {
@@ -225,10 +225,10 @@ export class CallController {
     try {
       const call = await this.opts.api.activeCall();
       if (this.disposed) return;
-      if (call) await this.onCallState(call);
+      if (call) await this.onCallUiState(call);
       else if (this.state.call && this.state.phase !== 'ended' && this.state.phase !== 'idle') {
         // The call ended while we were offline.
-        await this.onCallState({
+        await this.onCallUiState({
           ...this.state.call,
           state: 'ENDED',
           endedAt: new Date().toISOString(),
@@ -240,7 +240,7 @@ export class CallController {
     }
   }
 
-  private async onCallState(call: CallInfo) {
+  private async onCallUiState(call: CallInfo) {
     const prev = this.state.call;
     if (prev && prev.id === call.id && prev.state === 'ENDED') return; // already finished
     if (
@@ -499,7 +499,7 @@ export class CallController {
     this.set({ assertive: { id: ++this.messageId, text } });
   }
 
-  private set(patch: Partial<CallState>) {
+  private set(patch: Partial<CallUiState>) {
     this.state = { ...this.state, ...patch };
     for (const l of this.listeners) l();
   }

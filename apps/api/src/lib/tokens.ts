@@ -1,3 +1,4 @@
+import { ACCESS_TOKEN_ALGORITHM, ACCESS_TOKEN_ISSUER } from '@yatri/types';
 import jwt from 'jsonwebtoken';
 
 import { env } from '../config/env';
@@ -12,6 +13,8 @@ export interface AccessTokenClaims {
 
 export function signAccessToken(claims: AccessTokenClaims): string {
   return jwt.sign(claims, env.JWT_ACCESS_SECRET, {
+    algorithm: ACCESS_TOKEN_ALGORITHM,
+    issuer: ACCESS_TOKEN_ISSUER,
     expiresIn: `${env.ACCESS_TOKEN_TTL_MINUTES}m`,
   });
 }
@@ -25,7 +28,10 @@ export class InvalidAccessTokenError extends Error {
 
 export function verifyAccessToken(token: string): AccessTokenClaims {
   try {
-    const decoded = jwt.verify(token, env.JWT_ACCESS_SECRET);
+    const decoded = jwt.verify(token, env.JWT_ACCESS_SECRET, {
+      algorithms: [ACCESS_TOKEN_ALGORITHM],
+      issuer: ACCESS_TOKEN_ISSUER,
+    });
     if (
       typeof decoded !== 'object' ||
       decoded === null ||

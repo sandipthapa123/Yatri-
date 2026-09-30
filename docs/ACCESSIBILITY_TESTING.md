@@ -169,3 +169,26 @@ real screen reader yet. Do all of it with NVDA (or VoiceOver) and the keyboard o
 6. Users: suspend and reactivate use the same confirmation and need a reason; the result is announced.
 7. Administrators: permission checkboxes read their name and what they allow; ones you cannot grant say so.
 8. No browser dialog appears anywhere. Zoom to 200% and 400%: nothing is cut off, tables scroll sideways.
+
+## L. Focus and structure (Phase 12 audit)
+
+Automated (`packages/mobile-ride/src/a11y.static.test.ts` for every mobile screen, `admin-ops.test.ts` for the
+console) and run on every push: every Pressable has a role and a spoken name, every TextInput and Image is named
+or marked decorative, nothing that must be operable hangs its action on a Text or View, announcements never use
+disappearing toasts, the console has one main landmark and a skip link, every field is labelled, every table has a
+caption and headers, every result has a status region, and no browser dialog is used.
+
+Fixed in the audit: when a confirmation or a form replaces what was on screen, the screen reader now moves to it
+instead of being left on a control that has gone (the SOS confirmation question, the report-a-concern form, the
+rating form, the report-a-problem form). Check each by hand:
+
+1. Turn on TalkBack or VoiceOver. Open the SOS control, activate **Emergency SOS**: focus lands on "Send an
+   emergency alert?" and the two buttons follow. **Not now** returns to the SOS button.
+2. After a ride ends, activate **Rate your driver**: focus lands on the form's title; the stars read as a group
+   of options with their state.
+3. Activate **Report a safety concern**: focus lands on its title before the first category.
+4. Repeat 1-3 with a hardware keyboard or switch access; the order must match the reading order.
+
+Still only verifiable by a person with the real tools (nothing in this repository can prove it): how TalkBack,
+VoiceOver and NVDA actually speak each announcement, whether announcements collide when several arrive together,
+and touch-target size on small phones. Run sections F-K of this document with them before each release.

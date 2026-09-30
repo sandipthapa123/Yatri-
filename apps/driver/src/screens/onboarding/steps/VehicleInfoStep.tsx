@@ -2,7 +2,7 @@ import type { Vehicle, VehicleCategory } from '@yatri/types';
 import { useState } from 'react';
 import { AccessibilityInfo, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { useTheme } from '../../../theme/useTheme';
+import { useTheme } from '@yatri/mobile-ui';
 import { FormField } from '../FormField';
 import { WizardShell } from '../WizardShell';
 

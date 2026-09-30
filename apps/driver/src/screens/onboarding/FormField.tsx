@@ -1,6 +1,6 @@
 import { StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
 
-import { useTheme } from '../../theme/useTheme';
+import { useTheme } from '@yatri/mobile-ui';
 
 interface FormFieldProps extends Omit<TextInputProps, 'style' | 'placeholderTextColor'> {
   label: string;

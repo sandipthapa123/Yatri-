@@ -2,21 +2,21 @@
 
 ## What existed, what was built
 
-| Area                    | Before                                              | Now                                                                                                             |
-| ----------------------- | --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| Access control          | ADMIN role opened everything except three reads     | 16 permissions; **every** admin route names one (`requirePermission`); read from the database on every request  |
-| Live dashboard          | none (a landing page)                               | `/admin/dashboard`: active rides, online / available / stale drivers, pending applications, payments, safety    |
-| Analytics               | none                                                | `/admin/analytics`: volume, completion and cancellation rates, revenue, earnings, activity, safety, ratings     |
-| Users                   | none                                                | list (search, filter, sort, page), detail, suspend and reactivate with a reason                                 |
-| Drivers and vehicles    | verification flow                                   | same flow, now audited; vehicles list with filters and expiring papers                                          |
-| Rides                   | list by status and search                           | + live/finished groups, period, sort, fare                                                                      |
-| Payments                | on a ride only                                      | payments list, summary and driver earnings (read-only, audited)                                                  |
-| Wallets and payouts     | (do not exist)                                      | **still do not exist**: Yatri takes cash and holds no money. Screens say so instead of showing empty tables     |
-| Notifications           | stored and sent                                     | monitoring by type, period and read state (never the message text)                                              |
-| Platform settings       | environment only                                    | `platform_settings` store, admin editor with version check, reason, confirmation; apps read it from the API      |
-| Vehicle categories      | table, no editor                                    | editor: name, order, on/off, fare overrides; the last active category cannot be switched off                   |
-| Audit                   | reads and safety actions                            | every sensitive admin action, plus an audit viewer (reading it is audited)                                       |
-| Administrators          | permissions set by hand in the database             | manage permissions in the console: cannot edit yourself, can only grant what you hold                           |
+| Area                 | Before                                          | Now                                                                                                            |
+| -------------------- | ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Access control       | ADMIN role opened everything except three reads | 16 permissions; **every** admin route names one (`requirePermission`); read from the database on every request |
+| Live dashboard       | none (a landing page)                           | `/admin/dashboard`: active rides, online / available / stale drivers, pending applications, payments, safety   |
+| Analytics            | none                                            | `/admin/analytics`: volume, completion and cancellation rates, revenue, earnings, activity, safety, ratings    |
+| Users                | none                                            | list (search, filter, sort, page), detail, suspend and reactivate with a reason                                |
+| Drivers and vehicles | verification flow                               | same flow, now audited; vehicles list with filters and expiring papers                                         |
+| Rides                | list by status and search                       | + live/finished groups, period, sort, fare                                                                     |
+| Payments             | on a ride only                                  | payments list, summary and driver earnings (read-only, audited)                                                |
+| Wallets and payouts  | (do not exist)                                  | **still do not exist**: Yatri takes cash and holds no money. Screens say so instead of showing empty tables    |
+| Notifications        | stored and sent                                 | monitoring by type, period and read state (never the message text)                                             |
+| Platform settings    | environment only                                | `platform_settings` store, admin editor with version check, reason, confirmation; apps read it from the API    |
+| Vehicle categories   | table, no editor                                | editor: name, order, on/off, fare overrides; the last active category cannot be switched off                   |
+| Audit                | reads and safety actions                        | every sensitive admin action, plus an audit viewer (reading it is audited)                                     |
+| Administrators       | permissions set by hand in the database         | manage permissions in the console: cannot edit yourself, can only grant what you hold                          |
 
 ## How it is built (and where each thing lives, once)
 
@@ -24,7 +24,7 @@
   `@yatri/types` (`admin.ts`). `requirePermission` in `admin/permissions.ts` is the only guard; the admin
   menu (`apps/admin/src/lib/nav.ts`) uses the same list. A test walks the router and fails if any route
   (other than `/me`) opens without a permission.
-- **Audit**: `auditAdminAction` (route level) writes the entry *before* the reply leaves, so a reply means the
+- **Audit**: `auditAdminAction` (route level) writes the entry _before_ the reply leaves, so a reply means the
   audit exists; failed actions are not recorded as if they happened. Reads of personal or money data are
   audited by their handlers. One table, `audit_log`; setting and administrator changes carry no subject row.
 - **Date ranges**: `admin-range.ts` is the only place a period becomes instants, in `PLATFORM_TIME_ZONE`

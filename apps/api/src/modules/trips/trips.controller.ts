@@ -211,6 +211,6 @@ export async function openDisputeHandler(req: Request, res: Response<ApiResponse
   res.status(201).json({ success: true, data: await openDispute(idParam(req), uid(req), reason) });
 }
 
-export async function listDisputesHandler(req: Request, res: Response<ApiResponse<DisputeInfo[]>>) {
+export async function myDisputesHandler(req: Request, res: Response<ApiResponse<DisputeInfo[]>>) {
   res.json({ success: true, data: await listMyDisputes(idParam(req), uid(req)) });
 }

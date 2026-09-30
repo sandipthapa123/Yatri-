@@ -81,8 +81,10 @@ export async function recordTripEvent(input: RecordEventInput): Promise<TripEven
       }
     }
     const ins = await client.query<EventRow>(
-      `INSERT INTO trip_events (trip_id, seq, type, actor_id, payload, dedupe_key)
-       VALUES ($1, $2, $3, $4, $5::jsonb, $6)
+      // created_at is taken now, under the row lock that handed out the sequence number (the column
+      // default is the transaction's start time, which can be earlier than a neighbour's with a lower seq).
+      `INSERT INTO trip_events (trip_id, seq, type, actor_id, payload, dedupe_key, created_at)
+       VALUES ($1, $2, $3, $4, $5::jsonb, $6, clock_timestamp())
        RETURNING seq, type, payload, created_at`,
       [
         input.tripId,

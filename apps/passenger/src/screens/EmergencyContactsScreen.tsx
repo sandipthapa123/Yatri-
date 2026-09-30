@@ -5,7 +5,7 @@ import { ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { RootStackParamList } from '../navigation/RootNavigator';
-import { useTheme } from '../theme/useTheme';
+import { useTheme } from '@yatri/mobile-ui';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'EmergencyContacts'>;
 

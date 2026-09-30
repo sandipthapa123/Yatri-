@@ -108,7 +108,12 @@ exports.up = (pgm) => {
 
   pgm.createTable('incident_notes', {
     id: { type: 'uuid', primaryKey: true, default: pgm.func('gen_random_uuid()') },
-    incident_id: { type: 'uuid', notNull: true, references: 'incident_reports', onDelete: 'CASCADE' },
+    incident_id: {
+      type: 'uuid',
+      notNull: true,
+      references: 'incident_reports',
+      onDelete: 'CASCADE',
+    },
     admin_id: { type: 'uuid', references: 'users', onDelete: 'SET NULL' },
     kind: { type: 'text', notNull: true },
     body: { type: 'text', notNull: true },

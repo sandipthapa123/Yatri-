@@ -25,6 +25,11 @@ module.exports = [
   },
   ...base,
   {
+    // Repository maintenance scripts (ES modules run by Node).
+    files: ['scripts/**/*.mjs'],
+    languageOptions: { sourceType: 'module', globals: { ...globals.node } },
+  },
+  {
     // CommonJS tooling config files (babel/metro/eslint config, shared config package).
     files: [
       '**/*.config.js',

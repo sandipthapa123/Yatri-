@@ -28,6 +28,7 @@ import {
 } from '../pricing/categories';
 import { estimateFare, finalFare, waitingCharge } from '../pricing/pricing';
 import { pricingConfig } from '../pricing/pricing.config';
+import { metaFromRow } from './trip-meta';
 import { settingBool, settingText } from '../settings/settings.service';
 import { isCategoryAvailable } from '../dispatch/matching';
 import { decidePassengerCancellation, requireCancellationAllowed } from './cancellation';
@@ -40,7 +41,6 @@ import {
   onTripStatusChanged,
   readOdometerMeters,
   saveMeta,
-  type TripMeta,
 } from '../tracking/tracking.service';
 import { endSharesForTrip } from '../sharing/sharing.service';
 import { freshProfilePictureUrl } from '../users/profile-picture';
@@ -62,21 +62,8 @@ import {
   type TripRow,
 } from './trips.repository';
 
-export function metaFromRow(t: TripRow): TripMeta {
-  return {
-    tripId: t.id,
-    status: t.status,
-    passengerId: t.passenger_id,
-    driverId: t.driver_id,
-    pickup: pickupOf(t),
-    destination: destinationOf(t),
-    distanceMeters: t.distance_meters,
-    matchedAtMs: t.matched_at?.getTime() ?? null,
-    arrivedAtMs: t.arrived_at?.getTime() ?? null,
-    passengerNotifiedAtMs: t.passenger_notified_at?.getTime() ?? null,
-    driverNotifiedAtMs: null,
-  };
-}
+// (defined in trip-meta.ts; re-exported so existing imports keep working)
+export { metaFromRow };
 
 const notFound = () => new HttpError(404, 'NOT_FOUND', 'Trip not found.');
 

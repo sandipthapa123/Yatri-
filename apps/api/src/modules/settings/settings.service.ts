@@ -14,6 +14,7 @@ import { pool } from '../../config/database';
 import { recordAudit } from '../../lib/audit';
 import { query } from '../../lib/db';
 import { HttpError } from '../../middleware/errorHandler';
+import { log } from '../../lib/logger';
 
 /**
  * THE platform settings store. `getSetting` is what every rule reads (fares, cancellation, waiting,
@@ -79,7 +80,7 @@ export function refreshSettings(): Promise<void> {
       );
       loadedAt = Date.now();
     } catch (err) {
-      console.error('Could not refresh platform settings; using the last known values', err);
+      log.error('Could not refresh platform settings; using the last known values', err);
     } finally {
       inflight = null;
     }

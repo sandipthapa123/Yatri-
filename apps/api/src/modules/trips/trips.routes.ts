@@ -16,7 +16,7 @@ import {
 } from '../sharing/sharing.controller';
 import { chatRouter } from '../chat/chat.routes';
 import { authenticate } from '../../middleware/authenticate';
-import { userRateLimit } from '../../middleware/rateLimit';
+import { userRateLimit, userMutationRateLimit } from '../../middleware/rateLimit';
 import { requireRole } from '../../middleware/requireRole';
 import { validateBody } from '../../middleware/validate';
 import { validateQuery } from '../../middleware/validateQuery';
@@ -32,7 +32,7 @@ import {
   getPaymentHandler,
   getTripHandler,
   historyHandler,
-  listDisputesHandler,
+  myDisputesHandler,
   liveSnapshotHandler,
   offerResponseHandler,
   openDisputeHandler,
@@ -53,6 +53,7 @@ import {
 export const tripsRouter: RouterType = Router();
 
 tripsRouter.use(authenticate, requireRole('PASSENGER', 'DRIVER'));
+tripsRouter.use(userMutationRateLimit());
 
 // Passenger: price a ride, request it.
 tripsRouter.post(
@@ -168,7 +169,7 @@ tripsRouter.post(
   confirmPaymentHandler,
 );
 tripsRouter.post('/:id/rating', validateUuidParam('id'), validateBody(ratingSchema), rateHandler);
-tripsRouter.get('/:id/disputes', validateUuidParam('id'), listDisputesHandler);
+tripsRouter.get('/:id/disputes', validateUuidParam('id'), myDisputesHandler);
 tripsRouter.post(
   '/:id/disputes',
   validateUuidParam('id'),

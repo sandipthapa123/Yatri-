@@ -2,6 +2,7 @@ import { describeSosStatus, OPEN_SOS_STATES } from '@yatri/types';
 import { useState } from 'react';
 import { Linking, StyleSheet, Text, View } from 'react-native';
 
+import { useFocusWhen } from '../hooks';
 import type { SosController, SosState } from '../sosController';
 import { ActionButton, Announcer, Card, type UiProps } from './RideUi';
 
@@ -19,6 +20,8 @@ export function SosPanel(props: UiProps & { state: SosState; controller: SosCont
   const { state, controller, colors, minTouchTarget } = props;
   const ui = { colors, minTouchTarget };
   const [confirming, setConfirming] = useState(false);
+  // When the confirmation replaces the SOS button, the screen reader goes to its question.
+  const questionRef = useFocusWhen(confirming);
   const sos = state.sos;
   const open = sos !== null && OPEN_SOS_STATES.includes(sos.status);
   const number = sos?.emergencyNumber ?? FALLBACK_NUMBER;
@@ -50,7 +53,11 @@ export function SosPanel(props: UiProps & { state: SosState; controller: SosCont
         </>
       ) : confirming ? (
         <View style={styles.group}>
-          <Text accessibilityRole="header" style={{ color: colors.textPrimary, fontWeight: '700' }}>
+          <Text
+            ref={questionRef}
+            accessibilityRole="header"
+            style={{ color: colors.textPrimary, fontWeight: '700' }}
+          >
             Send an emergency alert?
           </Text>
           <Text style={{ color: colors.textSecondary }}>

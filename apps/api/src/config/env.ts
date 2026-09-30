@@ -1,12 +1,26 @@
 import { config as loadDotenv } from 'dotenv';
 import path from 'node:path';
 import { z } from 'zod';
+import { log } from '../lib/logger';
 
 // NODE_ENV=test loads .env.test instead of .env, so the suite runs against a
 // dedicated test database/config without touching local dev settings.
 loadDotenv({
   path: path.resolve(__dirname, '../..', process.env.NODE_ENV === 'test' ? '.env.test' : '.env'),
 });
+
+/** A host that only means "this machine": never acceptable as a public address. */
+function isLocalHost(hostname: string): boolean {
+  const h = hostname.toLowerCase();
+  return (
+    h === 'localhost' ||
+    h.endsWith('.localhost') ||
+    h.startsWith('127.') ||
+    h === '0.0.0.0' ||
+    h === '[::1]' ||
+    h === '::1'
+  );
+}
 
 function numList(v: string): number[] {
   return v
@@ -235,14 +249,81 @@ const envSchema = z
       .int()
       .positive()
       .default(8 * 1024 * 1024),
+
+    // --- Operations (logging, proxies, limits, database, shutdown) ---
+    LOG_LEVEL: z.preprocess(
+      (v) => (v === '' ? undefined : v),
+      z.enum(['debug', 'info', 'warn', 'error', 'silent']).optional(),
+    ),
+    // Identifies the running release in logs and health checks (a git SHA or tag, set by the deploy).
+    APP_VERSION: z.preprocess(
+      (v) => (v === '' ? undefined : v),
+      z.string().trim().min(1).max(64).optional(),
+    ),
+    // How many reverse proxies sit in front of the API (so req.ip is the real client). 0 = none.
+    TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(5).default(1),
+    // Generic per-IP request ceiling for the whole API, per minute (auth, OTP and other routes have their own, stricter limits).
+    API_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().positive().default(600),
+    // Per signed-in user, per minute, for state-changing requests across the API (stricter limits sit in front of sensitive routes).
+    MUTATION_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().positive().default(120),
+    DATABASE_SSL: boolFromEnv(false),
+    // Only ever turn this off for a database reached over a private network you control.
+    DATABASE_SSL_REJECT_UNAUTHORIZED: boolFromEnv(true),
+    DB_POOL_MAX: z.coerce.number().int().min(1).max(100).default(10),
+    // A query running longer than this is cancelled by Postgres (a stuck query cannot hold a connection forever).
+    DB_STATEMENT_TIMEOUT_MS: z.coerce.number().int().min(1000).default(15000),
+    // A Redis command that does not answer in this time fails instead of hanging the request.
+    REDIS_COMMAND_TIMEOUT_MS: z.coerce.number().int().min(200).default(3000),
+    // On SIGTERM the server stops accepting work and waits at most this long before exiting.
+    SHUTDOWN_TIMEOUT_MS: z.coerce.number().int().min(1000).default(10000),
   })
   .superRefine((data, ctx) => {
-    if (data.NODE_ENV === 'production' && data.OTP_DEV_MODE) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['OTP_DEV_MODE'],
-        message: 'OTP_DEV_MODE must never be true when NODE_ENV=production',
-      });
+    // Staging is reachable from the internet with real-looking data: it gets production's rules.
+    const deployed = data.NODE_ENV === 'production' || data.NODE_ENV === 'staging';
+    const issue = (path: string, message: string) =>
+      ctx.addIssue({ code: 'custom', path: [path], message });
+    if (deployed) {
+      if (data.OTP_DEV_MODE)
+        issue('OTP_DEV_MODE', 'OTP_DEV_MODE must be false outside development and test');
+      if (data.SMS_PROVIDER === 'console') {
+        issue(
+          'SMS_PROVIDER',
+          'SMS_PROVIDER must not be "console" in staging or production (OTPs would only be logged)',
+        );
+      }
+      for (const origin of data.CORS_ORIGINS) {
+        let url: URL | null = null;
+        try {
+          url = new URL(origin);
+        } catch {
+          /* reported below */
+        }
+        if (!url || url.protocol !== 'https:' || isLocalHost(url.hostname)) {
+          issue(
+            'CORS_ORIGINS',
+            `CORS origin "${origin}" must be an https URL that is not localhost (never "*")`,
+          );
+        }
+      }
+      const publicUrl = new URL(data.PUBLIC_BASE_URL);
+      if (publicUrl.protocol !== 'https:' || isLocalHost(publicUrl.hostname)) {
+        issue(
+          'PUBLIC_BASE_URL',
+          'PUBLIC_BASE_URL must be the public https address (share links are built from it)',
+        );
+      }
+      if (data.JWT_ACCESS_SECRET === data.STORAGE_SIGNING_SECRET) {
+        issue(
+          'STORAGE_SIGNING_SECRET',
+          'STORAGE_SIGNING_SECRET must differ from JWT_ACCESS_SECRET (one leak must not open both)',
+        );
+      }
+    }
+    if (data.NODE_ENV === 'production' && (data.ADMIN_SEED_PASSWORD || data.ADMIN_SEED_EMAIL)) {
+      issue(
+        'ADMIN_SEED_PASSWORD',
+        'ADMIN_SEED_* are development-only and must not be set in production',
+      );
     }
     if (data.SMS_PROVIDER === 'http' && !data.SMS_HTTP_ENDPOINT) {
       ctx.addIssue({
@@ -263,24 +344,30 @@ const envSchema = z
           'The public OpenStreetMap Nominatim server forbids production use; point this at a self-hosted or commercial Nominatim-compatible service',
       });
     }
-    if (data.NODE_ENV === 'production' && data.SMS_PROVIDER === 'console') {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['SMS_PROVIDER'],
-        message: 'SMS_PROVIDER must not be "console" in production (OTPs would only be logged)',
-      });
-    }
   });
 
-function loadEnv() {
-  const parsed = envSchema.safeParse(process.env);
+/** Every variable the API reads (for the check that .env.example documents them all). */
+export const ENV_KEYS: string[] = Object.keys(envSchema.shape);
+
+/** What is wrong with a set of variables, as "NAME: reason" lines (empty when it is valid). Never includes a value. */
+export function envIssues(source: NodeJS.ProcessEnv): string[] {
+  const parsed = envSchema.safeParse(source);
+  if (parsed.success) return [];
+  return parsed.error.issues.map(
+    (issue) => `${issue.path.join('.') || '(root)'}: ${issue.message}`,
+  );
+}
+
+/** Validate a set of variables. The API uses `process.env`; tests pass their own to prove the rules. */
+export function parseEnv(source: NodeJS.ProcessEnv) {
+  const parsed = envSchema.safeParse(source);
   if (!parsed.success) {
-    console.error('Invalid environment configuration:', parsed.error.flatten().fieldErrors);
+    log.error('Invalid environment configuration:', parsed.error.flatten().fieldErrors);
     throw new Error('Failed to load environment configuration.');
   }
   return parsed.data;
 }
 
-export const env = loadEnv();
+export const env = parseEnv(process.env);
 export type Env = typeof env;
 export const isProduction = env.NODE_ENV === 'production';

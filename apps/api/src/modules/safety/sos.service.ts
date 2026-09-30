@@ -26,6 +26,7 @@ import { getTrip } from '../trips/trips.repository';
 import { approvedVehicleOf } from '../vehicles/vehicle-lookup';
 import { contactsForSos } from './emergency-contacts.service';
 import { notifySafetyTeam } from './safety-team';
+import { log } from '../../lib/logger';
 
 /**
  * SOS. A person on an active ride raises an alert; it is recorded at once, with the position at that
@@ -180,7 +181,7 @@ export async function triggerSos(
 
   // Everything below is best effort: the alert already exists.
   const step = (label: string, fn: () => Promise<unknown>) =>
-    fn().catch((err) => console.error(`SOS ${label} failed`, err));
+    fn().catch((err) => log.error(`SOS ${label} failed`, err));
   await step('audit', () =>
     recordAudit({
       actorId: userId,
@@ -225,7 +226,7 @@ async function tellEmergencyContacts(row: SosRow, tripId: string, userId: string
       sent++;
     } catch (err) {
       // The provider's message can hold the number; log only what failed.
-      console.error('SOS text failed', err instanceof Error ? err.name : 'error');
+      log.error('SOS text failed', err instanceof Error ? err.name : 'error');
     }
   }
   await query('UPDATE sos_events SET contacts_notified = $2 WHERE id = $1', [row.id, sent]);

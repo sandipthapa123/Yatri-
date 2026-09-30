@@ -1,0 +1,70 @@
+name: Release
+
+# Builds the release images and publishes them to the GitHub Container Registry. It DEPLOYS nothing:
+# rolling an image out (and rolling it back) is the operator's step, described in docs/OPERATIONS.md,
+# because how a host pulls and restarts containers is specific to where Yatri is hosted.
+#
+# Start it from the Actions tab with the tag to release (for example v1.4.0), on a commit that
+# passed CI. The tag becomes APP_VERSION, so a running instance reports the release it is.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release tag (for example v1.4.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: release # protect this environment in GitHub settings to require an approver
+    steps:
+      - name: Check the tag looks like a release
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          case "$VERSION" in
+            v[0-9]*.[0-9]*.[0-9]*) ;;
+            *) echo "version must look like v1.2.3" >&2; exit 1 ;;
+          esac
+
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Lower-case the image owner
+        run: echo "OWNER=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_ENV"
+
+      - name: API runtime image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/Dockerfile.api
+          target: runtime
+          push: true
+          tags: ghcr.io/${{ env.OWNER }}/yatri-api:${{ inputs.version }}
+      - name: API migration image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/Dockerfile.api
+          target: migrate
+          push: true
+          tags: ghcr.io/${{ env.OWNER }}/yatri-api-migrate:${{ inputs.version }}
+      - name: Admin console image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/Dockerfile.admin
+          push: true
+          tags: ghcr.io/${{ env.OWNER }}/yatri-admin:${{ inputs.version }}

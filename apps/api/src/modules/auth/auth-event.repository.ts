@@ -1,4 +1,5 @@
 import { query } from '../../lib/db';
+import { log } from '../../lib/logger';
 
 export type AuthEventType =
   | 'OTP_REQUESTED'
@@ -46,6 +47,6 @@ export async function recordAuthEvent(input: RecordAuthEventInput): Promise<void
       ],
     );
   } catch (err) {
-    console.error('Failed to record auth event', input.eventType, err);
+    log.error('Failed to record auth event', input.eventType, err);
   }
 }

@@ -4,6 +4,7 @@ import type { RequestHandler } from 'express';
 import { recordAudit } from '../../lib/audit';
 import { query } from '../../lib/db';
 import { HttpError } from '../../middleware/errorHandler';
+import { log } from '../../lib/logger';
 
 /**
  * Admin permissions and the audit of sensitive reads: defined here once, used by every admin
@@ -80,7 +81,7 @@ export function auditAdminAction(
         subjectIds: subject === 'param' && id ? [id] : null,
         detail: typeof reason === 'string' ? { reason } : {},
       })
-        .catch((err) => console.error('audit write failed', action, err))
+        .catch((err) => log.error('audit write failed', action, err))
         .finally(() => send(body));
       return res;
     }) as typeof res.json;

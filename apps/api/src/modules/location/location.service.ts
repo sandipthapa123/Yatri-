@@ -8,6 +8,7 @@ import { roundCoordinate, type Coordinate } from './coordinates';
 import { haversineMeters } from './geo';
 import { getLocationProvider, getRouteProvider } from './providers';
 import { LocationProviderError } from './providers/location-provider';
+import { log } from '../../lib/logger';
 
 /**
  * Maps any provider failure to a safe, user-understandable HttpError. The
@@ -17,7 +18,7 @@ import { LocationProviderError } from './providers/location-provider';
 function toHttpError(err: unknown): HttpError {
   if (err instanceof HttpError) return err;
   if (err instanceof LocationProviderError) {
-    console.error(`Location provider failure (${err.kind}): ${err.message}`);
+    log.error(`Location provider failure (${err.kind}): ${err.message}`);
     if (err.kind === 'RATE_LIMITED' || err.kind === 'QUOTA') {
       return new HttpError(
         503,
@@ -157,7 +158,7 @@ export async function calculateDistance(
       };
     } catch (err) {
       if (!(err instanceof LocationProviderError)) throw err;
-      console.error(`Route provider failure (${err.kind}); falling back to straight line`);
+      log.error(`Route provider failure (${err.kind}); falling back to straight line`);
     }
   }
   const meters = haversineMeters(origin, destination);

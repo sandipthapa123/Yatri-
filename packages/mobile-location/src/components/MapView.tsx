@@ -40,8 +40,20 @@ export interface YatriMapProps {
 // Tile source is configuration, not code: swap the provider (self-hosted,
 // MapTiler, etc.) by changing this env var. MapLibre/vector tiles would
 // replace this component behind the same props.
-const TILE_URL =
-  process.env.EXPO_PUBLIC_MAP_TILE_URL ?? 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+// The public OpenStreetMap tile server is for light, non-commercial use only; a release build must be
+// given its own tile provider (EXPO_PUBLIC_MAP_TILE_URL). Without one, a release build shows no map at
+// all (the text places and distances around it carry the same information) rather than quietly
+// leaning on a server that forbids that use. Development keeps the public server for convenience.
+export function resolveTileUrl(value: string | undefined, isDev: boolean): string | null {
+  const configured = value?.trim();
+  if (configured) return configured;
+  return isDev ? 'https://tile.openstreetmap.org/{z}/{x}/{y}.png' : null;
+}
+declare const __DEV__: boolean | undefined;
+const TILE_URL = resolveTileUrl(
+  process.env.EXPO_PUBLIC_MAP_TILE_URL,
+  typeof __DEV__ === 'undefined' ? true : __DEV__,
+);
 const TILE_ATTRIBUTION = process.env.EXPO_PUBLIC_MAP_ATTRIBUTION ?? '© OpenStreetMap contributors';
 // react-native-webview's class typings collapse to `never` props under React 19; restore the real props type.
 type WebViewHandle = { injectJavaScript: (script: string) => void };
@@ -53,10 +65,10 @@ const READY_TIMEOUT_MS = 10_000;
 
 function buildHtml(tileUrl: string, attribution: string): string {
   return `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=5">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 <style>html,body,#m{height:100%;margin:0}.g{background:#C81E3A;color:#fff;font:700 14px sans-serif;border:2px solid #fff;border-radius:50%;width:28px;height:28px;line-height:24px;text-align:center}</style>
 </head><body><div id="m"></div>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script>
 var map, layer;
 function post(o){window.ReactNativeWebView.postMessage(JSON.stringify(o));}
@@ -134,9 +146,10 @@ export function YatriMap({
   height = 220,
 }: YatriMapProps) {
   const webRef = useRef<WebViewHandle>(null);
-  const [phase, setPhase] = useState<'loading' | 'ready' | 'error'>('loading');
+  // No configured tile provider in a release build: no map (and no request to a third-party server).
+  const [phase, setPhase] = useState<'loading' | 'ready' | 'error'>(TILE_URL ? 'loading' : 'error');
   const [attempt, setAttempt] = useState(0);
-  const html = useMemo(() => buildHtml(TILE_URL, TILE_ATTRIBUTION), []);
+  const html = useMemo(() => (TILE_URL ? buildHtml(TILE_URL, TILE_ATTRIBUTION) : ''), []);
 
   const push = useCallback(
     (recenter: boolean) => {

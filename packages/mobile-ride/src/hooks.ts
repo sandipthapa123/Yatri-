@@ -1,9 +1,9 @@
 import { quickFix } from '@yatri/mobile-location';
 import type { TripRole } from '@yatri/types';
-import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
-import { AccessibilityInfo, AppState, Platform } from 'react-native';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { AccessibilityInfo, AppState, findNodeHandle, Platform, type Text } from 'react-native';
 
-import { CallController, type CallSocket, type CallState } from './callController';
+import { CallController, type CallSocket, type CallUiState } from './callController';
 import { ChatController, type ChatSocket, type ChatState } from './chatController';
 import { SosController, type SosState } from './sosController';
 import { OfferController, type OfferSocket, type OfferState } from './offerController';
@@ -38,6 +38,26 @@ export function useSpeakOnIos(message: { id: number; text: string } | null) {
   useEffect(() => {
     if (message && Platform.OS === 'ios') AccessibilityInfo.announceForAccessibility(message.text);
   }, [message]);
+}
+
+/**
+ * Move the screen reader's focus to an element when something replaces what was on screen (a
+ * confirmation opens, a form appears), so a screen-reader or switch user lands on it instead of being
+ * left on a control that is no longer there. Attach the returned ref to the element's Text. It only
+ * moves while `active` is true, waits a moment for the element to be laid out, and does nothing when
+ * no screen reader is running (setAccessibilityFocus is a no-op then).
+ */
+export function useFocusWhen(active: boolean) {
+  const ref = useRef<Text>(null);
+  useEffect(() => {
+    if (!active) return;
+    const timer = setTimeout(() => {
+      const node = ref.current ? findNodeHandle(ref.current) : null;
+      if (node) AccessibilityInfo.setAccessibilityFocus(node);
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [active]);
+  return ref;
 }
 
 const IDLE_CHAT: ChatState = {
@@ -86,7 +106,7 @@ export function useChat(opts: {
   return { state: useStore(controller, IDLE_CHAT), controller };
 }
 
-const IDLE_CALL: CallState = {
+const IDLE_CALL: CallUiState = {
   phase: 'idle',
   call: null,
   outgoing: false,

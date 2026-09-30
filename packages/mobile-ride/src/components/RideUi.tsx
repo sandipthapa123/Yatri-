@@ -1,7 +1,7 @@
 import { type ReactNode } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { useSpeakOnIos } from '../hooks';
+import { useFocusWhen, useSpeakOnIos } from '../hooks';
 
 /** The theme tokens the ride UI needs (both apps' theme objects satisfy this). */
 export interface RideColors {
@@ -107,12 +107,20 @@ export function Announcer(
   );
 }
 
-export function Card(props: UiProps & { title?: string; children: ReactNode }) {
+/** A titled group. `focusOnMount` moves the screen reader to the title when the card appears (a form or confirmation that replaced other content). */
+export function Card(
+  props: UiProps & { title?: string; children: ReactNode; focusOnMount?: boolean },
+) {
   const { colors } = props;
+  const titleRef = useFocusWhen(!!props.focusOnMount);
   return (
     <View style={[styles.card, { borderColor: colors.border, backgroundColor: colors.surface }]}>
       {props.title ? (
-        <Text accessibilityRole="header" style={[styles.cardTitle, { color: colors.textPrimary }]}>
+        <Text
+          ref={titleRef}
+          accessibilityRole="header"
+          style={[styles.cardTitle, { color: colors.textPrimary }]}
+        >
           {props.title}
         </Text>
       ) : null}

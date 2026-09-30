@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { useTheme } from '../../theme/useTheme';
+import { useTheme } from '@yatri/mobile-ui';
 
 interface WizardShellProps {
   stepNumber: number;

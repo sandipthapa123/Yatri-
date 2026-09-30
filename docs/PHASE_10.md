@@ -2,17 +2,17 @@
 
 ## What exists, what was built
 
-| Area                          | Before                                                | Now                                                                                                                      |
-| ----------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| Ratings                       | one per rater per ride, gated on payment              | open at **completion** (payment is a separate matter); aggregate `ratingSummary` (average + count) computed once, on read |
-| Written feedback              | optional comment on the rating                        | unchanged; never shown to the person it is about; low ratings visible to the safety team only                            |
-| SOS                           | none                                                  | `sos_events`, one open alert per person per ride, guarded state machine, notifies the person's devices and the safety team |
-| Emergency contacts            | none                                                  | owner-only CRUD, limit from env; contacts get a quiet share link by SMS when an SOS is raised                            |
-| Trip sharing                  | passenger shares a ride (Phase 8)                     | same service; SOS links use `purpose = 'SOS'` (not counted against the share limit, no ride event)                        |
-| Incident reports              | none                                                  | six categories, tied to a ride, legal moves from one table, internal notes and actions                                    |
-| Disputes (Phase 6)            | money/service decision by an admin                    | unchanged and deliberately **separate** (see below)                                                                      |
-| Admin safety                  | none                                                  | `/admin/sos*`, `/admin/incidents*`, `/admin/ratings/low` behind the new `SAFETY_REVIEW` permission; pages under `/safety` |
-| Audit                         | `admin_access_log` (reads only)                       | one `audit_log` (renamed) for sensitive reads **and** safety/admin actions                                               |
+| Area               | Before                                   | Now                                                                                                                        |
+| ------------------ | ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Ratings            | one per rater per ride, gated on payment | open at **completion** (payment is a separate matter); aggregate `ratingSummary` (average + count) computed once, on read  |
+| Written feedback   | optional comment on the rating           | unchanged; never shown to the person it is about; low ratings visible to the safety team only                              |
+| SOS                | none                                     | `sos_events`, one open alert per person per ride, guarded state machine, notifies the person's devices and the safety team |
+| Emergency contacts | none                                     | owner-only CRUD, limit from env; contacts get a quiet share link by SMS when an SOS is raised                              |
+| Trip sharing       | passenger shares a ride (Phase 8)        | same service; SOS links use `purpose = 'SOS'` (not counted against the share limit, no ride event)                         |
+| Incident reports   | none                                     | six categories, tied to a ride, legal moves from one table, internal notes and actions                                     |
+| Disputes (Phase 6) | money/service decision by an admin       | unchanged and deliberately **separate** (see below)                                                                        |
+| Admin safety       | none                                     | `/admin/sos*`, `/admin/incidents*`, `/admin/ratings/low` behind the new `SAFETY_REVIEW` permission; pages under `/safety`  |
+| Audit              | `admin_access_log` (reads only)          | one `audit_log` (renamed) for sensitive reads **and** safety/admin actions                                                 |
 
 ## Design decisions
 

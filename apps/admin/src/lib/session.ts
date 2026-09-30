@@ -1,3 +1,4 @@
+import { ACCESS_TOKEN_ALGORITHM, ACCESS_TOKEN_ISSUER } from '@yatri/types';
 import jwt from 'jsonwebtoken';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
@@ -30,7 +31,10 @@ export interface AdminAccessClaims {
  */
 export function verifyAdminAccessToken(token: string): AdminAccessClaims | null {
   try {
-    const decoded = jwt.verify(token, env.JWT_ACCESS_SECRET);
+    const decoded = jwt.verify(token, env.JWT_ACCESS_SECRET, {
+      algorithms: [ACCESS_TOKEN_ALGORITHM],
+      issuer: ACCESS_TOKEN_ISSUER,
+    });
     if (
       typeof decoded !== 'object' ||
       decoded === null ||

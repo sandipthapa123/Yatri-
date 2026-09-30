@@ -61,7 +61,10 @@ exports.up = (pgm) => {
 
 /** @param {import('node-pg-migrate').MigrationBuilder} pgm */
 exports.down = (pgm) => {
-  pgm.dropIndex('users', ['role', 'created_at'], { name: 'users_role_created_idx', ifExists: true });
+  pgm.dropIndex('users', ['role', 'created_at'], {
+    name: 'users_role_created_idx',
+    ifExists: true,
+  });
   pgm.dropIndex('audit_log', ['created_at'], { name: 'audit_log_created_at_idx', ifExists: true });
   pgm.dropIndex('notifications', ['created_at'], {
     name: 'notifications_created_at_idx',

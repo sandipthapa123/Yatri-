@@ -42,9 +42,12 @@ yatri/
 │   ├── types/       # Shared TypeScript contracts (API envelope, user, geo primitives)
 │   ├── mobile-auth/ # Shared RN auth client: API client, secure token storage, AuthContext,
 │   │                # accessible phone/OTP inputs (used by passenger + driver)
+│   ├── mobile-ui/   # Theme hook and crash boundary shared by both apps
 │   └── config/      # Shared TypeScript & ESLint base configuration
-├── docs/            # Architecture notes and phase plans
-└── .github/         # CI workflow, PR template
+├── deploy/          # Container images, a full local stack, backup and restore scripts
+├── scripts/         # Repository audits (unused dependencies, dead files, duplicate definitions)
+├── docs/            # Architecture notes, operations, security and phase plans
+└── .github/         # CI and release workflows, PR template
 ```
 
 ## Prerequisites
@@ -128,6 +131,9 @@ Run from the repository root; each fans out to every workspace package via pnpm.
 - **Document storage is behind a `StorageProvider` abstraction** (local disk in
   development, swappable for a production object store) with signed, time-limited access
   URLs — no identity document is ever served from a predictable or permanent public path.
+- Running it for real: [`docs/OPERATIONS.md`](docs/OPERATIONS.md) (architecture, deployment, backups,
+  monitoring, incident recovery, release and rollback) and [`docs/SECURITY.md`](docs/SECURITY.md) (the controls,
+  what was audited, what is still open). Container images and a full local stack are in [`deploy/`](deploy/).
 - See [`docs/AUTHENTICATION.md`](docs/AUTHENTICATION.md) for the full authentication
   architecture, [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the system overview, and
   [`docs/PHASE_1.md`](docs/PHASE_1.md)/[`docs/PHASE_2.md`](docs/PHASE_2.md)/

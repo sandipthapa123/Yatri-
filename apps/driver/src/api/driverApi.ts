@@ -1,5 +1,7 @@
 import { authApi, type PickedFile } from '@yatri/mobile-auth';
 import type {
+  VehicleCreateBody,
+  VehicleUpdateBody,
   DocumentSummary,
   DocumentTypeRef,
   DriverOnboardingProgress,
@@ -52,34 +54,18 @@ export function getVehicleCategories(accessToken: string): Promise<VehicleCatego
   return authApi.request<VehicleCategory[]>('/vehicles/categories', { accessToken });
 }
 
-export interface CreateVehicleInput {
-  categoryId: string;
-  make: string;
-  model: string;
-  year: number;
-  color: string;
-  registrationNumber: string;
-  vin?: string;
-  registrationExpiryDate?: string;
-  insuranceProvider?: string;
-  insurancePolicyNumber?: string;
-  insuranceExpiryDate?: string;
-}
-
 export function listVehicles(accessToken: string): Promise<Vehicle[]> {
   return authApi.request<Vehicle[]>('/vehicles', { accessToken });
 }
 
-export function createVehicle(accessToken: string, input: CreateVehicleInput): Promise<Vehicle> {
+export function createVehicle(accessToken: string, input: VehicleCreateBody): Promise<Vehicle> {
   return authApi.request<Vehicle>('/vehicles', { method: 'POST', accessToken, body: input });
 }
-
-export type UpdateVehicleInput = Partial<CreateVehicleInput>;
 
 export function updateVehicle(
   accessToken: string,
   vehicleId: string,
-  update: UpdateVehicleInput,
+  update: VehicleUpdateBody,
 ): Promise<Vehicle> {
   return authApi.request<Vehicle>(`/vehicles/${vehicleId}`, {
     method: 'PATCH',

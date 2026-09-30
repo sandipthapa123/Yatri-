@@ -1,7 +1,7 @@
 import { Router, type Router as RouterType } from 'express';
 
 import { authenticate } from '../../middleware/authenticate';
-import { userRateLimit } from '../../middleware/rateLimit';
+import { userMutationRateLimit, userRateLimit } from '../../middleware/rateLimit';
 import { requireRole } from '../../middleware/requireRole';
 import { validateUuidParam } from '../../middleware/validateUuidParam';
 import { savedPlacesRouter } from '../saved-places/saved-places.routes';
@@ -28,10 +28,18 @@ export const usersRouter: RouterType = Router();
 // own base profile — role-specific extensions live under their own router
 // (e.g. /drivers/me).
 usersRouter.get('/me', authenticate, getMeHandler);
-usersRouter.patch('/me', authenticate, validateBody(updateProfileSchema), updateMeHandler);
+usersRouter.patch(
+  '/me',
+  authenticate,
+  userMutationRateLimit(),
+  validateBody(updateProfileSchema),
+  updateMeHandler,
+);
 usersRouter.post(
   '/me/profile-picture',
   authenticate,
+  // Uploads are the costliest thing a caller can ask for: a handful per hour is plenty for a profile photo.
+  userRateLimit('profile-picture', 10, 3600),
   uploadSingleFile,
   uploadProfilePictureHandler,
 );
@@ -58,5 +66,10 @@ usersRouter.delete(
   validateUuidParam('contactId'),
   removeContactHandler,
 );
-usersRouter.post('/me/deactivate', authenticate, deactivateMeHandler);
+usersRouter.post(
+  '/me/deactivate',
+  authenticate,
+  userRateLimit('deactivate', 5, 3600),
+  deactivateMeHandler,
+);
 usersRouter.use('/me/saved-places', savedPlacesRouter);

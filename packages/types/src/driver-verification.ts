@@ -135,3 +135,35 @@ export interface VerificationEvent {
   reason: string | null;
   createdAt: string;
 }
+
+/**
+ * What a driver sends to add a vehicle. The API checks every field (apps/api vehicles.validators.ts);
+ * the driver app and the API's repository both use THIS type, so a field cannot exist on one side only.
+ */
+export interface VehicleCreateBody {
+  categoryId: string;
+  make: string;
+  model: string;
+  year: number;
+  color: string;
+  registrationNumber: string;
+  vin?: string;
+  registrationExpiryDate?: string;
+  insuranceProvider?: string;
+  insurancePolicyNumber?: string;
+  insuranceExpiryDate?: string;
+}
+
+/** Editing a vehicle: any of its details (not its category); null clears an optional one. */
+export interface VehicleUpdateBody {
+  make?: string;
+  model?: string;
+  year?: number;
+  color?: string;
+  registrationNumber?: string;
+  vin?: string | null;
+  registrationExpiryDate?: string | null;
+  insuranceProvider?: string | null;
+  insurancePolicyNumber?: string | null;
+  insuranceExpiryDate?: string | null;
+}

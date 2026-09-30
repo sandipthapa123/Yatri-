@@ -22,6 +22,7 @@ export * from './format';
 export * from './admin';
 export * from './admin-ops';
 export * from './settings';
+export * from './security';
 export * from './availability';
 export * from './geo';
 
@@ -45,6 +46,8 @@ export interface ApiErrorShape {
   code: string;
   message: string;
   details?: Record<string, unknown>;
+  /** On a server error: the correlation id to quote to support (matches the X-Request-Id header and the log line). */
+  requestId?: string;
 }
 
 export type ApiResponse<T> = { success: true; data: T } | { success: false; error: ApiErrorShape };

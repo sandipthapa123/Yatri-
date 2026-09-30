@@ -2,6 +2,7 @@ import type { Coordinate } from '../location/coordinates';
 import { haversineMeters } from '../location/geo';
 import { LocationProviderError } from '../location/providers/location-provider';
 import type { RouteProvider } from '../location/providers/route-provider';
+import { log } from '../../lib/logger';
 
 export interface EtaResult {
   distanceMeters: number;
@@ -58,7 +59,7 @@ export async function computeEta(
     }
   } catch (err) {
     if (!(err instanceof LocationProviderError)) throw err;
-    console.error(`ETA route provider failure (${err.kind}); using estimate`);
+    log.error(`ETA route provider failure (${err.kind}); using estimate`);
   }
   return {
     distanceMeters: Math.round(straight),

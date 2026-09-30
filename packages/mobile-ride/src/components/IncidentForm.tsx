@@ -30,7 +30,7 @@ export function IncidentForm(
   const [sending, setSending] = useState(false);
   const ready = category !== null && description.trim().length >= INCIDENT_DESCRIPTION_MIN;
   return (
-    <Card {...ui} title="Report a safety concern">
+    <Card {...ui} title="Report a safety concern" focusOnMount>
       <Text style={{ color: colors.textSecondary }}>
         {`If you are in danger now, use Emergency SOS or call ${props.emergencyNumber ?? '100'}. This report is read by our safety team afterwards.`}
       </Text>

@@ -2,7 +2,7 @@ import type { DriverDetails, Vehicle } from '@yatri/types';
 import { useState } from 'react';
 import { AccessibilityInfo, StyleSheet, Text, View } from 'react-native';
 
-import { useTheme } from '../../../theme/useTheme';
+import { useTheme } from '@yatri/mobile-ui';
 import { WizardShell } from '../WizardShell';
 
 interface Props {

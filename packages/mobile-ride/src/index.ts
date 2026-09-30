@@ -5,7 +5,7 @@ export type { RideAction, RideActionId } from './rideActions';
 export { ChatController } from './chatController';
 export type { ChatEntry, ChatState, MessageStatus } from './chatController';
 export { CallController, endText } from './callController';
-export type { CallState, CallPhase, MediaState } from './callController';
+export type { CallUiState, CallPhase, MediaState } from './callController';
 export { QualityTracker, evaluateInterval, describeQuality, QUALITY_RULES } from './callQuality';
 export type { CallQuality, RtcStatsSample } from './callQuality';
 export type { RtcFactory, RtcPeer } from './rtc';

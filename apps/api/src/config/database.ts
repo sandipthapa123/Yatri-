@@ -1,6 +1,7 @@
 import { Pool, types } from 'pg';
 
 import { env } from './env';
+import { log } from '../lib/logger';
 
 // Postgres DATE columns (OID 1082) come back as JS Date objects by default,
 // which JSON.stringify() then serializes as a full timestamp
@@ -11,14 +12,26 @@ import { env } from './env';
 types.setTypeParser(1082, (value) => value);
 
 /**
- * A single pooled Postgres connection, shared across the app. `pg` connects
- * lazily on first query, so importing this module does not require a live
- * database — modules just import `pool` and query when they need to.
+ * The one pooled Postgres connection set, shared across the app. `pg` connects lazily on first
+ * query, so importing this module does not need a live database.
+ *  - TLS is on when DATABASE_SSL=true (certificates verified unless explicitly relaxed for a private network);
+ *  - the pool is bounded (DB_POOL_MAX) and a connection attempt or idle client cannot hang forever;
+ *  - Postgres cancels any statement running longer than DB_STATEMENT_TIMEOUT_MS, so one slow query
+ *    cannot hold a connection (and with it the API) hostage;
+ *  - application_name shows in pg_stat_activity, so an operator can tell this service's sessions apart.
  */
-export const pool = new Pool({ connectionString: env.DATABASE_URL });
+export const pool = new Pool({
+  connectionString: env.DATABASE_URL,
+  max: env.DB_POOL_MAX,
+  idleTimeoutMillis: 30_000,
+  connectionTimeoutMillis: 5_000,
+  statement_timeout: env.DB_STATEMENT_TIMEOUT_MS,
+  application_name: 'yatri-api',
+  ssl: env.DATABASE_SSL ? { rejectUnauthorized: env.DATABASE_SSL_REJECT_UNAUTHORIZED } : undefined,
+});
 
 pool.on('error', (err) => {
-  console.error('Unexpected error on an idle PostgreSQL client', err);
+  log.error('Unexpected error on an idle PostgreSQL client', err);
 });
 
 /**

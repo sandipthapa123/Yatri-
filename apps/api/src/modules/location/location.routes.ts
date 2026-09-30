@@ -2,7 +2,7 @@ import { Router, type Router as RouterType } from 'express';
 
 import { env } from '../../config/env';
 import { authenticate } from '../../middleware/authenticate';
-import { userRateLimit } from '../../middleware/rateLimit';
+import { userRateLimit, userMutationRateLimit } from '../../middleware/rateLimit';
 import { validateBody } from '../../middleware/validate';
 import { validateQuery } from '../../middleware/validateQuery';
 import { distanceHandler, reverseGeocodeHandler, searchHandler } from './location.controller';
@@ -13,6 +13,7 @@ export const locationRouter: RouterType = Router();
 // Every endpoint spends provider quota or CPU, so all require a signed-in
 // user (any role) and are rate limited per user, not just per IP.
 locationRouter.use(authenticate);
+locationRouter.use(userMutationRateLimit());
 
 locationRouter.get(
   '/search',

@@ -65,8 +65,12 @@ const toRow = (r: UserRowDb): AdminUserRow => ({
   ridesCompleted: r.completed,
 });
 
-const COMPLETED_SQL = `(SELECT count(*)::int FROM trips t
-   WHERE t.status = 'COMPLETED' AND (t.passenger_id = u.id OR t.driver_id = u.id))`;
+// Two index-friendly counts (a person is on a ride as passenger OR as driver, never both on one
+// ride) instead of one count over an OR, which cannot use either history index.
+const COMPLETED_SQL = `(
+  (SELECT count(*) FROM trips t WHERE t.passenger_id = u.id AND t.status = 'COMPLETED')
+  + (SELECT count(*) FROM trips t WHERE t.driver_id = u.id AND t.status = 'COMPLETED')
+)::int`;
 
 export async function listUsersHandler(
   req: Request,

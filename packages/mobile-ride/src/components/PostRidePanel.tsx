@@ -129,7 +129,7 @@ function RateForm(
   const who = role === 'PASSENGER' ? 'your driver' : 'the passenger';
   const values = Array.from({ length: RATING_MAX - RATING_MIN + 1 }, (_, i) => RATING_MIN + i);
   return (
-    <Card {...ui} title={`Rate ${who}`}>
+    <Card {...ui} title={`Rate ${who}`} focusOnMount>
       <View accessibilityRole="radiogroup" style={styles.stars}>
         {values.map((v) => (
           <ActionButton
@@ -182,7 +182,7 @@ function DisputeForm(
   const [sending, setSending] = useState(false);
   const ready = reason.trim().length >= 5;
   return (
-    <Card {...ui} title="Report a problem">
+    <Card {...ui} title="Report a problem" focusOnMount>
       <Text style={{ color: colors.textSecondary }}>
         Tell us what went wrong. Our team will look at this ride and get back to you.
       </Text>

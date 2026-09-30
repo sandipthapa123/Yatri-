@@ -156,9 +156,9 @@ export interface RideWorld {
 }
 
 /** A passenger requests a ride and a nearby online driver accepts it: trip is DRIVER_EN_ROUTE. */
-export async function rideWorld(): Promise<RideWorld> {
+export async function rideWorld(existingDriver?: OnboardedUser): Promise<RideWorld> {
   const passenger = await onboardUser('PASSENGER');
-  const driver = await onboardUser('DRIVER');
+  const driver = existingDriver ?? (await onboardUser('DRIVER'));
   await forceDriverOnline(driver.user.id as string);
   const req = await requestRide(passenger.accessToken);
   if (req.status !== 201) throw new Error(`request failed ${JSON.stringify(req.body)}`);
@@ -198,8 +198,8 @@ export async function clearRedis() {
 }
 
 /** A ride taken to the end: arrived, started, completed and (when `paid`) the driver confirmed the cash. */
-export async function finishedRide(paid = true): Promise<RideWorld> {
-  const w = await rideWorld();
+export async function finishedRide(paid = true, driver?: OnboardedUser): Promise<RideWorld> {
+  const w = await rideWorld(driver);
   await arriveAtPickup(w);
   await api.post(`/api/v1/trips/${w.tripId}/start`).set(auth(w.driver.accessToken));
   await api.post(`/api/v1/trips/${w.tripId}/complete`).set(auth(w.driver.accessToken));

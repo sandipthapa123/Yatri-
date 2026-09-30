@@ -58,6 +58,24 @@ import {
   userRecordsHandler,
 } from './admin-compliance';
 import { uploadSingleFile } from '../../middleware/upload';
+import {
+  awardsQuerySchema,
+  createIncentiveRuleHandler,
+  createPricingRuleHandler,
+  createZoneHandler,
+  heatmapHandler,
+  optionsHandler,
+  listAwardsHandler,
+  listIncentiveRulesHandler,
+  listPricingRulesHandler,
+  listZonesHandler,
+  updateIncentiveRuleHandler,
+  updatePricingRuleHandler,
+  updateZoneHandler,
+} from './admin-operations';
+import { incentiveRuleSchema } from '../operations/incentives.service';
+import { pricingRuleSchema } from '../operations/pricing-rules.service';
+import { zoneBodySchema } from '../operations/zones.service';
 import { adminAdminsRoutes } from './admin-admins.routes';
 import { analyticsHandler } from './admin-analytics';
 import { adminAuditQuerySchema, listAuditHandler } from './admin-audit';
@@ -505,3 +523,64 @@ adminRouter.patch(
   updateRetentionHandler,
 );
 adminRouter.get('/compliance/users/:id/records', validateUuidParam('id'), userRecordsHandler);
+
+// ---- advanced operations: demand and supply, zones, dynamic pricing, incentives
+// Reading needs OPERATIONS_VIEW; every change needs DISPATCH_MANAGE and is audited with its reason.
+adminRouter.get('/operations/options', requirePermission('OPERATIONS_VIEW'), optionsHandler);
+adminRouter.get('/operations/heatmap', requirePermission('OPERATIONS_VIEW'), heatmapHandler);
+adminRouter.get('/operations/zones', requirePermission('OPERATIONS_VIEW'), listZonesHandler);
+adminRouter.post(
+  '/operations/zones',
+  requirePermission('DISPATCH_MANAGE'),
+  validateBody(zoneBodySchema),
+  createZoneHandler,
+);
+adminRouter.put(
+  '/operations/zones/:id',
+  requirePermission('DISPATCH_MANAGE'),
+  validateUuidParam('id'),
+  validateBody(zoneBodySchema),
+  updateZoneHandler,
+);
+adminRouter.get(
+  '/operations/pricing-rules',
+  requirePermission('OPERATIONS_VIEW'),
+  listPricingRulesHandler,
+);
+adminRouter.post(
+  '/operations/pricing-rules',
+  requirePermission('DISPATCH_MANAGE'),
+  validateBody(pricingRuleSchema),
+  createPricingRuleHandler,
+);
+adminRouter.put(
+  '/operations/pricing-rules/:id',
+  requirePermission('DISPATCH_MANAGE'),
+  validateUuidParam('id'),
+  validateBody(pricingRuleSchema),
+  updatePricingRuleHandler,
+);
+adminRouter.get(
+  '/operations/incentive-rules',
+  requirePermission('OPERATIONS_VIEW'),
+  listIncentiveRulesHandler,
+);
+adminRouter.post(
+  '/operations/incentive-rules',
+  requirePermission('DISPATCH_MANAGE'),
+  validateBody(incentiveRuleSchema),
+  createIncentiveRuleHandler,
+);
+adminRouter.put(
+  '/operations/incentive-rules/:id',
+  requirePermission('DISPATCH_MANAGE'),
+  validateUuidParam('id'),
+  validateBody(incentiveRuleSchema),
+  updateIncentiveRuleHandler,
+);
+adminRouter.get(
+  '/operations/incentive-awards',
+  requirePermission('OPERATIONS_VIEW'),
+  validateQuery(awardsQuerySchema),
+  listAwardsHandler,
+);

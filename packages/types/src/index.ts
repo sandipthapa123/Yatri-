@@ -18,6 +18,7 @@ export * from './trip-comms';
 export * from './trip-share';
 export * from './safety';
 export * from './support';
+export * from './operations';
 export * from './compliance';
 export * from './realtime';
 export * from './format';

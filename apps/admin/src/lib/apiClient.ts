@@ -1,5 +1,13 @@
 import type {
   AdminAccountRow,
+  AdminIncentiveRuleBody,
+  AdminPricingRuleBody,
+  AdminZoneBody,
+  HeatmapData,
+  IncentiveAwardRow,
+  IncentiveRuleInfo,
+  PricingRuleInfo,
+  ZoneDef,
   AdminAssignBody,
   AdminDataRequestRow,
   AdminNoteBody,
@@ -565,3 +573,38 @@ export const updateRetentionRule = (
   adminRequest<RetentionPolicyInfo>(`/compliance/retention/${type}`, t, { method: 'PATCH', body });
 export const getUserComplianceRecords = (t: string, userId: string) =>
   adminRequest<ComplianceRecordInfo[]>(`/compliance/users/${userId}/records`, t);
+
+// ---- advanced operations (OPERATIONS_VIEW to read, DISPATCH_MANAGE to change)
+export const getHeatmap = (t: string) => adminRequest<HeatmapData>('/operations/heatmap', t);
+export const getOperationOptions = (t: string) =>
+  adminRequest<{
+    zones: Array<{ id: string; name: string; isActive: boolean }>;
+    categories: Array<{ id: string; label: string }>;
+  }>('/operations/options', t);
+export const listZones = (t: string) => adminRequest<ZoneDef[]>('/operations/zones', t);
+export const saveZone = (t: string, id: string | null, body: AdminZoneBody) =>
+  adminRequest<ZoneDef>(id ? `/operations/zones/${id}` : '/operations/zones', t, {
+    method: id ? 'PUT' : 'POST',
+    body,
+  });
+export const listPricingRules = (t: string) =>
+  adminRequest<PricingRuleInfo[]>('/operations/pricing-rules', t);
+export const savePricingRule = (t: string, id: string | null, body: AdminPricingRuleBody) =>
+  adminRequest<PricingRuleInfo>(
+    id ? `/operations/pricing-rules/${id}` : '/operations/pricing-rules',
+    t,
+    { method: id ? 'PUT' : 'POST', body },
+  );
+export const listIncentiveRules = (t: string) =>
+  adminRequest<IncentiveRuleInfo[]>('/operations/incentive-rules', t);
+export const saveIncentiveRule = (t: string, id: string | null, body: AdminIncentiveRuleBody) =>
+  adminRequest<IncentiveRuleInfo>(
+    id ? `/operations/incentive-rules/${id}` : '/operations/incentive-rules',
+    t,
+    { method: id ? 'PUT' : 'POST', body },
+  );
+export const listIncentiveAwards = (t: string, p: { page?: number; pageSize?: number }) =>
+  adminRequest<{ items: IncentiveAwardRow[]; total: number; totalAwardedNpr: number }>(
+    `/operations/incentive-awards${toQuery(p)}`,
+    t,
+  );

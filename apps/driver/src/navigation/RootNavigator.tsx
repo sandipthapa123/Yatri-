@@ -12,11 +12,13 @@ import { OnboardingScreen } from '../screens/onboarding/OnboardingScreen';
 import { OtpVerificationScreen } from '../screens/OtpVerificationScreen';
 import { PhoneEntryScreen } from '../screens/PhoneEntryScreen';
 import { VerificationPendingScreen } from '../screens/VerificationPendingScreen';
+import { IncentivesScreen } from '../screens/IncentivesScreen';
 import { SupportScreen } from '../screens/SupportScreen';
 import { WelcomeScreen } from '../screens/WelcomeScreen';
 
 export type RootStackParamList = {
   Support: { tripId?: string; ticketId?: string } | undefined;
+  Incentives: undefined;
   Welcome: undefined;
   PhoneEntry: undefined;
   OtpVerification: { phoneNumber: string };
@@ -65,6 +67,7 @@ export function RootNavigator() {
             />
             <Stack.Screen name="DriverHome" component={DriverHomeScreen} />
             <Stack.Screen name="Support" component={SupportScreen} />
+            <Stack.Screen name="Incentives" component={IncentivesScreen} />
           </>
         ) : (
           <>

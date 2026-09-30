@@ -229,3 +229,24 @@ The controls and their evidence are in `docs/SECURITY.md`. What operators must d
   deleted data until they expire (section 4): count that when you answer a deletion request.
 - **Policy text** lives at the address you publish (a web page you control); Yatri stores only the version and
   the address. Publishing a new version asks every person to accept it again.
+
+## 10. Dispatch, pricing, zones and incentives
+
+- **Start without zones.** With no service area in use, rides are allowed everywhere. Add a service area (and
+  any restricted, airport or venue zones) before relying on geofencing; once one is in use, a ride whose
+  pickup or drop-off is outside it is refused and a driver outside it is not offered rides. A zone is switched
+  off, not deleted.
+- **Pricing rules.** Create a rule per situation (an airport rush, Friday evenings, a festival weekend, high
+  demand). The highest matching multiplier applies and never exceeds the platform limit in Settings
+  ("Highest price multiplier"). Riders see the resulting fare before they confirm; a request made at an old
+  price is refused with the new fare. Check your local rules on demand pricing before turning any rule on.
+- **Watch demand and supply.** Admin > Demand, zones and pricing shows requests against available drivers per
+  zone and the multiplier in force. The map hides small counts on purpose. The figures are refreshed every
+  few seconds and cached per instance for up to ten.
+- **Dispatch tuning** (Settings > Dispatch): how far each unanswered offer widens the search, the largest
+  radius, how much a recent ride counts against a driver when ranking, and the workload window.
+  `MATCHING_STRATEGY` chooses `eta_workload` (default) or `proximity`.
+- **Driver limits** (Settings > Dispatch): most rides per day and longest continuous time online (0 = no
+  limit). A driver at a limit is told why and is not offered rides.
+- **Incentives** are recorded, not paid, by the platform: Admin > Driver incentives lists every award; pay
+  from that list and keep your own payment record. Changing a rule never undoes bonuses already earned.

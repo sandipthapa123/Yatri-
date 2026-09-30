@@ -3,6 +3,7 @@ import type { EligibilitySummary } from '@yatri/types';
 import { query } from '../../lib/db';
 import { ACTIVE_SQL } from '../trips/trips.repository';
 import { checkVerificationEligibility } from '../drivers/onboarding.service';
+import { limitReasonFor } from './driver-limits';
 
 /**
  * Can this driver go online RIGHT NOW? Decided by the server from the database on
@@ -45,6 +46,10 @@ export async function evaluateDriverEligibility(driverId: string): Promise<Eligi
   if (Number(active.rows[0]?.n ?? 0) > 0) {
     reasons.push('You are already assigned to an active trip.');
   }
+
+  // Operational limits (most rides in a day): the reason is the sentence the driver is shown.
+  const limit = await limitReasonFor(driverId);
+  if (limit) reasons.push(limit);
 
   return { eligible: reasons.length === 0, reasons };
 }

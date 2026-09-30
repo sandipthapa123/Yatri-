@@ -27,6 +27,8 @@ import {
 import { driverLocationSampleSchema } from '../availability/availability.validators';
 import { updateOnboardingSchema } from './drivers.validators';
 
+import { driverIncentives } from '../operations/incentives.service';
+
 export const driversRouter: RouterType = Router();
 
 driversRouter.use(authenticate, requireRole('DRIVER'));
@@ -51,6 +53,11 @@ driversRouter.put(
   putLocationHandler,
 );
 driversRouter.get('/me/location', getLocationHandler);
+
+// The driver's own bonus rules, progress and earnings (from the award records).
+driversRouter.get('/me/incentives', async (req, res) => {
+  res.json({ success: true, data: await driverIncentives(req.auth?.userId as string) });
+});
 driversRouter.delete('/me/location', deleteLocationHandler);
 
 // Availability. Eligibility is decided by the server; the client only asks.

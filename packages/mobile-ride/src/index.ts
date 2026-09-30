@@ -32,3 +32,4 @@ export { useSos } from './hooks';
 export { SosPanel } from './components/SosPanel';
 export { IncidentForm } from './components/IncidentForm';
 export { EmergencyContactsPanel } from './components/EmergencyContactsPanel';
+export { IncentivesPanel } from './components/IncentivesPanel';

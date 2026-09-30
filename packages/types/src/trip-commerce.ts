@@ -37,6 +37,12 @@ export interface FareBreakdown {
   durationSeconds: number | null;
   /** True when the distance/time came from a road route rather than the straight-line estimate. */
   routeBased: boolean;
+  /** 1 when normal pricing applies; above 1 when a pricing rule raised this ride's fare. */
+  surgeMultiplier: number;
+  /** The extra rupees the multiplier adds (0 at normal pricing); totalNpr includes it. */
+  surgeNpr: number;
+  /** The rule's name for the rider ("Airport rush"), null at normal pricing. */
+  surgeLabel: string | null;
 }
 
 export const RATING_MIN = 1;
@@ -53,6 +59,12 @@ export interface TripRequestBody {
   vehicleCategory: string;
   pickup: { latitude: number; longitude: number; address: string; name?: string };
   destination: { latitude: number; longitude: number; address: string; name?: string };
+  /**
+   * The total the rider was shown and agreed to. It is never a price (the server prices the ride): it is
+   * compared with the server's fare, and a difference (demand pricing changed) refuses the request with
+   * the new fare so the rider confirms again.
+   */
+  confirmedTotalNpr?: number;
 }
 
 /** A vehicle category a passenger can ride in. Categories are reference data owned by the server. */
@@ -84,6 +96,8 @@ export interface FareEstimateResponse {
   pickup: TripPlace;
   destination: TripPlace;
   waitingRule: { freeSeconds: number; perMinuteNpr: number };
+  /** Sentences about the places: for example the airport pickup point. Shown and read before confirming. */
+  notices: string[];
 }
 
 export interface TripHistoryPage {

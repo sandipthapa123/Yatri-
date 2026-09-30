@@ -214,3 +214,23 @@ Check by hand with TalkBack or VoiceOver (and NVDA in the console), and with a k
    my account** returns focus to the start.
 7. Console: the ticket queue table has a caption and headers and works without scripts; in a ticket, resolving,
    closing and each refund money step open an in-page confirmation and Escape backs out; zoom to 200% and 400%.
+
+## N. Dynamic pricing, zones, heatmap and bonuses (Phase 15)
+
+Automated: fare parts adding up, the price sentence (`describeSurge`), the heatmap's text equivalents and the
+console forms' labels and status regions are covered by tests and the static scans. Check by hand with
+TalkBack or VoiceOver (and NVDA in the console), and with a keyboard:
+
+1. **Request a ride** in a pricing rule's time or zone: the estimate card reads the total, then "Higher demand
+   pricing ... NPR Y more on this ride" as an alert, then "Normal fare ... plus ... for higher demand". The
+   button reads "Request Car for NPR ...". Choosing another vehicle type re-reads its own price.
+2. Let the price change between looking and requesting (raise the multiplier in the console): the request
+   is refused, the new fare is announced as an alert and shown, and nothing was requested.
+3. A pickup in a zone with a note (airport): the note is read in the estimate before confirming. A pickup
+   outside the area or in a restricted zone reads the reason and offers no ride.
+4. **Driver > Your bonuses**: each rule is a heading and a sentence; progress reads "3 of 5 rides done this
+   day; 2 to go"; the earned total and the note about cash are read.
+5. Console > Demand, zones and pricing: the heatmap is announced as an image with its description; the table
+   and the list of squares in words carry the same information; counts below the minimum read "fewer than 3".
+6. Console forms (zones, pricing, bonuses): every field has a label; the day checkboxes read their names; the
+   confirmation sentence takes focus and Escape backs out; the result is announced; zoom to 200% and 400%.

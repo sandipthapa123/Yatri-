@@ -135,6 +135,10 @@ Run from the repository root; each fans out to every workspace package via pnpm.
   that record what was paid back, accessible screens in both apps and a support workspace in the console, policy
   acceptance records, account-deletion and data-access requests, and retention rules kept as configuration.
   `packages/mobile-support` is the shared client. Rides, payments and the audit log are never deleted by it.
+- **Advanced operations** (`docs/PHASE_15.md`): service zones and geofencing, configurable dynamic pricing
+  with the fare always shown before confirming, ETA- and workload-aware dispatch with widening retries,
+  driver limits and incentives, and a privacy-preserving demand and supply heatmap with a text equivalent.
+  The fare arithmetic, geography and matching each still have exactly one implementation.
 - Running it for real: [`docs/OPERATIONS.md`](docs/OPERATIONS.md) (architecture, deployment, backups,
   monitoring, incident recovery, release and rollback) and [`docs/SECURITY.md`](docs/SECURITY.md) (the controls,
   what was audited, what is still open). Container images and a full local stack are in [`deploy/`](deploy/).

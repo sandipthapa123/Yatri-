@@ -58,7 +58,7 @@ export async function estimateHandler(
   res: Response<ApiResponse<FareEstimateResponse>>,
 ) {
   const body = req.body as TripEstimateBody;
-  const { fare, category, options } = await estimateForRequest(body);
+  const { fare, category, options, notices } = await estimateForRequest(body);
   const cfg = pricingConfig();
   res.json({
     success: true,
@@ -79,6 +79,7 @@ export async function estimateHandler(
         longitude: body.destination.longitude,
       },
       waitingRule: { freeSeconds: cfg.waitingFreeSeconds, perMinuteNpr: cfg.waitingPerMinuteNpr },
+      notices,
     },
   });
 }

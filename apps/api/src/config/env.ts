@@ -199,7 +199,7 @@ const envSchema = z
     CALL_PROVIDER: z.enum(['webrtc']).default('webrtc'),
     // How candidate drivers are ranked. Only "proximity" exists today; add a strategy in
     // dispatch/matching.ts and its name here, never in a controller or an app.
-    MATCHING_STRATEGY: z.enum(['proximity']).default('proximity'),
+    MATCHING_STRATEGY: z.enum(['proximity', 'eta_workload']).default('eta_workload'),
     // Cancellation rules. A passenger who cancels within CANCEL_FREE_SECONDS of a driver being
     // assigned, or before any driver is assigned, pays nothing; later, the fee below is RECORDED on
     // the ride (not charged: payments are a later phase). 0 disables the fee.
@@ -245,6 +245,17 @@ const envSchema = z
     SUPPORT_AUTO_CLOSE_DAYS: z.coerce.number().int().min(0).max(365).default(7),
     SUPPORT_MAX_ATTACHMENTS_PER_TICKET: z.coerce.number().int().min(0).max(50).default(6),
     DATA_REQUEST_RESPONSE_DAYS: z.coerce.number().int().min(1).max(90).default(30),
+    // --- Dispatch, surge and driver limits (defaults; an administrator can override them in Settings) ---
+    DISPATCH_RADIUS_EXPANSION_PERCENT: z.coerce.number().int().min(0).max(200).default(25),
+    DISPATCH_MAX_RADIUS_METERS: z.coerce.number().int().min(1000).max(50000).default(12000),
+    DISPATCH_WORKLOAD_WINDOW_MINUTES: z.coerce.number().int().min(15).max(720).default(120),
+    DISPATCH_WORKLOAD_PENALTY_SECONDS: z.coerce.number().int().min(0).max(600).default(60),
+    SURGE_MAX_MULTIPLIER: z.coerce.number().min(1).max(10).default(3),
+    SURGE_DEMAND_WINDOW_MINUTES: z.coerce.number().int().min(5).max(120).default(15),
+    DRIVER_MAX_RIDES_PER_DAY: z.coerce.number().int().min(0).max(200).default(0),
+    DRIVER_MAX_ONLINE_HOURS: z.coerce.number().int().min(0).max(24).default(0),
+    HEATMAP_CELL_METERS: z.coerce.number().int().min(500).max(5000).default(1000),
+    HEATMAP_MIN_COUNT: z.coerce.number().int().min(1).max(20).default(3),
     // How often the support sweep (escalations, auto-close) and the retention job run.
     SUPPORT_SWEEP_SECONDS: z.coerce.number().int().positive().default(300),
 

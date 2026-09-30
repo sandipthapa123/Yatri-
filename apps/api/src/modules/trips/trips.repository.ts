@@ -35,6 +35,9 @@ export interface TripRow {
   ended_longitude: string | null;
   actual_distance_meters: number | null;
   actual_duration_seconds: number | null;
+  surge_multiplier: string;
+  surge_label: string | null;
+  pickup_zone_id: string | null;
   created_at: Date;
   pickup_name: string | null;
   pickup_address: string;
@@ -55,6 +58,7 @@ const SELECT = `
          t.cancelled_from_status, t.cancellation_fee_npr,
          t.started_latitude, t.started_longitude, t.ended_latitude, t.ended_longitude,
          t.actual_distance_meters, t.actual_duration_seconds,
+         t.surge_multiplier, t.surge_label, t.pickup_zone_id,
          pl.place_name AS pickup_name, pl.address AS pickup_address,
          pl.latitude AS pickup_lat, pl.longitude AS pickup_lng,
          dl.place_name AS dest_name, dl.address AS dest_address,
@@ -89,6 +93,10 @@ export async function createTripRequest(input: {
   distanceMeters: number;
   durationSeconds: number | null;
   fareEstimateNpr: number;
+  /** The multiplier the rider was quoted; the final fare uses it, whatever the rules say later. */
+  surgeMultiplier: number;
+  surgeLabel: string | null;
+  pickupZoneId: string | null;
   searchTimeoutSeconds: number;
 }): Promise<TripRow> {
   const client = await pool.connect();
@@ -99,8 +107,9 @@ export async function createTripRequest(input: {
     const ins = await client.query<{ id: string }>(
       `INSERT INTO trips
          (passenger_id, pickup_location_id, destination_location_id, status,
-          distance_meters, duration_seconds, fare_estimate_npr, search_deadline_at, vehicle_category_id)
-       VALUES ($1, $2, $3, 'SEARCHING', $4, $5, $6, now() + ($7::int * interval '1 second'), $8)
+          distance_meters, duration_seconds, fare_estimate_npr, search_deadline_at, vehicle_category_id,
+          surge_multiplier, surge_label, pickup_zone_id)
+       VALUES ($1, $2, $3, 'SEARCHING', $4, $5, $6, now() + ($7::int * interval '1 second'), $8, $9, $10, $11)
        RETURNING id`,
       [
         input.passengerId,
@@ -111,6 +120,9 @@ export async function createTripRequest(input: {
         input.fareEstimateNpr,
         input.searchTimeoutSeconds,
         input.vehicleCategoryId,
+        input.surgeMultiplier,
+        input.surgeLabel,
+        input.pickupZoneId,
       ],
     );
     await client.query('COMMIT');

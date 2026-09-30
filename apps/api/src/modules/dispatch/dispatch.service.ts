@@ -8,7 +8,7 @@ import { publishToUser } from '../realtime/bus';
 import { recordTripEvent } from '../trips/trip-events.service';
 import { getTrip, pickupOf, destinationOf, type TripRow } from '../trips/trips.repository';
 import { assignDriver, markNoDrivers } from '../trips/trips.service';
-import { matchDrivers } from './matching';
+import { matchDrivers, searchRadius } from './matching';
 import {
   closeOffer,
   countOffers,
@@ -24,7 +24,7 @@ import {
  * Dispatch: turns a SEARCHING trip into an assigned driver. WHO may be offered the ride and in
  * what order is matching.ts (eligibility + the configured ranking strategy); this module only
  * schedules: one offer at a time, DISPATCH_OFFER_TTL_SECONDS to accept, and declining or timing
- * out moves on to the next driver.
+ * out moves on to the next driver, searching farther each time (`searchRadius`).
  * The accept race is decided by two guarded UPDATEs (offer, then trip), never by the client.
  */
 
@@ -58,15 +58,19 @@ export async function offerNext(tripId: string): Promise<OfferOutcome> {
     return 'no_drivers';
   }
   if (await openOfferForTrip(tripId)) return 'offered'; // one open offer at a time
-  if ((await countOffers(tripId)) >= env.DISPATCH_MAX_OFFERS) {
+  const offersSoFar = await countOffers(tripId);
+  if (offersSoFar >= env.DISPATCH_MAX_OFFERS) {
     await markNoDrivers(tripId);
     return 'no_drivers';
   }
 
+  // Retry and fallback: every offer that was not taken widens the next search (up to a configured limit),
+  // so a ride nobody nearby wants is offered farther out instead of waiting for the deadline.
   const ranked = await matchDrivers({
     tripId,
     pickup: pickupOf(trip),
     vehicleCategoryId: trip.vehicle_category_id,
+    radiusMeters: searchRadius(offersSoFar),
   });
   for (const c of ranked.slice(0, 5)) {
     const offer = await insertOffer({

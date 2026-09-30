@@ -46,6 +46,12 @@ Yatri-specific reminders:
   app or an env value. Policy words are never stored: only the version and the address. Retention is
   `retention_policies`; only `runRetention` deletes by age. Files in support use the ONE upload path
   (sniffed type, random key, signed link).
+- Where a ride may start or end is `checkZoneAccess` over the one `pointInPolygon` (`@yatri/types`); a
+  price multiplier is decided ONLY by `operations/surge.ts` and applied by `pricing/pricing.ts`, locked on
+  the ride, and shown by `FareBreakdown` + `describeSurge` (an app never computes it). Who is offered a ride
+  is `dispatch/matching.ts` (eligibility, strategy, `searchRadius`), driver limits are
+  `availability/driver-limits.ts`, demand is `operations/demand.ts`, a rule time window is `windowActive`,
+  and a bonus is calculated only in `evaluateIncentives` and recorded as an award, never as a fare change.
 - Do not put a backslash inside a SQL string written from a shell command: use `ESCAPE '!'` with
   `likeContains` for searches.
 - If you discover a duplicate, consolidate it or add it to "Known duplication" in the doc.

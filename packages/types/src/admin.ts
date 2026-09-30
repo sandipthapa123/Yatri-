@@ -20,6 +20,7 @@ export const ADMIN_PERMISSIONS = [
   'SUPPORT_MANAGE',
   'REFUNDS_MANAGE',
   'COMPLIANCE_MANAGE',
+  'DISPATCH_MANAGE',
   'USERS_VIEW',
   'USERS_MANAGE',
   'FINANCE_VIEW',
@@ -57,6 +58,10 @@ export const ADMIN_PERMISSION_LABELS: Record<AdminPermission, { label: string; h
   COMPLIANCE_MANAGE: {
     label: 'Compliance and data requests',
     help: 'Publish policy versions, handle data-access and account-deletion requests, and set retention rules.',
+  },
+  DISPATCH_MANAGE: {
+    label: 'Dispatch, pricing and zones',
+    help: 'Edit service zones, dynamic pricing rules and driver incentives, and read the demand and supply picture. Every change is audited.',
   },
   USERS_VIEW: { label: 'View users', help: 'Search and read user accounts.' },
   USERS_MANAGE: { label: 'Manage users', help: 'Suspend and reactivate accounts.' },
@@ -100,6 +105,7 @@ export const PERMISSION_IMPLIES: Partial<Record<AdminPermission, readonly AdminP
   RIDES_MANAGE: ['OPERATIONS_VIEW'],
   DRIVERS_REVIEW: ['OPERATIONS_VIEW'],
   SUPPORT_MANAGE: ['DISPUTES_MANAGE'],
+  DISPATCH_MANAGE: ['OPERATIONS_VIEW'],
 };
 
 /** Whether a set of held permissions grants the one needed. The one rule; the API and the app use it. */

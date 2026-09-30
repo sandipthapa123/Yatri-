@@ -27,7 +27,12 @@ const categoryCode = z
   .regex(/^[A-Z0-9_]+$/);
 
 export const tripRequestSchema = z
-  .object({ pickup: place, destination: place, vehicleCategory: categoryCode })
+  .object({
+    pickup: place,
+    destination: place,
+    vehicleCategory: categoryCode,
+    confirmedTotalNpr: z.number().int().positive().max(1_000_000).optional(),
+  })
   .strict();
 
 /** The estimate may leave the category out; the response then lists every category. */

@@ -31,6 +31,11 @@ import { pricingConfig } from '../pricing/pricing.config';
 import { metaFromRow } from './trip-meta';
 import { settingBool, settingText } from '../settings/settings.service';
 import { isCategoryAvailable } from '../dispatch/matching';
+import { assertZoneAccess, primaryZone } from '../operations/zones.service';
+import { surgeFor } from '../operations/surge';
+import { recordAudit } from '../../lib/audit';
+import { log } from '../../lib/logger';
+import { evaluateIncentives } from '../operations/incentives.service';
 import { decidePassengerCancellation, requireCancellationAllowed } from './cancellation';
 import { estimateEta } from '../tracking/eta';
 import { trackingConfig } from '../tracking/tracking.config';
@@ -180,6 +185,12 @@ const unknownCategory = () =>
  * marked available-or-not near the pickup (a yes/no; no driver is ever identified or counted).
  */
 export async function estimateForRequest(body: TripEstimateBody) {
+  // A ride that cannot start or end here is refused before anything is priced (service zones).
+  const pickupZones = await assertZoneAccess(body.pickup, 'PICKUP');
+  const dropoffZones = await assertZoneAccess(body.destination, 'DROPOFF');
+  const notices = [
+    ...new Set([...pickupZones, ...dropoffZones].flatMap((z) => (z.note ? [z.note] : []))),
+  ];
   const trip = await measureTrip(body);
   const categories = await listActiveCategories();
   const selected = body.vehicleCategory
@@ -191,7 +202,12 @@ export async function estimateForRequest(body: TripEstimateBody) {
       code: c.code,
       label: c.label,
       available: await isCategoryAvailable(body.pickup, c.id),
-      fare: estimateFare(trip, pricingFor(c)),
+      // The price the rider is shown includes demand pricing: the same engine a request will use.
+      fare: estimateFare(
+        trip,
+        pricingFor(c),
+        await surgeFor({ pickup: body.pickup, categoryId: c.id }),
+      ),
     })),
   );
   const chosen = options.find((o) => o.code === selected.code) as RideCategoryOption;
@@ -201,6 +217,7 @@ export async function estimateForRequest(body: TripEstimateBody) {
     options,
     distanceMeters: trip.distanceMeters,
     durationSeconds: trip.durationSeconds,
+    notices,
   };
 }
 
@@ -211,9 +228,20 @@ export async function requestTrip(passengerId: string, body: TripRequestBody): P
   }
   const category = await getActiveCategoryByCode(body.vehicleCategory);
   if (!category) throw unknownCategory();
+  const pickupZones = await assertZoneAccess(body.pickup, 'PICKUP');
+  await assertZoneAccess(body.destination, 'DROPOFF');
   const trip = await measureTrip(body);
   // The fare is priced by the server for the chosen category; the request carries no price.
-  const fare = estimateFare(trip, pricingFor(category));
+  const surge = await surgeFor({ pickup: body.pickup, categoryId: category.id });
+  const fare = estimateFare(trip, pricingFor(category), surge);
+  // Demand pricing may have moved since the rider saw the estimate: they must confirm the new total.
+  if (body.confirmedTotalNpr !== undefined && body.confirmedTotalNpr !== fare.totalNpr) {
+    throw new HttpError(
+      409,
+      'FARE_CHANGED',
+      `The fare changed to NPR ${fare.totalNpr}. Please check it and confirm again.`,
+    ).withDetails({ fare });
+  }
   // Availability is informational (the picker shows it). A request with nobody nearby still
   // searches: drivers come online, and the search ends in NO_DRIVERS on its own deadline.
   let row: TripRow;
@@ -236,6 +264,9 @@ export async function requestTrip(passengerId: string, body: TripRequestBody): P
       distanceMeters: trip.distanceMeters,
       durationSeconds: trip.durationSeconds,
       fareEstimateNpr: fare.totalNpr,
+      surgeMultiplier: surge.multiplier,
+      surgeLabel: surge.multiplier > 1 ? surge.label : null,
+      pickupZoneId: primaryZone(pickupZones)?.id ?? null,
       searchTimeoutSeconds: env.DISPATCH_SEARCH_TIMEOUT_SECONDS,
     });
   } catch (err) {
@@ -247,6 +278,17 @@ export async function requestTrip(passengerId: string, body: TripRequestBody): P
   await saveMeta(metaFromRow(row));
   await bumpTripVersion(row.id);
   await recordTripEvent({ tripId: row.id, type: 'TRIP_REQUESTED', actorId: passengerId });
+  if (surge.multiplier > 1) {
+    // A raised price is explainable afterwards: which rule, and what the rider was quoted.
+    await recordAudit({
+      actorId: passengerId,
+      actorRole: 'PASSENGER',
+      action: 'SURGE_APPLIED',
+      subjectType: 'trip',
+      subjectIds: [row.id],
+      detail: { multiplier: surge.multiplier, rules: surge.rules, totalNpr: fare.totalNpr },
+    });
+  }
   return row;
 }
 
@@ -402,6 +444,8 @@ export async function completeTrip(tripId: string, driverId: string): Promise<Tr
     { distanceMeters, durationSeconds },
     pricingFor(category),
     trip.waiting_charge_npr,
+    // The multiplier the rider was quoted when they requested, not whatever the rules say now.
+    { multiplier: Number(trip.surge_multiplier), label: trip.surge_label },
   );
   const done = await transition(tripId, {
     to: 'COMPLETED',
@@ -422,6 +466,8 @@ export async function completeTrip(tripId: string, driverId: string): Promise<Tr
     },
   });
   await createPendingPayment(tripId, finalNpr);
+  // Bonuses are a record beside the ride; a failure here never undoes a completed ride.
+  await evaluateIncentives(tripId).catch((err) => log.error('Incentive evaluation failed', err));
   return done;
 }
 

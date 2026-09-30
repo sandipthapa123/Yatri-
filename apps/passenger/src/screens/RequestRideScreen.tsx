@@ -2,6 +2,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ApiError, useAuth } from '@yatri/mobile-auth';
 import { ActionButton, CategoryPicker, Card, Fact, rideApi } from '@yatri/mobile-ride';
 import {
+  describeSurge,
   formatDistance,
   formatDuration,
   formatElapsed,
@@ -102,7 +103,12 @@ export function RequestRideScreen({ navigation }: Props) {
     if (!places || !selectedCode || requesting) return;
     setRequesting(true);
     setRequestError(null);
-    const body: TripRequestBody = { ...places, vehicleCategory: selectedCode };
+    // The rider confirms the total they were shown; if demand pricing moved, the server says so.
+    const body: TripRequestBody = {
+      ...places,
+      vehicleCategory: selectedCode,
+      confirmedTotalNpr: selected?.fare.totalNpr,
+    };
     try {
       const trip = await rideApi.request(await getAccessToken(), body);
       navigation.replace('TripTracking', { tripId: trip.id });
@@ -117,6 +123,10 @@ export function RequestRideScreen({ navigation }: Props) {
         } catch {
           /* fall through to the message */
         }
+      }
+      if (e instanceof ApiError && e.code === 'FARE_CHANGED') {
+        // Show the new fare (a fresh estimate) and ask again: nothing was requested.
+        setAttempt((n) => n + 1);
       }
       setRequestError(
         e instanceof ApiError ? e.message : 'Could not request the ride. Please try again.',
@@ -170,6 +180,25 @@ export function RequestRideScreen({ navigation }: Props) {
 
                 <Card {...ui} title="Estimate">
                   <Fact {...ui} label="Estimated fare" value={formatNpr(selected.fare.totalNpr)} />
+                  {selected.fare.surgeMultiplier > 1 ? (
+                    <View accessible accessibilityRole="alert">
+                      <Text style={{ color: theme.colors.textPrimary, fontWeight: '700' }}>
+                        {describeSurge(
+                          selected.fare.surgeMultiplier,
+                          selected.fare.surgeLabel,
+                          selected.fare.surgeNpr,
+                        )}
+                      </Text>
+                      <Text style={{ color: theme.colors.textSecondary }}>
+                        {`Normal fare ${formatNpr(selected.fare.totalNpr - selected.fare.surgeNpr)} plus ${formatNpr(selected.fare.surgeNpr)} for higher demand.`}
+                      </Text>
+                    </View>
+                  ) : null}
+                  {estimate.notices.map((n) => (
+                    <Text key={n} style={{ color: theme.colors.textPrimary }}>
+                      {n}
+                    </Text>
+                  ))}
                   <Fact
                     {...ui}
                     label="Distance"
@@ -200,7 +229,11 @@ export function RequestRideScreen({ navigation }: Props) {
 
             <ActionButton
               {...ui}
-              label={selected ? `Request ${selected.label}` : 'Request ride'}
+              label={
+                selected
+                  ? `Request ${selected.label} for ${formatNpr(selected.fare.totalNpr)}`
+                  : 'Request ride'
+              }
               tone="primary"
               busy={requesting}
               disabled={!selected}

@@ -1,4 +1,4 @@
-import type { FareBreakdown, WaitingRule } from '@yatri/types';
+import { applySurge, type FareBreakdown, type WaitingRule } from '@yatri/types';
 
 import type { PricingConfig } from './pricing.config';
 
@@ -7,9 +7,16 @@ import type { PricingConfig } from './pricing.config';
  * numbers they are given. The distance/time come from the RouteProvider (or, honestly
  * flagged, the straight-line estimate) — never from the client.
  */
+export interface SurgeQuote {
+  multiplier: number;
+  label: string | null;
+}
+export const NORMAL_PRICING: SurgeQuote = { multiplier: 1, label: null };
+
 export function estimateFare(
   input: { distanceMeters: number; durationSeconds: number | null; routeBased: boolean },
   cfg: PricingConfig,
+  surge: SurgeQuote = NORMAL_PRICING,
 ): FareBreakdown {
   const km = input.distanceMeters / 1000;
   const minutes = (input.durationSeconds ?? 0) / 60;
@@ -17,16 +24,21 @@ export function estimateFare(
   const timeNpr = Math.round(minutes * cfg.perMinuteNpr);
   const subtotal = cfg.baseNpr + distanceNpr + timeNpr;
   const minimumFareApplied = subtotal < cfg.minimumNpr;
+  // Demand pricing is one step on top of the normal fare (minimum included): total = normal + extra.
+  const { surgeNpr, totalNpr } = applySurge(Math.max(cfg.minimumNpr, subtotal), surge.multiplier);
   return {
     currency: 'NPR',
     baseNpr: cfg.baseNpr,
     distanceNpr,
     timeNpr,
     minimumFareApplied,
-    totalNpr: Math.max(cfg.minimumNpr, subtotal),
+    totalNpr,
     distanceMeters: Math.round(input.distanceMeters),
     durationSeconds: input.durationSeconds === null ? null : Math.round(input.durationSeconds),
     routeBased: input.routeBased,
+    surgeMultiplier: surge.multiplier,
+    surgeNpr,
+    surgeLabel: surge.multiplier > 1 ? surge.label : null,
   };
 }
 
@@ -39,8 +51,10 @@ export function finalFare(
   actual: { distanceMeters: number; durationSeconds: number },
   cfg: PricingConfig,
   waitingChargeNpr: number,
+  surge: SurgeQuote = NORMAL_PRICING,
 ): { fare: FareBreakdown; totalNpr: number } {
-  const fare = estimateFare({ ...actual, routeBased: false }, cfg);
+  // The multiplier is the one the rider was quoted when they requested (locked on the ride).
+  const fare = estimateFare({ ...actual, routeBased: false }, cfg, surge);
   return { fare, totalNpr: fare.totalNpr + waitingChargeNpr };
 }
 

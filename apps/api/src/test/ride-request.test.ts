@@ -262,13 +262,13 @@ describe('driver eligibility (matching)', () => {
     const mid = await make(undefined, north(THAMEL, 700));
     const ranked = await matchDrivers({ pickup: THAMEL, vehicleCategoryId: car.id });
     expect(ranked.map((c) => c.driverId)).toEqual([near, mid, far]);
-    expect(activeStrategy().name).toBe('proximity');
+    expect(activeStrategy().name).toBe('eta_workload');
 
     // a strategy only orders: it cannot add or drop candidates, and it is a pure function
     const sample = [
-      { driverId: 'a', distanceMeters: 500 },
-      { driverId: 'b', distanceMeters: 100 },
-      { driverId: 'c', distanceMeters: 300 },
+      { driverId: 'a', distanceMeters: 500, etaSeconds: 90, recentRides: 0 },
+      { driverId: 'b', distanceMeters: 100, etaSeconds: 20, recentRides: 0 },
+      { driverId: 'c', distanceMeters: 300, etaSeconds: 60, recentRides: 0 },
     ];
     const req = { pickup: THAMEL, vehicleCategoryId: null };
     const out = proximityStrategy.rank(sample, req);

@@ -7,7 +7,8 @@ import { ActionButton, type UiProps } from './RideUi';
 export function categoryLabel(o: RideCategoryOption, selected: boolean): string {
   const time =
     o.fare.durationSeconds === null ? '' : `, about ${formatDuration(o.fare.durationSeconds)}`;
-  return `${o.label}, ${formatNpr(o.fare.totalNpr)}${time}. ${
+  const surge = o.fare.surgeMultiplier > 1 ? ', higher demand pricing' : '';
+  return `${o.label}, ${formatNpr(o.fare.totalNpr)}${surge}${time}. ${
     o.available ? 'Available now.' : 'None available near you right now.'
   }${selected ? ' Selected.' : ''}`;
 }

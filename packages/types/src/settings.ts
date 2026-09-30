@@ -1,0 +1,299 @@
+/**
+ * Platform settings: the ONE registry of every value operations may change without a deploy —
+ * its key, words, kind and limits. The server validates against it, the admin screens render from it,
+ * and the values themselves live in one place (the `platform_settings` table, falling back to the
+ * environment default when nothing has been set). Apps never keep their own copy of a value: they
+ * receive what they need from the API.
+ *
+ * Adding a setting = adding one entry here, its environment default in the API config, and using
+ * `getSetting` where it applies. Nothing else lists settings.
+ */
+
+export const SETTING_GROUPS = [
+  'availability',
+  'fare',
+  'cancellation',
+  'waiting',
+  'notifications',
+] as const;
+export type SettingGroup = (typeof SETTING_GROUPS)[number];
+
+export const SETTING_GROUP_LABELS: Record<SettingGroup, string> = {
+  availability: 'Service availability',
+  fare: 'Fare parameters',
+  cancellation: 'Cancellation rules',
+  waiting: 'Waiting rules',
+  notifications: 'Notification settings',
+};
+
+export type SettingKind = 'boolean' | 'int' | 'number' | 'intList' | 'text';
+export type SettingValue = boolean | number | number[] | string;
+
+export interface SettingDef {
+  key: string;
+  group: SettingGroup;
+  label: string;
+  help: string;
+  kind: SettingKind;
+  /** Inclusive limits: a number's value, a list's items, a text's length. */
+  min?: number;
+  max?: number;
+  unit?: string;
+}
+
+export const PLATFORM_SETTINGS = [
+  {
+    key: 'SERVICE_REQUESTS_ENABLED',
+    group: 'availability',
+    label: 'Accept new ride requests',
+    help: 'Turn off to pause new requests (for example during an outage). Rides already under way are not affected.',
+    kind: 'boolean',
+  },
+  {
+    key: 'SERVICE_PAUSED_MESSAGE',
+    group: 'availability',
+    label: 'Message shown while requests are paused',
+    help: 'Passengers who try to request a ride while requests are paused are shown this.',
+    kind: 'text',
+    min: 1,
+    max: 200,
+  },
+  {
+    key: 'FARE_BASE_NPR',
+    group: 'fare',
+    label: 'Base fare',
+    help: 'Charged at the start of every ride.',
+    kind: 'int',
+    min: 0,
+    max: 100000,
+    unit: 'NPR',
+  },
+  {
+    key: 'FARE_PER_KM_NPR',
+    group: 'fare',
+    label: 'Price per kilometre',
+    help: 'Added for each kilometre of the route.',
+    kind: 'number',
+    min: 0,
+    max: 10000,
+    unit: 'NPR',
+  },
+  {
+    key: 'FARE_PER_MINUTE_NPR',
+    group: 'fare',
+    label: 'Price per minute',
+    help: 'Added for each minute of the ride.',
+    kind: 'number',
+    min: 0,
+    max: 10000,
+    unit: 'NPR',
+  },
+  {
+    key: 'FARE_MINIMUM_NPR',
+    group: 'fare',
+    label: 'Minimum fare',
+    help: 'No ride costs less than this.',
+    kind: 'int',
+    min: 0,
+    max: 100000,
+    unit: 'NPR',
+  },
+  {
+    key: 'CANCEL_FREE_SECONDS',
+    group: 'cancellation',
+    label: 'Free cancellation window',
+    help: 'A passenger who cancels within this long of a driver being assigned pays nothing.',
+    kind: 'int',
+    min: 0,
+    max: 3600,
+    unit: 'seconds',
+  },
+  {
+    key: 'CANCEL_FEE_NPR',
+    group: 'cancellation',
+    label: 'Cancellation fee',
+    help: 'Recorded when a passenger cancels after the free window. 0 means no fee.',
+    kind: 'int',
+    min: 0,
+    max: 100000,
+    unit: 'NPR',
+  },
+  {
+    key: 'WAITING_FREE_SECONDS',
+    group: 'waiting',
+    label: 'Free waiting time',
+    help: 'How long a driver waits at the pickup before waiting is charged.',
+    kind: 'int',
+    min: 0,
+    max: 3600,
+    unit: 'seconds',
+  },
+  {
+    key: 'WAITING_PER_MINUTE_NPR',
+    group: 'waiting',
+    label: 'Waiting charge',
+    help: 'Charged for each minute of waiting after the free time.',
+    kind: 'number',
+    min: 0,
+    max: 10000,
+    unit: 'NPR per minute',
+  },
+  {
+    key: 'NO_SHOW_AFTER_SECONDS',
+    group: 'waiting',
+    label: 'Driver may report no-show after',
+    help: 'How long a driver must wait before they can report that the passenger did not arrive.',
+    kind: 'int',
+    min: 1,
+    max: 7200,
+    unit: 'seconds',
+  },
+  {
+    key: 'WAITING_NOTIFY_SECONDS',
+    group: 'notifications',
+    label: 'Waiting reminders at',
+    help: 'Seconds of waiting at which the passenger and driver are reminded. Comma separated, for example 120,240,360.',
+    kind: 'intList',
+    min: 1,
+    max: 7200,
+    unit: 'seconds',
+  },
+  {
+    key: 'NEARBY_NOTIFY_METERS',
+    group: 'notifications',
+    label: 'Driver-nearby alerts at',
+    help: 'Distances (metres) at which the passenger is told the driver is close. Comma separated, for example 1000,500,200.',
+    kind: 'intList',
+    min: 1,
+    max: 50000,
+    unit: 'metres',
+  },
+] as const satisfies readonly SettingDef[];
+
+export type SettingKey = (typeof PLATFORM_SETTINGS)[number]['key'];
+export const SETTING_KEYS: readonly SettingKey[] = PLATFORM_SETTINGS.map((s) => s.key);
+
+export function settingDef(key: string): SettingDef | undefined {
+  return (PLATFORM_SETTINGS as readonly SettingDef[]).find((s) => s.key === key);
+}
+
+/** What a stored/entered value must look like: null message = valid. The one validation rule. */
+export type SettingCheck = { ok: true; value: SettingValue } | { ok: false; message: string };
+
+const inRange = (n: number, def: SettingDef) =>
+  (def.min === undefined || n >= def.min) && (def.max === undefined || n <= def.max);
+const rangeWords = (def: SettingDef) =>
+  `between ${def.min ?? '-∞'} and ${def.max ?? '∞'}${def.unit ? ` ${def.unit}` : ''}`;
+
+/**
+ * Check a raw value (from JSON, or text typed into a form) against its definition. Text input is
+ * accepted for numbers, booleans and lists so the same rule serves the API and the admin form.
+ */
+export function checkSettingValue(def: SettingDef, raw: unknown): SettingCheck {
+  switch (def.kind) {
+    case 'boolean': {
+      if (typeof raw === 'boolean') return { ok: true, value: raw };
+      if (raw === 'true' || raw === 'on') return { ok: true, value: true };
+      if (raw === 'false' || raw === 'off') return { ok: true, value: false };
+      return { ok: false, message: `${def.label} must be on or off.` };
+    }
+    case 'int':
+    case 'number': {
+      const n =
+        typeof raw === 'number'
+          ? raw
+          : typeof raw === 'string' && raw.trim() !== ''
+            ? Number(raw)
+            : NaN;
+      if (!Number.isFinite(n)) return { ok: false, message: `${def.label} must be a number.` };
+      if (def.kind === 'int' && !Number.isInteger(n)) {
+        return { ok: false, message: `${def.label} must be a whole number.` };
+      }
+      if (!inRange(n, def))
+        return { ok: false, message: `${def.label} must be ${rangeWords(def)}.` };
+      return { ok: true, value: n };
+    }
+    case 'intList': {
+      const items = Array.isArray(raw)
+        ? raw
+        : typeof raw === 'string'
+          ? raw.split(',').map((s) => s.trim())
+          : null;
+      if (!items || items.length === 0 || items.length > 20) {
+        return { ok: false, message: `${def.label} needs between 1 and 20 numbers.` };
+      }
+      const nums = items.map((i) => (typeof i === 'number' ? i : i === '' ? NaN : Number(i)));
+      if (nums.some((n) => !Number.isInteger(n) || !inRange(n, def))) {
+        return {
+          ok: false,
+          message: `Each item of ${def.label} must be a whole number ${rangeWords(def)}.`,
+        };
+      }
+      return { ok: true, value: [...new Set(nums)].sort((a, b) => a - b) };
+    }
+    case 'text': {
+      if (typeof raw !== 'string') return { ok: false, message: `${def.label} must be text.` };
+      const t = raw.trim();
+      if (t.length < (def.min ?? 0) || t.length > (def.max ?? Infinity)) {
+        return {
+          ok: false,
+          message: `${def.label} must be ${def.min ?? 0} to ${def.max ?? '∞'} characters.`,
+        };
+      }
+      return { ok: true, value: t };
+    }
+  }
+}
+
+/** A value as words, for lists and the audit trail ("on", "NPR 50", "120, 240, 360"). One formatter. */
+export function describeSettingValue(def: SettingDef, value: SettingValue): string {
+  if (typeof value === 'boolean') return value ? 'on' : 'off';
+  if (Array.isArray(value)) return `${value.join(', ')}${def.unit ? ` ${def.unit}` : ''}`;
+  if (typeof value === 'number') return def.unit ? `${value} ${def.unit}` : String(value);
+  return value;
+}
+
+/** One setting as the admin sees it. */
+export interface PlatformSettingInfo {
+  key: string;
+  group: SettingGroup;
+  label: string;
+  help: string;
+  kind: SettingKind;
+  unit: string | null;
+  /** The value in force now. */
+  value: SettingValue;
+  /** What it falls back to when unset (the deployment default). */
+  defaultValue: SettingValue;
+  /** True when an admin has set it (false = using the default). */
+  overridden: boolean;
+  /** Changes with every edit; an edit must quote the version it was based on. */
+  version: number;
+  updatedAt: string | null;
+  updatedByName: string | null;
+}
+
+export interface PlatformSettingsResponse {
+  settings: PlatformSettingInfo[];
+  canManage: boolean;
+}
+
+export interface UpdateSettingBody {
+  value: unknown;
+  /** The version the admin saw; a stale one is refused so two admins cannot overwrite each other. */
+  expectedVersion: number;
+  /** Why (kept in the audit log). */
+  reason: string;
+}
+
+/**
+ * What the apps may know: the values in force, read from the same store. Apps display these and
+ * never decide with them (the server prices, cancels and gates requests itself).
+ */
+export interface PublicPlatformConfig {
+  requestsEnabled: boolean;
+  pausedMessage: string | null;
+  fare: { baseNpr: number; perKmNpr: number; perMinuteNpr: number; minimumNpr: number };
+  cancellation: { freeSeconds: number; feeNpr: number };
+  waiting: { freeSeconds: number; perMinuteNpr: number; noShowAfterSeconds: number };
+}

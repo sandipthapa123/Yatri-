@@ -1,6 +1,10 @@
+import { WAITING_TRIP_STATUSES } from '@yatri/types';
+
 import { query } from '../../lib/db';
+import { sqlIn } from '../../lib/sql';
 import { env } from '../../config/env';
 import { offerNext } from '../dispatch/dispatch.service';
+import { settingList } from '../settings/settings.service';
 import { bumpTripVersion, loadMeta, saveMeta } from '../tracking/tracking.service';
 import { recordTripEvent } from './trip-events.service';
 import { driverDropsOut, metaFromRow } from './trips.service';
@@ -28,7 +32,7 @@ function highestCrossed(seconds: number, thresholds: number[]): number | null {
 
 export async function sweepTrips(nowMs = Date.now()): Promise<TripSweepResult> {
   const out: TripSweepResult = { waitingEvents: 0, rematched: [] };
-  const thresholds = env.WAITING_NOTIFY_SECONDS;
+  const thresholds = settingList('WAITING_NOTIFY_SECONDS');
 
   const waiting = await query<{
     id: string;
@@ -37,7 +41,7 @@ export async function sweepTrips(nowMs = Date.now()): Promise<TripSweepResult> {
     arrived_at: Date | null;
   }>(
     `SELECT id, status, matched_at, arrived_at FROM trips
-     WHERE status IN ('DRIVER_EN_ROUTE', 'DRIVER_ARRIVED')`,
+     WHERE status IN ${sqlIn(WAITING_TRIP_STATUSES)}`,
   );
   for (const t of waiting.rows) {
     const arrived = t.status === 'DRIVER_ARRIVED';
@@ -71,7 +75,7 @@ export async function sweepTrips(nowMs = Date.now()): Promise<TripSweepResult> {
   const lost = await query<{ id: string; driver_id: string }>(
     `SELECT t.id, t.driver_id FROM trips t
      JOIN driver_availability a ON a.driver_id = t.driver_id
-     WHERE t.status IN ('DRIVER_EN_ROUTE', 'DRIVER_ARRIVED')
+     WHERE t.status IN ${sqlIn(WAITING_TRIP_STATUSES)}
        AND a.state <> 'ONLINE'
        AND a.state_changed_at < now() - ($1::int * interval '1 second')`,
     [env.TRIP_DRIVER_LOST_SECONDS],

@@ -28,6 +28,14 @@ export const canSosTransition = (from: SosStatus, to: SosStatus) =>
 export const sosStatesLeadingTo = (to: SosStatus): SosStatus[] =>
   SOS_STATES.filter((from) => canSosTransition(from, to));
 
+/** An alert's state as the safety team reads it (the person's own wording is `describeSosStatus`). */
+export const SOS_STATUS_LABELS: Record<SosStatus, string> = {
+  ACTIVE: 'Active: needs attention',
+  ACKNOWLEDGED: 'Acknowledged',
+  RESOLVED: 'Resolved',
+  CANCELLED: 'Cancelled by the person',
+};
+
 export type SosLocationSource = 'DEVICE' | 'DRIVER_FEED' | 'NONE';
 
 /** What a person may send with an SOS. Everything is optional: an emergency must never be refused. */
@@ -126,6 +134,10 @@ export const INCIDENT_TRANSITIONS: Record<IncidentStatus, readonly IncidentStatu
 };
 export const canIncidentTransition = (from: IncidentStatus, to: IncidentStatus) =>
   INCIDENT_TRANSITIONS[from].includes(to);
+/** Reports still being handled: every state that can still move (derived, so it follows the table). */
+export const OPEN_INCIDENT_STATES: readonly IncidentStatus[] = INCIDENT_STATES.filter(
+  (s) => INCIDENT_TRANSITIONS[s].length > 0,
+);
 export const incidentStatesLeadingTo = (to: IncidentStatus): IncidentStatus[] =>
   INCIDENT_STATES.filter((from) => canIncidentTransition(from, to));
 

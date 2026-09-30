@@ -1,7 +1,7 @@
 import type { TripStatus } from '@yatri/types';
 
-import { env } from '../../config/env';
 import { HttpError } from '../../middleware/errorHandler';
+import { settingNumber } from '../settings/settings.service';
 
 /**
  * THE cancellation rules. One pure function decides whether a cancellation is allowed and what it
@@ -19,8 +19,8 @@ export interface CancellationRules {
 }
 
 export const cancellationRules = (): CancellationRules => ({
-  freeSeconds: env.CANCEL_FREE_SECONDS,
-  feeNpr: env.CANCEL_FEE_NPR,
+  freeSeconds: settingNumber('CANCEL_FREE_SECONDS'),
+  feeNpr: settingNumber('CANCEL_FEE_NPR'),
 });
 
 export interface CancellationDecision {

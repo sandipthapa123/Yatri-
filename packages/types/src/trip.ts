@@ -52,6 +52,9 @@ export const ASSIGNED_TRIP_STATUSES: readonly TripStatus[] = [
   'IN_PROGRESS',
 ];
 
+/** Statuses in which a driver has been assigned but the ride has not started (waiting, arriving). */
+export const WAITING_TRIP_STATUSES: readonly TripStatus[] = ['DRIVER_EN_ROUTE', 'DRIVER_ARRIVED'];
+
 export const TERMINAL_TRIP_STATUSES: readonly TripStatus[] = [
   'COMPLETED',
   'CANCELLED',

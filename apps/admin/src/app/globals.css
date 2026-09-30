@@ -29,3 +29,72 @@ body {
 a {
   color: var(--color-primary);
 }
+
+/* ---- console shell: keyboard-first, visible focus, no colour-only meaning ---- */
+:focus-visible {
+  outline: 3px solid var(--color-text-primary);
+  outline-offset: 2px;
+}
+.skip-link {
+  position: absolute;
+  left: 8px;
+  top: -60px;
+  z-index: 100;
+  padding: 10px 14px;
+  background: var(--color-text-primary);
+  color: var(--color-background);
+  border-radius: 8px;
+  font-weight: 700;
+}
+.skip-link:focus {
+  top: 8px;
+}
+.console-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 24px;
+  padding: 10px 24px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+.console-brand {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--color-primary);
+}
+.console-nav ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.console-nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 8px;
+  color: var(--color-text-primary);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 14px;
+}
+.console-nav a:hover {
+  background: var(--color-border);
+}
+.console-nav a[aria-current='page'] {
+  text-decoration: underline;
+  text-underline-offset: 6px;
+  text-decoration-thickness: 3px;
+  color: var(--color-primary);
+}
+.console-main {
+  outline: none;
+}
+.table-scroll {
+  overflow-x: auto;
+}

@@ -1,6 +1,6 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { resolveMediaUrl, useAuth } from '@yatri/mobile-auth';
-import type { AccountStatus } from '@yatri/types';
+import { ACCOUNT_STATUS_LABELS } from '@yatri/types';
 import * as ImagePicker from 'expo-image-picker';
 import { useState } from 'react';
 import {
@@ -21,12 +21,6 @@ import type { RootStackParamList } from '../navigation/RootNavigator';
 import { useTheme } from '../theme/useTheme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Profile'>;
-
-const ACCOUNT_STATUS_LABEL: Record<AccountStatus, string> = {
-  ACTIVE: 'Active',
-  SUSPENDED: 'Suspended',
-  DEACTIVATED: 'Deactivated',
-};
 
 function initials(name: string | null): string {
   if (!name) return '?';
@@ -50,7 +44,7 @@ export function ProfileScreen({ navigation }: Props) {
   const [deactivating, setDeactivating] = useState(false);
 
   const accountStatus = user?.status ?? 'ACTIVE';
-  const accountStatusLabel = ACCOUNT_STATUS_LABEL[accountStatus];
+  const accountStatusLabel = ACCOUNT_STATUS_LABELS[accountStatus];
 
   async function handleChangePicture() {
     setPictureError(undefined);

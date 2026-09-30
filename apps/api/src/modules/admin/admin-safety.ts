@@ -26,18 +26,14 @@ import type {
   lowRatingsQuerySchema,
 } from '../safety/safety.validators';
 import { listSos, sosDetail, toSosInfo, transitionSos } from '../safety/sos.service';
-import { hasPermission } from './permissions';
 
 /**
- * The safety team's endpoints. Everything needs SAFETY_REVIEW (holding the admin role is not enough),
+ * The safety team's endpoints. The router requires SAFETY_REVIEW for all of them (holding the admin role is not enough),
  * every read of an alert or a report is audited, and every change goes through the same service the
  * rest of the system uses — no admin-only path around a state machine.
  */
 async function safetyAdmin(req: Request): Promise<string> {
   if (!req.auth) throw new HttpError(401, 'UNAUTHENTICATED', 'Authentication required.');
-  if (!(await hasPermission(req.auth.userId, 'SAFETY_REVIEW'))) {
-    throw new HttpError(403, 'FORBIDDEN', 'You do not have permission to handle safety alerts.');
-  }
   return req.auth.userId;
 }
 const idParam = (req: Request) => {

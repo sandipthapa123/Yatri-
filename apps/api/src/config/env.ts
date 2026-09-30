@@ -71,8 +71,8 @@ const envSchema = z
     // --- Admin seed (development only; never a hard-coded default) ---
     ADMIN_SEED_EMAIL: z.string().email().optional(),
     ADMIN_SEED_PASSWORD: z.string().min(12).optional(),
-    // Development only: comma-separated admin permissions granted to the seeded admin
-    // (e.g. DRIVER_LOCATION_VIEW). Real environments grant these deliberately, per admin.
+    // Development only: comma-separated admin permissions granted to the seeded admin, or ALL
+    // (e.g. OPERATIONS_VIEW,DRIVER_LOCATION_VIEW). Real environments grant these deliberately, per admin.
     ADMIN_SEED_PERMISSIONS: z
       .string()
       .default('')
@@ -191,6 +191,23 @@ const envSchema = z
     // the ride (not charged: payments are a later phase). 0 disables the fee.
     CANCEL_FREE_SECONDS: z.coerce.number().int().min(0).default(120),
     CANCEL_FEE_NPR: z.coerce.number().int().min(0).default(0),
+    // --- Platform settings (see @yatri/types settings.ts and settings/settings.service.ts) ---
+    // Every setting an admin may change has its default here (the FARE_*, CANCEL_*, WAITING_*,
+    // NO_SHOW_* and *_NOTIFY_* values above and below); the database only holds what an admin set.
+    SERVICE_REQUESTS_ENABLED: z
+      .enum(['true', 'false'])
+      .default('true')
+      .transform((v) => v === 'true'),
+    SERVICE_PAUSED_MESSAGE: z
+      .string()
+      .trim()
+      .min(1)
+      .max(200)
+      .default('Ride requests are paused for a short while. Please try again soon.'),
+    // How long a process trusts its copy of the settings before re-reading them (0 = every request).
+    SETTINGS_CACHE_SECONDS: z.coerce.number().int().min(0).default(10),
+    // The time zone that days and "today" mean in dashboards and reports.
+    PLATFORM_TIME_ZONE: z.string().trim().min(1).default('Asia/Kathmandu'),
     DISPATCH_MAX_OFFERS: z.coerce.number().int().positive().default(6),
     // An assigned driver silent for this long (still en route) is replaced by re-matching.
     TRIP_DRIVER_LOST_SECONDS: z.coerce.number().int().positive().default(120),

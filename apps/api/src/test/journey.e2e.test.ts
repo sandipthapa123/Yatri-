@@ -217,7 +217,7 @@ describe('the whole ride, from passenger, driver and admin', () => {
     const email = `journey-admin-${Date.now()}@example.com`;
     const adminToken = await loginTestAdmin(email, 'a-strong-test-password-1');
     await pool.query(
-      "UPDATE users SET admin_permissions = ARRAY['TRIP_CHAT_VIEW'] WHERE email = $1",
+      "UPDATE users SET admin_permissions = ARRAY['OPERATIONS_VIEW', 'TRIP_CHAT_VIEW'] WHERE email = $1",
       [email],
     );
     const d = (await api.get(`/api/v1/admin/trips/${tripId}`).set(auth(adminToken))).body.data;

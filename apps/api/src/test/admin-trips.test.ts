@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { pool } from '../config/database';
-import { api, loginTestAdmin, onboardUser } from './helpers';
+import { BASELINE_ADMIN_PERMISSIONS, api, loginTestAdmin, onboardUser } from './helpers';
 import { arriveAtPickup, auth, driverAt, north, requestRide, rideWorld, THAMEL } from './rides';
 
 let n = 0;
@@ -10,7 +10,8 @@ async function admin(permissions: string[] = []) {
   const token = await loginTestAdmin(email, 'a-strong-test-password-1');
   await pool.query('UPDATE users SET admin_permissions = $2::text[] WHERE email = $1', [
     email,
-    permissions,
+    // What the admin could always do (see the ride), plus exactly the extra permissions under test.
+    [...BASELINE_ADMIN_PERMISSIONS, ...permissions],
   ]);
   const id = (await pool.query('SELECT id FROM users WHERE email = $1', [email])).rows[0].id;
   return { token, id: id as string };

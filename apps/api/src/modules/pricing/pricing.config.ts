@@ -1,6 +1,6 @@
-import { env } from '../../config/env';
+import { settingNumber } from '../settings/settings.service';
 
-/** THE fare and waiting rules, from configuration. Nothing else in the system restates them. */
+/** THE fare and waiting rules, from the platform settings (admin-editable, environment default). Nothing else in the system restates them. */
 export interface PricingConfig {
   baseNpr: number;
   perKmNpr: number;
@@ -13,12 +13,12 @@ export interface PricingConfig {
 
 export function pricingConfig(): PricingConfig {
   return {
-    baseNpr: env.FARE_BASE_NPR,
-    perKmNpr: env.FARE_PER_KM_NPR,
-    perMinuteNpr: env.FARE_PER_MINUTE_NPR,
-    minimumNpr: env.FARE_MINIMUM_NPR,
-    waitingFreeSeconds: env.WAITING_FREE_SECONDS,
-    waitingPerMinuteNpr: env.WAITING_PER_MINUTE_NPR,
-    noShowAfterSeconds: env.NO_SHOW_AFTER_SECONDS,
+    baseNpr: settingNumber('FARE_BASE_NPR'),
+    perKmNpr: settingNumber('FARE_PER_KM_NPR'),
+    perMinuteNpr: settingNumber('FARE_PER_MINUTE_NPR'),
+    minimumNpr: settingNumber('FARE_MINIMUM_NPR'),
+    waitingFreeSeconds: settingNumber('WAITING_FREE_SECONDS'),
+    waitingPerMinuteNpr: settingNumber('WAITING_PER_MINUTE_NPR'),
+    noShowAfterSeconds: settingNumber('NO_SHOW_AFTER_SECONDS'),
   };
 }

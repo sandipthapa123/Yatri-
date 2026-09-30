@@ -148,3 +148,24 @@ a hardware keyboard (or switch access) before relying on it.
    alert…** needs the in-page confirmation and a note), an incident (status form offers only the
    moves the ride's state allows). Every result is announced in a status region. There is no browser
    alert/confirm dialog anywhere.
+
+## K. Admin console (keyboard and screen reader)
+
+Structural checks are automated (`admin-ops.test.ts`, "admin accessibility"); none of this has been run with a
+real screen reader yet. Do all of it with NVDA (or VoiceOver) and the keyboard only:
+
+1. First Tab stop is **Skip to the main content**; activating it moves focus into the page. There is one main
+   landmark and a "Main" navigation; the current page is read as "current page" and is underlined.
+2. Every menu entry you cannot use is absent (sign in as an administrator with few permissions). Opening a page
+   you lack by address shows "You do not have access to ..." and nothing else.
+3. Dashboard: each figure reads as "Label, number" and, where there is a list behind it, the label is a link.
+   The 15-second refresh has an on/off checkbox, never moves focus and does not announce.
+4. Filters (period, search, selects) are reachable in order, each with its label; **Apply** submits with Enter.
+   Tables read their caption first, then column headers with each cell; sort links say "(sorted)".
+5. Change a setting: **Change ...** moves focus into the field; **Review this change** moves focus to the
+   "Are you sure?" sentence, which states old and new values; **Yes, change it** announces "... changed" and
+   focus returns to the **Change ...** button. Escape steps back at every stage. Try a stale edit from two
+   windows: the message says someone else changed it.
+6. Users: suspend and reactivate use the same confirmation and need a reason; the result is announced.
+7. Administrators: permission checkboxes read their name and what they allow; ones you cannot grant say so.
+8. No browser dialog appears anywhere. Zoom to 200% and 400%: nothing is cut off, tables scroll sideways.

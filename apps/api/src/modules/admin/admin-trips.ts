@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import {
+  ACTIVE_TRIP_STATUSES,
   DISPUTE_STATUSES,
   TRIP_STATUSES,
   type AdminDisputeRow,
@@ -15,6 +16,7 @@ import { z } from 'zod';
 
 import { env } from '../../config/env';
 import { query } from '../../lib/db';
+import { sqlIn } from '../../lib/sql';
 import { HttpError } from '../../middleware/errorHandler';
 import { locationFreshness } from '../availability/availability.machine';
 import { listCallsForTrip } from '../calls/calls.service';
@@ -27,10 +29,15 @@ import { listTripEvents } from '../trips/trip-events.service';
 import { destinationOf, getTrip, pickupOf } from '../trips/trips.repository';
 import { adminCancelTrip, metaFromRow } from '../trips/trips.service';
 import { computeWaiting } from '../trips/waiting';
+import { likeContains, rangeFields, resolveRange } from './admin-range';
 import { hasPermission, recordAdminAccess } from './permissions';
 
 export const adminTripsQuerySchema = z.object({
+  ...rangeFields,
   status: z.enum(TRIP_STATUSES).optional(),
+  /** active = still live, ended = completed / cancelled / no driver. */
+  group: z.enum(['active', 'ended']).optional(),
+  sort: z.enum(['live', 'newest', 'oldest', 'fare']).default('live'),
   search: z.string().trim().max(100).optional(),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(50).default(20),
@@ -70,9 +77,26 @@ export async function listTripsHandler(
     LEFT JOIN users d ON d.id = t.driver_id
     WHERE ($1::text IS NULL OR t.status = $1)
       AND ($2::text IS NULL
-           OR p.full_name ILIKE '%' || $2 || '%' OR p.phone_number ILIKE '%' || $2 || '%'
-           OR d.full_name ILIKE '%' || $2 || '%' OR d.phone_number ILIKE '%' || $2 || '%')`;
-  const filter = [q.status ?? null, q.search || null];
+           OR p.full_name ILIKE $2 ESCAPE '!' OR p.phone_number ILIKE $2 ESCAPE '!'
+           OR d.full_name ILIKE $2 ESCAPE '!' OR d.phone_number ILIKE $2 ESCAPE '!')
+      AND ($3::text IS NULL OR ($3 = 'active') = (t.status IN ${sqlIn(ACTIVE_TRIP_STATUSES)}))
+      AND ($4::timestamptz IS NULL OR t.requested_at >= $4)
+      AND ($5::timestamptz IS NULL OR t.requested_at < $5)`;
+  // A period is only applied when one was asked for; otherwise every ride is listed.
+  const period = q.range || q.from || q.to ? await resolveRange(q) : null;
+  const filter = [
+    q.status ?? null,
+    q.search ? likeContains(q.search) : null,
+    q.group ?? null,
+    period?.from ?? null,
+    period?.to ?? null,
+  ];
+  const order = {
+    live: `(t.status IN ${sqlIn(ACTIVE_TRIP_STATUSES)}) DESC, t.requested_at DESC`,
+    newest: 't.requested_at DESC',
+    oldest: 't.requested_at ASC',
+    fare: 'COALESCE(t.fare_final_npr, t.fare_estimate_npr) DESC NULLS LAST, t.requested_at DESC',
+  }[q.sort];
   const [rows, count] = await Promise.all([
     query<{
       id: string;
@@ -85,19 +109,19 @@ export async function listTripsHandler(
       dest_address: string;
       requested_at: Date;
       ended_at: Date | null;
+      fare: number | null;
       payment_status: AdminTripRow['paymentStatus'] | null;
       open_disputes: string;
     }>(
       `SELECT t.id, t.status, p.full_name AS passenger_name, d.full_name AS driver_name,
               pl.place_name AS pickup_name, pl.address AS pickup_address,
               dl.place_name AS dest_name, dl.address AS dest_address,
-              t.requested_at, t.ended_at,
+              t.requested_at, t.ended_at, COALESCE(t.fare_final_npr, t.fare_estimate_npr) AS fare,
               (SELECT status FROM trip_payments WHERE trip_id = t.id) AS payment_status,
               (SELECT count(*) FROM trip_disputes WHERE trip_id = t.id AND status = 'OPEN')::text AS open_disputes
        ${from}
-       ORDER BY (t.status IN ('SEARCHING', 'DRIVER_EN_ROUTE', 'DRIVER_ARRIVED', 'IN_PROGRESS')) DESC,
-                t.requested_at DESC
-       LIMIT $3 OFFSET $4`,
+       ORDER BY ${order}, t.id
+       LIMIT $6 OFFSET $7`,
       [...filter, q.pageSize, (q.page - 1) * q.pageSize],
     ),
     query<{ n: string }>(`SELECT count(*)::text AS n ${from}`, filter),
@@ -115,6 +139,7 @@ export async function listTripsHandler(
         destinationName: r.dest_name ?? r.dest_address,
         requestedAt: r.requested_at.toISOString(),
         endedAt: r.ended_at?.toISOString() ?? null,
+        fareNpr: r.fare,
         paymentStatus: r.payment_status ?? 'NONE',
         openDisputes: Number(r.open_disputes),
       })),

@@ -1,6 +1,8 @@
 import { randomInt } from 'node:crypto';
+import type { AdminPermission } from '@yatri/types';
 import request, { type Response as SupertestResponse } from 'supertest';
 
+import { pool } from '../config/database';
 import { createApp } from '../app';
 import { hashSecret, PASSWORD_HASH_ROUNDS } from '../lib/password';
 import { createAdmin } from '../modules/users/users.repository';
@@ -47,13 +49,38 @@ export async function onboardUser(
   return { phoneNumber, role, user, accessToken, refreshToken, isNewUser };
 }
 
-export async function createTestAdmin(email: string, password: string) {
+/**
+ * What an admin could do before permissions were granular: run operations, review drivers, cancel
+ * rides, decide disputes. Test admins get this by default; a test that is about a permission passes
+ * exactly the set it wants (including none).
+ */
+export const BASELINE_ADMIN_PERMISSIONS: AdminPermission[] = [
+  'OPERATIONS_VIEW',
+  'DRIVERS_REVIEW',
+  'RIDES_MANAGE',
+  'DISPUTES_MANAGE',
+];
+
+export async function createTestAdmin(
+  email: string,
+  password: string,
+  permissions: AdminPermission[] = BASELINE_ADMIN_PERMISSIONS,
+) {
   const passwordHash = await hashSecret(password, PASSWORD_HASH_ROUNDS);
-  return createAdmin(email, passwordHash, 'Test Admin');
+  const admin = await createAdmin(email, passwordHash, 'Test Admin');
+  await pool.query('UPDATE users SET admin_permissions = $2::text[] WHERE id = $1', [
+    admin.id,
+    permissions,
+  ]);
+  return admin;
 }
 
-export async function loginTestAdmin(email: string, password: string): Promise<string> {
-  await createTestAdmin(email, password);
+export async function loginTestAdmin(
+  email: string,
+  password: string,
+  permissions?: AdminPermission[],
+): Promise<string> {
+  await createTestAdmin(email, password, permissions);
   const res = await api.post('/api/v1/auth/admin/login').send({ email, password });
   if (res.status !== 200) throw new Error(`admin login failed: ${JSON.stringify(res.body)}`);
   return res.body.data.accessToken as string;

@@ -6,6 +6,8 @@
  * environment, create admin accounts out-of-band (direct DB insert by an
  * operator, or a future admin-invite flow), not with this script.
  */
+import { ADMIN_PERMISSIONS } from '@yatri/types';
+
 import { env, isProduction } from '../src/config/env';
 import { hashSecret, PASSWORD_HASH_ROUNDS } from '../src/lib/password';
 import { createAdmin, findUserByEmail } from '../src/modules/users/users.repository';
@@ -13,11 +15,21 @@ import { pool } from '../src/config/database';
 
 async function grantPermissions(adminId: string) {
   if (env.ADMIN_SEED_PERMISSIONS.length === 0) return;
+  // ALL means every permission that exists (development convenience); names are checked against the one list.
+  const wanted = env.ADMIN_SEED_PERMISSIONS.includes('ALL')
+    ? [...ADMIN_PERMISSIONS]
+    : env.ADMIN_SEED_PERMISSIONS;
+  const unknown = wanted.filter((p) => !(ADMIN_PERMISSIONS as readonly string[]).includes(p));
+  if (unknown.length > 0) {
+    console.error(`Unknown permission(s) in ADMIN_SEED_PERMISSIONS: ${unknown.join(', ')}`);
+    process.exitCode = 1;
+    return;
+  }
   await pool.query('UPDATE users SET admin_permissions = $2::text[] WHERE id = $1', [
     adminId,
-    env.ADMIN_SEED_PERMISSIONS,
+    wanted,
   ]);
-  console.log(`Granted permissions: ${env.ADMIN_SEED_PERMISSIONS.join(', ')}`);
+  console.log(`Granted permissions: ${wanted.join(', ')}`);
 }
 
 async function main() {

@@ -20,6 +20,8 @@ export * from './safety';
 export * from './realtime';
 export * from './format';
 export * from './admin';
+export * from './admin-ops';
+export * from './settings';
 export * from './availability';
 export * from './geo';
 

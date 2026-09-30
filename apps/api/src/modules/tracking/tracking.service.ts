@@ -13,6 +13,7 @@ import { getRedisClient } from '../../config/redis';
 import { reverseGeocode } from '../location/location.service';
 import { getRouteProvider } from '../location/providers';
 import { pricingConfig } from '../pricing/pricing.config';
+import { settingList } from '../settings/settings.service';
 import { publishTripChange } from '../realtime/bus';
 import { getLastEventSeq, recordTripEvent } from '../trips/trip-events.service';
 import { ODOMETER_MIN_STEP_METERS } from '../trips/ride-actuals';
@@ -242,7 +243,7 @@ export async function applyLocationUpdate(input: {
 /** "Driver is 500 meters away": raised once per configured threshold as the driver closes in. */
 async function maybeNearby(meta: TripMeta, distanceMeters: number) {
   if (meta.status !== 'DRIVER_EN_ROUTE') return;
-  const thresholds = env.NEARBY_NOTIFY_METERS; // ascending
+  const thresholds = settingList('NEARBY_NOTIFY_METERS'); // ascending
   const crossed = thresholds.find((t) => distanceMeters <= t);
   if (crossed === undefined) return;
   const redis = getRedisClient();

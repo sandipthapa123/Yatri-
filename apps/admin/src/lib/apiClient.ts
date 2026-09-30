@@ -1,5 +1,26 @@
 import type {
+  AdminAccountRow,
+  AdminAuditRow,
   AdminDisputeRow,
+  AdminListResponse,
+  AdminMe,
+  AdminNotificationRow,
+  AdminPaymentRow,
+  AdminUserDetail,
+  AdminUserRow,
+  AppUser,
+  AdminVehicleCategory,
+  AdminVehicleRow,
+  AnalyticsData,
+  DashboardData,
+  DriverEarningsRow,
+  FinanceSummary,
+  NotificationSummary,
+  PlatformSettingInfo,
+  PlatformSettingsResponse,
+  SetPermissionsBody,
+  UpdateSettingBody,
+  VehicleCategoryBody,
   AdminIncidentDetail,
   AdminIncidentRow,
   AdminLowRating,
@@ -16,7 +37,6 @@ import type {
   AdminDriverListResponse,
   ApiErrorShape,
   ApiResponse,
-  AppUser,
   DocumentSummary,
   DriverStatus,
   VerificationEvent,
@@ -97,8 +117,8 @@ export function refreshAdminSession(refreshToken: string) {
   return request<SessionPayload>('/auth/refresh', { method: 'POST', body: { refreshToken } });
 }
 
-export function getAdminMe(accessToken: string): Promise<AppUser> {
-  return adminRequest<AppUser>('/me', accessToken);
+export function getAdminMe(accessToken: string): Promise<AdminMe> {
+  return adminRequest<AdminMe>('/me', accessToken);
 }
 
 export interface ListAdminDriversParams {
@@ -258,8 +278,10 @@ const toQuery = (params: object) => {
   return s ? `?${s}` : '';
 };
 
-export interface ListTripsParams {
+export interface ListTripsParams extends RangeParams {
   status?: string;
+  group?: string;
+  sort?: string;
   search?: string;
   page?: number;
   pageSize?: number;
@@ -372,3 +394,79 @@ export function listAdminLowRatings(
     accessToken,
   );
 }
+
+// ---- Phase 11: operations, users, money, notifications, settings, audit, administrators -----
+
+/** The date-range parameters every report and list accepts (a preset, or two calendar dates). */
+export interface RangeParams {
+  range?: string;
+  from?: string;
+  to?: string;
+}
+type Paged = { page?: number; pageSize?: number };
+
+export const getDashboard = (t: string, p: RangeParams) =>
+  adminRequest<DashboardData>(`/dashboard${toQuery(p)}`, t);
+export const getAnalytics = (t: string, p: RangeParams) =>
+  adminRequest<AnalyticsData>(`/analytics${toQuery(p)}`, t);
+
+export const listAdminUsers = (
+  t: string,
+  p: { role?: string; status?: string; search?: string; sort?: string } & Paged,
+) => adminRequest<AdminListResponse<AdminUserRow>>(`/users${toQuery(p)}`, t);
+export const getAdminUser = (t: string, id: string) =>
+  adminRequest<AdminUserDetail>(`/users/${id}`, t);
+export const setAdminUserStatus = (
+  t: string,
+  id: string,
+  to: 'suspend' | 'reactivate',
+  reason: string,
+) =>
+  adminRequest<{ status: string }>(`/users/${id}/${to}`, t, { method: 'POST', body: { reason } });
+
+export const listAdminVehicles = (
+  t: string,
+  p: {
+    status?: string;
+    category?: string;
+    expiring?: string;
+    search?: string;
+    sort?: string;
+  } & Paged,
+) => adminRequest<AdminListResponse<AdminVehicleRow>>(`/vehicles${toQuery(p)}`, t);
+
+export const getFinanceSummary = (t: string, p: RangeParams) =>
+  adminRequest<FinanceSummary>(`/finance/summary${toQuery(p)}`, t);
+export const listAdminPayments = (
+  t: string,
+  p: RangeParams & { status?: string; search?: string; sort?: string } & Paged,
+) => adminRequest<AdminListResponse<AdminPaymentRow>>(`/payments${toQuery(p)}`, t);
+export const listDriverEarnings = (
+  t: string,
+  p: RangeParams & { search?: string; sort?: string } & Paged,
+) => adminRequest<AdminListResponse<DriverEarningsRow>>(`/finance/earnings${toQuery(p)}`, t);
+
+export const getNotificationSummary = (t: string, p: RangeParams) =>
+  adminRequest<NotificationSummary>(`/notifications/summary${toQuery(p)}`, t);
+export const listAdminNotifications = (
+  t: string,
+  p: RangeParams & { type?: string; read?: string; search?: string } & Paged,
+) => adminRequest<AdminListResponse<AdminNotificationRow>>(`/notifications${toQuery(p)}`, t);
+
+export const getPlatformSettings = (t: string) =>
+  adminRequest<PlatformSettingsResponse>('/settings', t);
+export const updatePlatformSetting = (t: string, key: string, body: UpdateSettingBody) =>
+  adminRequest<PlatformSettingInfo>(`/settings/${key}`, t, { method: 'PUT', body });
+export const listVehicleCategories = (t: string) =>
+  adminRequest<AdminVehicleCategory[]>('/vehicle-categories', t);
+export const updateVehicleCategory = (t: string, id: string, body: VehicleCategoryBody) =>
+  adminRequest<AdminVehicleCategory>(`/vehicle-categories/${id}`, t, { method: 'PATCH', body });
+
+export const listAdminAudit = (
+  t: string,
+  p: RangeParams & { action?: string; subjectType?: string; search?: string } & Paged,
+) => adminRequest<AdminListResponse<AdminAuditRow>>(`/audit${toQuery(p)}`, t);
+
+export const listAdminAccounts = (t: string) => adminRequest<AdminAccountRow[]>('/admins', t);
+export const setAdminPermissions = (t: string, id: string, body: SetPermissionsBody) =>
+  adminRequest<AdminAccountRow>(`/admins/${id}/permissions`, t, { method: 'PUT', body });

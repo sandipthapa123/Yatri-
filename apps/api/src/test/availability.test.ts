@@ -478,7 +478,7 @@ describe('privacy & admin RBAC', () => {
     const privEmail = `priv-${Date.now()}@yatri.local`;
     const privileged = await loginTestAdmin(privEmail, 'a-strong-test-password-1');
     await pool.query(
-      "UPDATE users SET admin_permissions = ARRAY['DRIVER_LOCATION_VIEW'] WHERE email = $1",
+      "UPDATE users SET admin_permissions = ARRAY['OPERATIONS_VIEW', 'DRIVER_LOCATION_VIEW'] WHERE email = $1",
       [privEmail],
     );
 

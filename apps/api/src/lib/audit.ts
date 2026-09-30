@@ -14,11 +14,26 @@ export interface AuditInput {
   actorRole: 'ADMIN' | 'PASSENGER' | 'DRIVER' | 'SYSTEM';
   action: string;
   subjectType: string;
-  subjectIds: string[];
+  /** The records acted on (one row each), or null for an action about no single record. */
+  subjectIds: string[] | null;
   detail?: Record<string, unknown>;
 }
 
 export async function recordAudit(input: AuditInput): Promise<void> {
+  if (input.subjectIds === null) {
+    await query(
+      `INSERT INTO audit_log (actor_id, actor_role, action, subject_type, subject_id, detail)
+       VALUES ($1, $2, $3, $4, NULL, $5::jsonb)`,
+      [
+        input.actorId,
+        input.actorRole,
+        input.action,
+        input.subjectType,
+        JSON.stringify(input.detail ?? {}),
+      ],
+    );
+    return;
+  }
   if (input.subjectIds.length === 0) return;
   await query(
     `INSERT INTO audit_log (actor_id, actor_role, action, subject_type, subject_id, detail)

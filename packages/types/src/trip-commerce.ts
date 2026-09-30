@@ -8,6 +8,15 @@ export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 export const PAYMENT_STATUSES = ['PENDING', 'PAID', 'FAILED', 'VOID'] as const;
 export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
 
+/** Payment wording for lists and admin (a ride with no payment yet is NONE). One set of words. */
+export const PAYMENT_STATUS_LABELS: Record<PaymentStatus | 'NONE', string> = {
+  NONE: 'No payment yet',
+  PENDING: 'Awaiting cash',
+  PAID: 'Paid in cash',
+  FAILED: 'Failed',
+  VOID: 'Not due',
+};
+
 export interface PaymentInfo {
   tripId: string;
   amountNpr: number;
@@ -112,6 +121,8 @@ export interface TripOfferInfo {
 
 /** Admin views (same authoritative data, wider audience). */
 export interface AdminTripRow {
+  /** The final fare once completed, otherwise the estimate; null before either exists. */
+  fareNpr: number | null;
   id: string;
   status: TripSummary['status'];
   passengerName: string | null;

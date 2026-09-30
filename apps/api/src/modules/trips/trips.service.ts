@@ -28,6 +28,7 @@ import {
 } from '../pricing/categories';
 import { estimateFare, finalFare, waitingCharge } from '../pricing/pricing';
 import { pricingConfig } from '../pricing/pricing.config';
+import { settingBool, settingText } from '../settings/settings.service';
 import { isCategoryAvailable } from '../dispatch/matching';
 import { decidePassengerCancellation, requireCancellationAllowed } from './cancellation';
 import { estimateEta } from '../tracking/eta';
@@ -217,6 +218,10 @@ export async function estimateForRequest(body: TripEstimateBody) {
 }
 
 export async function requestTrip(passengerId: string, body: TripRequestBody): Promise<TripRow> {
+  // Operations can pause new requests (an outage, an incident); rides under way carry on.
+  if (!settingBool('SERVICE_REQUESTS_ENABLED')) {
+    throw new HttpError(503, 'SERVICE_PAUSED', settingText('SERVICE_PAUSED_MESSAGE'));
+  }
   const category = await getActiveCategoryByCode(body.vehicleCategory);
   if (!category) throw unknownCategory();
   const trip = await measureTrip(body);

@@ -34,4 +34,11 @@ Yatri-specific reminders:
   `ADMIN_PERMISSIONS` entry, not a role check.
 - A safety event that could involve the other participant (SOS) is NOT a trip event: trip events go
   to both people. It uses its own per-person message (`sos_state`) and the safety team's notification.
+- A value operations may change without a deploy is a `PLATFORM_SETTINGS` entry (@yatri/types) whose
+  default is the env var of the same name, read only through `getSetting`; never `env.X` in a
+  rule, never a copy in an app. Every admin route names ONE permission (`requirePermission`) and
+  audits its action (`auditAdminAction`). Periods come from `resolveRange`; screens never build
+  their own date maths, and shared words (roles, statuses, payment states) come from @yatri/types.
+- Do not put a backslash inside a SQL string written from a shell command: use `ESCAPE '!'` with
+  `likeContains` for searches.
 - If you discover a duplicate, consolidate it or add it to "Known duplication" in the doc.

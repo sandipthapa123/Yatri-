@@ -121,3 +121,28 @@ export async function isCategoryAvailable(
 ): Promise<boolean> {
   return (await findEligibleDrivers({ pickup, vehicleCategoryId })).length > 0;
 }
+
+/**
+ * How many drivers could be offered a ride right now, anywhere: the same conditions as
+ * `findEligibleDrivers` without a pickup (verified, active, ONLINE, a recent location, not on
+ * another ride, no open offer). Counted from the persisted last location, so it can lag the live
+ * fix by the persist interval; the operations dashboard says "as of the last saved location".
+ * `matching.test.ts` keeps the two definitions in step.
+ */
+export async function countAvailableDrivers(): Promise<number> {
+  const cfg = availabilityConfig();
+  const r = await query<{ n: number }>(
+    `SELECT count(*)::int AS n
+     FROM driver_availability a
+     JOIN driver_last_locations l ON l.driver_id = a.driver_id
+     JOIN users u ON u.id = a.driver_id AND u.status = 'ACTIVE'
+     JOIN driver_profiles dp ON dp.user_id = a.driver_id AND dp.status = 'VERIFIED'
+     WHERE a.state = 'ONLINE'
+       AND l.recorded_at > now() - (($1::int + $2::int) * interval '1 second')
+       AND NOT EXISTS (SELECT 1 FROM trips t
+                       WHERE t.driver_id = l.driver_id AND t.status IN ${sqlIn(ASSIGNED_TRIP_STATUSES)})
+       AND NOT EXISTS (SELECT 1 FROM trip_offers o WHERE o.driver_id = l.driver_id AND o.status = 'OFFERED')`,
+    [cfg.freshSeconds, cfg.persistSeconds],
+  );
+  return r.rows[0]?.n ?? 0;
+}

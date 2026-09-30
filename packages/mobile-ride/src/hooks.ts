@@ -1,11 +1,14 @@
+import { quickFix } from '@yatri/mobile-location';
 import type { TripRole } from '@yatri/types';
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { AccessibilityInfo, AppState, Platform } from 'react-native';
 
 import { CallController, type CallSocket, type CallState } from './callController';
 import { ChatController, type ChatSocket, type ChatState } from './chatController';
+import { SosController, type SosState } from './sosController';
 import { OfferController, type OfferSocket, type OfferState } from './offerController';
 import { rideApi } from './rideApi';
+import type { ServerMessageBus } from './rideSocket';
 import { createNativeRtc } from './webrtcAdapter';
 
 type Store<S> = { subscribe: (l: () => void) => () => void; getState: () => S };
@@ -166,4 +169,36 @@ export function useDriverOffers(socket: OfferSocket | null, getAccessToken: () =
     return () => controller?.stop();
   }, [controller]);
   return { state: useStore(controller, IDLE_OFFER), controller };
+}
+
+const IDLE_SOS: SosState = { sos: null, busy: null, error: null, assertive: null };
+
+/** The person's own SOS for this ride; the position comes from a quick, permission-free read. */
+export function useSos(opts: {
+  socket: ServerMessageBus | null;
+  tripId: string;
+  getAccessToken: () => Promise<string>;
+}) {
+  const { socket, tripId, getAccessToken } = opts;
+  const controller = useMemo(
+    () =>
+      socket
+        ? new SosController({
+            tripId,
+            socket,
+            api: {
+              mine: async () => rideApi.mySos(await getAccessToken(), tripId),
+              raise: async (body) => rideApi.sos(await getAccessToken(), tripId, body),
+              cancel: async () => rideApi.cancelSos(await getAccessToken(), tripId),
+            },
+            getPosition: async () => quickFix(),
+          })
+        : null,
+    [socket, tripId, getAccessToken],
+  );
+  useEffect(() => {
+    controller?.start();
+    return () => controller?.stop();
+  }, [controller]);
+  return { state: useStore(controller, IDLE_SOS), controller };
 }

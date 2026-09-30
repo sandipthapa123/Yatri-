@@ -175,19 +175,7 @@ describe('the whole ride, from passenger, driver and admin', () => {
     expect(fare.actualDistanceMeters).toBeGreaterThan(0);
     expect(fare.waitingChargeNpr).toBeGreaterThan(0);
 
-    // ---- payment (cash, confirmed by the driver) then ratings
-    expect(
-      (
-        await api
-          .post(`/api/v1/trips/${tripId}/rating`)
-          .set(auth(passenger.accessToken))
-          .send({ stars: 5 })
-      ).status,
-    ).toBe(409);
-    const paid = await api
-      .post(`/api/v1/trips/${tripId}/payment/confirm`)
-      .set(auth(driver.accessToken));
-    expect(paid.body.data).toMatchObject({ status: 'PAID', amountNpr: fare.finalNpr });
+    // ---- rating opens at completion (payment is separate); cash is then confirmed
     expect(
       (
         await api
@@ -196,6 +184,10 @@ describe('the whole ride, from passenger, driver and admin', () => {
           .send({ stars: 5, comment: 'Kind driver' })
       ).status,
     ).toBe(201);
+    const paid = await api
+      .post(`/api/v1/trips/${tripId}/payment/confirm`)
+      .set(auth(driver.accessToken));
+    expect(paid.body.data).toMatchObject({ status: 'PAID', amountNpr: fare.finalNpr });
     expect(
       (
         await api

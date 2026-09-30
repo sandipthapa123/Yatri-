@@ -2,6 +2,14 @@ import { Router, type Router as RouterType } from 'express';
 
 import { callsRouter } from '../calls/calls.routes';
 import {
+  cancelSosHandler,
+  createIncidentHandler,
+  myIncidentsHandler,
+  mySosHandler,
+  triggerSosHandler,
+} from '../safety/safety.controller';
+import { incidentSchema, sosBodySchema } from '../safety/safety.validators';
+import {
   createShareHandler,
   listSharesHandler,
   stopShareHandler,
@@ -98,6 +106,26 @@ tripsRouter.delete(
   validateUuidParam('shareId'),
   stopShareHandler,
 );
+
+// Safety, for the two people on the ride: an emergency alert (never announced to the other person)
+// and a report about the ride.
+tripsRouter.post(
+  '/:id/sos',
+  userRateLimit('sos', 10, 600),
+  validateUuidParam('id'),
+  validateBody(sosBodySchema),
+  triggerSosHandler,
+);
+tripsRouter.get('/:id/sos', validateUuidParam('id'), mySosHandler);
+tripsRouter.post('/:id/sos/cancel', validateUuidParam('id'), cancelSosHandler);
+tripsRouter.post(
+  '/:id/incidents',
+  userRateLimit('incident', 10, 3600),
+  validateUuidParam('id'),
+  validateBody(incidentSchema),
+  createIncidentHandler,
+);
+tripsRouter.get('/:id/incidents', validateUuidParam('id'), myIncidentsHandler);
 
 // Everyone in a trip.
 tripsRouter.get('/active', activeTripHandler);

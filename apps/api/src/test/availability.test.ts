@@ -507,7 +507,7 @@ describe('privacy & admin RBAC', () => {
     );
     expect(rowPriv.location).toMatchObject({ latitude: 27.7154, longitude: 85.3123 });
     const audit = await pool.query(
-      "SELECT 1 FROM admin_access_log WHERE subject_id = $1 AND action = 'VIEW_DRIVER_LOCATION'",
+      "SELECT 1 FROM audit_log WHERE subject_id = $1 AND action = 'VIEW_DRIVER_LOCATION'",
       [driver.user.id],
     );
     expect(audit.rowCount).toBe(1);

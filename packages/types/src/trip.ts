@@ -86,6 +86,8 @@ export interface TripCounterpart {
   vehicle: { description: string; registrationNumber: string } | null;
   /** Average of received ratings (1–5), null until they have at least one. */
   rating: number | null;
+  /** How many ratings that average is from. */
+  ratingCount: number;
   /** The counterpart's profile photo, for the passenger only (a driver sees the passenger's name, not a photo). */
   photoUrl: string | null;
 }

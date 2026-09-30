@@ -170,6 +170,10 @@ const envSchema = z
     DISPATCH_RADIUS_METERS: z.coerce.number().int().positive().default(5000),
     DISPATCH_OFFER_TTL_SECONDS: z.coerce.number().int().positive().default(20),
     DISPATCH_SEARCH_TIMEOUT_SECONDS: z.coerce.number().int().positive().default(120),
+    // Safety. How many emergency contacts a person may keep, and the local emergency services number the
+    // apps offer to call (Nepal Police is 100). Neither is hard-coded in an app.
+    EMERGENCY_CONTACTS_MAX: z.coerce.number().int().min(1).max(10).default(5),
+    EMERGENCY_SERVICES_NUMBER: z.string().trim().min(2).max(20).default('100'),
     // Trip sharing with a trusted contact. A link works for at most SHARE_DURATION_HOURS, and only
     // until the ride ends (then it shows the outcome for SHARE_ENDED_GRACE_MINUTES and stops).
     SHARE_DURATION_HOURS: z.coerce.number().positive().default(6),

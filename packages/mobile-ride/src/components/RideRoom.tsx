@@ -8,6 +8,7 @@ import {
 import {
   ACTIVE_TRIP_STATUSES,
   ASSIGNED_TRIP_STATUSES,
+  OPEN_SOS_STATES,
   TERMINAL_TRIP_STATUSES,
   counterpartLabel,
   type TripRole,
@@ -16,13 +17,15 @@ import {
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { useCall, useChat } from '../hooks';
+import { useCall, useChat, useSos } from '../hooks';
 import { rideActions, type RideActionId } from '../rideActions';
 import { rideApi } from '../rideApi';
 import { CallPanel } from './CallPanel';
 import { CounterpartCard } from './CounterpartCard';
 import { NavigateButton } from './NavigateButton';
 import { ChatPanel } from './ChatPanel';
+import { IncidentForm } from './IncidentForm';
+import { SosPanel } from './SosPanel';
 import { PostRidePanel } from './PostRidePanel';
 import { TripSharePanel } from './TripSharePanel';
 import { ActionButton, Announcer, type RideColors } from './RideUi';
@@ -74,11 +77,13 @@ export function RideRoom(props: RideRoomProps) {
   );
   const chat = useChat({ socket: live.socket, tripId, role, getAccessToken });
   const call = useCall({ socket: live.socket, tripId, role, getAccessToken });
+  const sos = useSos({ socket: live.socket, tripId, getAccessToken });
 
   const [tab, setTab] = useState<Tab>('trip');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [form, setForm] = useState<'rate' | 'dispute' | null>(null);
+  const [form, setForm] = useState<'rate' | 'dispute' | 'incident' | null>(null);
+  const [reportNews, setReportNews] = useState<{ id: number; text: string } | null>(null);
   const [share, setShare] = useState(false);
 
   // An incoming call is urgent: bring it to the front (it was also announced assertively).
@@ -110,7 +115,7 @@ export function RideRoom(props: RideRoomProps) {
   );
 
   const perform = async (id: RideActionId) => {
-    if (id === 'rate' || id === 'dispute') {
+    if (id === 'rate' || id === 'dispute' || id === 'incident') {
       setForm(id);
       return;
     }
@@ -160,6 +165,8 @@ export function RideRoom(props: RideRoomProps) {
   };
 
   const ended = status !== null && TERMINAL_TRIP_STATUSES.includes(status);
+  const sosOpen = sos.state.sos !== null && OPEN_SOS_STATES.includes(sos.state.sos.status);
+  const reporting = form === 'incident';
   const unread = chat.state.unreadCount;
   const chatLabel =
     unread > 0 ? `Chat, ${unread} unread ${unread === 1 ? 'message' : 'messages'}` : 'Chat';
@@ -175,6 +182,7 @@ export function RideRoom(props: RideRoomProps) {
       {/* Announcements live above the tabs so they are heard from any tab. */}
       <Announcer {...ui} polite={chat.state.announcement} />
       <Announcer {...ui} polite={call.state.polite} assertive={call.state.assertive} />
+      <Announcer {...ui} polite={reportNews} />
 
       {left ? (
         <View style={styles.block}>
@@ -229,6 +237,25 @@ export function RideRoom(props: RideRoomProps) {
 
           {tab === 'trip' ? (
             <View style={styles.block}>
+              {assigned || sosOpen ? (
+                <SosPanel {...ui} state={sos.state} controller={sos.controller} />
+              ) : null}
+              {reporting ? (
+                <IncidentForm
+                  {...ui}
+                  emergencyNumber={sos.state.sos?.emergencyNumber}
+                  onCancel={() => setForm(null)}
+                  onSubmit={(body) =>
+                    submit(async () => {
+                      await rideApi.reportIncident(await getAccessToken(), tripId, body);
+                      setReportNews((n) => ({
+                        id: (n?.id ?? 0) + 1,
+                        text: 'Your report was sent. The safety team will review it.',
+                      }));
+                    })
+                  }
+                />
+              ) : null}
               {trip?.counterpart && !ended ? (
                 <CounterpartCard {...ui} counterpart={trip.counterpart} viewer={role} />
               ) : null}
@@ -297,7 +324,7 @@ export function RideRoom(props: RideRoomProps) {
                   />
                 ) : null}
 
-                {active
+                {active && !reporting
                   ? actions.map((a) => (
                       <ActionButton
                         key={a.id}
@@ -320,7 +347,7 @@ export function RideRoom(props: RideRoomProps) {
                 ) : null}
               </LiveTripView>
 
-              {ended && trip ? (
+              {ended && trip && !reporting ? (
                 <PostRidePanel
                   {...ui}
                   trip={trip}

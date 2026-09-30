@@ -92,6 +92,23 @@ export default async function DashboardPage() {
         Rides
       </Link>
       <Link
+        href="/safety"
+        style={{
+          minHeight: 44,
+          display: 'inline-flex',
+          alignItems: 'center',
+          padding: '0 20px',
+          borderRadius: 999,
+          border: '2px solid var(--color-primary)',
+          color: 'var(--color-primary)',
+          fontSize: 15,
+          fontWeight: 700,
+          textDecoration: 'none',
+        }}
+      >
+        Safety: SOS alerts and incident reports
+      </Link>
+      <Link
         href="/disputes"
         style={{
           minHeight: 44,

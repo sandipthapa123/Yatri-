@@ -19,7 +19,27 @@ import {
   tripChatHandler,
   tripDetailHandler,
 } from './admin-trips';
+import {
+  adminIncidentsQuerySchema,
+  adminSosQuerySchema,
+  incidentNoteSchema,
+  incidentStatusSchema,
+  lowRatingsQuerySchema,
+  sosAcknowledgeSchema,
+  sosResolveSchema,
+} from '../safety/safety.validators';
 import { getMeHandler } from '../users/users.controller';
+import {
+  acknowledgeSosHandler,
+  incidentDetailHandler,
+  incidentNoteHandler,
+  incidentStatusHandler,
+  listIncidentsHandler,
+  listSosHandler,
+  lowRatingsHandler,
+  resolveSosHandler,
+  sosDetailHandler,
+} from './admin-safety';
 import {
   approveDocumentHandler,
   approveVehicleHandler,
@@ -71,6 +91,37 @@ adminRouter.post(
   validateBody(adminResolveSchema),
   resolveDisputeHandler,
 );
+
+// Safety: alerts, incident reports and the signals around them (all need SAFETY_REVIEW).
+adminRouter.get('/sos', validateQuery(adminSosQuerySchema), listSosHandler);
+adminRouter.get('/sos/:id', validateUuidParam('id'), sosDetailHandler);
+adminRouter.post(
+  '/sos/:id/acknowledge',
+  validateUuidParam('id'),
+  validateBody(sosAcknowledgeSchema),
+  acknowledgeSosHandler,
+);
+adminRouter.post(
+  '/sos/:id/resolve',
+  validateUuidParam('id'),
+  validateBody(sosResolveSchema),
+  resolveSosHandler,
+);
+adminRouter.get('/incidents', validateQuery(adminIncidentsQuerySchema), listIncidentsHandler);
+adminRouter.get('/incidents/:id', validateUuidParam('id'), incidentDetailHandler);
+adminRouter.post(
+  '/incidents/:id/status',
+  validateUuidParam('id'),
+  validateBody(incidentStatusSchema),
+  incidentStatusHandler,
+);
+adminRouter.post(
+  '/incidents/:id/notes',
+  validateUuidParam('id'),
+  validateBody(incidentNoteSchema),
+  incidentNoteHandler,
+);
+adminRouter.get('/ratings/low', validateQuery(lowRatingsQuerySchema), lowRatingsHandler);
 
 adminRouter.get('/drivers', validateQuery(listDriversQuerySchema), listDriversHandler);
 adminRouter.get('/drivers/:id', validateUuidParam('id'), getDriverDetailHandler);

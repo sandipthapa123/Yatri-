@@ -1,5 +1,6 @@
 import type { AdminPermission } from '@yatri/types';
 
+import { recordAudit } from '../../lib/audit';
 import { query } from '../../lib/db';
 
 /**
@@ -17,17 +18,12 @@ export async function hasPermission(
   return r.rows[0]?.ok === true;
 }
 
-/** Record that an admin read sensitive data about one or more subjects. */
+/** Record that an admin read sensitive data about one or more subjects (the one audit log). */
 export async function recordAdminAccess(
   adminId: string,
   action: 'VIEW_DRIVER_LOCATION' | 'VIEW_TRIP_CHAT' | 'VIEW_TRIP_DRIVER_LOCATION',
   subjectType: 'driver' | 'trip',
   subjectIds: string[],
 ): Promise<void> {
-  if (subjectIds.length === 0) return;
-  await query(
-    `INSERT INTO admin_access_log (admin_id, action, subject_type, subject_id)
-     SELECT $1, $2, $3, s FROM unnest($4::uuid[]) AS s`,
-    [adminId, action, subjectType, subjectIds],
-  );
+  await recordAudit({ actorId: adminId, actorRole: 'ADMIN', action, subjectType, subjectIds });
 }

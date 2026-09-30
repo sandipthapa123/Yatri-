@@ -4,12 +4,19 @@ import type {
   ChatHistory,
   ChatMessage,
   DisputeInfo,
+  EmergencyContact,
+  EmergencyContactsResponse,
   FareEstimateResponse,
   IceServersResponse,
+  IncidentBody,
+  IncidentInfo,
   PaymentInfo,
   RatingInput,
+  RatingSummary,
   ShareCreated,
   ShareInfo,
+  SosInfo,
+  SosRequestBody,
   TripHistoryPage,
   TripEstimateBody,
   TripOfferInfo,
@@ -78,6 +85,24 @@ export const rideApi = {
       method: 'DELETE',
       accessToken: t,
     }),
+
+  // ---- safety: SOS, incident reports, emergency contacts, my rating
+  sos: (t: Token, id: string, body: SosRequestBody) => post<SosInfo>(`/trips/${id}/sos`, t, body),
+  mySos: (t: Token, id: string) => get<SosInfo | null>(`/trips/${id}/sos`, t),
+  cancelSos: (t: Token, id: string) => post<SosInfo>(`/trips/${id}/sos/cancel`, t),
+  reportIncident: (t: Token, id: string, body: IncidentBody) =>
+    post<IncidentInfo>(`/trips/${id}/incidents`, t, body),
+  myIncidents: (t: Token, id: string) => get<IncidentInfo[]>(`/trips/${id}/incidents`, t),
+  emergencyContacts: (t: Token) =>
+    get<EmergencyContactsResponse>('/users/me/emergency-contacts', t),
+  addEmergencyContact: (t: Token, name: string, phoneNumber: string) =>
+    post<EmergencyContact>('/users/me/emergency-contacts', t, { name, phoneNumber }),
+  removeEmergencyContact: (t: Token, id: string) =>
+    authApi.request<{ removed: true }>(`/users/me/emergency-contacts/${id}`, {
+      method: 'DELETE',
+      accessToken: t,
+    }),
+  myRating: (t: Token) => get<RatingSummary>('/users/me/rating', t),
 
   iceServers: (t: Token, id: string) => get<IceServersResponse>(`/trips/${id}/calls/ice`, t),
 };

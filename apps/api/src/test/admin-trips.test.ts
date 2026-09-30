@@ -17,7 +17,7 @@ async function admin(permissions: string[] = []) {
 }
 const accessRows = async (adminId: string, action: string) =>
   (
-    await pool.query('SELECT 1 FROM admin_access_log WHERE admin_id = $1 AND action = $2', [
+    await pool.query('SELECT 1 FROM audit_log WHERE actor_id = $1 AND action = $2', [
       adminId,
       action,
     ])

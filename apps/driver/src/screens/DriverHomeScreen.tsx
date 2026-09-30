@@ -265,6 +265,19 @@ export function DriverHomeScreen({ navigation }: Props) {
           <Text style={{ color: theme.colors.textPrimary, fontWeight: '600' }}>Your rides</Text>
         </Pressable>
         <Pressable
+          onPress={() => navigation.navigate('DriverEmergencyContacts')}
+          accessibilityRole="button"
+          accessibilityLabel="Emergency contacts"
+          style={[
+            styles.secondary,
+            { minHeight: theme.minTouchTarget, borderColor: theme.colors.border },
+          ]}
+        >
+          <Text style={{ color: theme.colors.textPrimary, fontWeight: '600' }}>
+            Emergency contacts
+          </Text>
+        </Pressable>
+        <Pressable
           onPress={() => navigation.navigate('DriverLocation')}
           accessibilityRole="button"
           accessibilityLabel="My location"

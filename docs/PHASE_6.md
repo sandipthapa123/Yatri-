@@ -119,7 +119,7 @@ broadcasts from the trip screen. Passenger sharing stays opt-in and EN_ROUTE onl
 location freshness, fare and payment, matching history, calls and chat counts, timeline, ratings,
 disputes, operator cancel), **Ride conversation**, **Reported problems**. Exact driver coordinates
 need `DRIVER_LOCATION_VIEW`, chat text needs `TRIP_CHAT_VIEW`; **both reads are written to the one
-`admin_access_log`** (`admin/permissions.ts`). The earlier per-feature location audit was folded
+`admin_access_log`** (`admin/permissions.ts`; renamed `audit_log` in Phase 10, which also records actions). The earlier per-feature location audit was folded
 into it. Live pages refresh on a **switchable** timer (WCAG 2.2.2); the refresh never moves focus
 or announces.
 

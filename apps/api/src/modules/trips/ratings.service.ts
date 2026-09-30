@@ -1,23 +1,32 @@
-import { RATING_COMMENT_MAX, RATING_MAX, RATING_MIN, type RatingInput } from '@yatri/types';
+import {
+  RATING_COMMENT_MAX,
+  RATING_MAX,
+  RATING_MIN,
+  type RatingInput,
+  type RatingSummary,
+} from '@yatri/types';
 
 import { query } from '../../lib/db';
 import { HttpError } from '../../middleware/errorHandler';
-import { getPayment } from './payments.service';
 import { getTrip } from './trips.repository';
 
-/** Average rating a user has received (1–5, one decimal), or null with no ratings yet. */
-export async function averageRating(userId: string): Promise<number | null> {
-  const r = await query<{ avg: string | null }>(
-    'SELECT round(avg(stars)::numeric, 1)::text AS avg FROM trip_ratings WHERE ratee_id = $1',
+/**
+ * THE rating aggregation: what a person has been rated, computed from the ratings themselves on every
+ * read (nothing is cached or stored beside them, so it cannot drift). One decimal, 1 to 5.
+ */
+export async function ratingSummary(userId: string): Promise<RatingSummary> {
+  const r = await query<{ avg: string | null; n: string }>(
+    'SELECT round(avg(stars)::numeric, 1)::text AS avg, count(*)::text AS n FROM trip_ratings WHERE ratee_id = $1',
     [userId],
   );
-  const v = r.rows[0]?.avg;
-  return v === null || v === undefined ? null : Number(v);
+  const row = r.rows[0];
+  return { average: row?.avg == null ? null : Number(row.avg), count: Number(row?.n ?? 0) };
 }
 
 /**
- * Rate the other party of a finished trip. Sequence follows the product flow: the ride is
- * completed and paid before ratings open. One rating per person per trip.
+ * Rate the other party of a COMPLETED ride: the passenger rates the driver, the driver the passenger,
+ * 1 to 5 stars with optional written feedback. One rating per person per ride (the database enforces
+ * it, so two simultaneous submissions cannot both count).
  */
 export async function rateTrip(tripId: string, raterId: string, input: RatingInput) {
   if (
@@ -36,9 +45,6 @@ export async function rateTrip(tripId: string, raterId: string, input: RatingInp
   }
   if (trip.status !== 'COMPLETED' || !trip.driver_id) {
     throw new HttpError(409, 'TRIP_NOT_COMPLETED', 'You can rate a ride once it has ended.');
-  }
-  if ((await getPayment(tripId))?.status !== 'PAID') {
-    throw new HttpError(409, 'PAYMENT_NOT_SETTLED', 'Ratings open once the payment is settled.');
   }
   const rateeId = isPassenger ? trip.driver_id : trip.passenger_id;
   try {

@@ -1,5 +1,13 @@
 import type {
   AdminDisputeRow,
+  AdminIncidentDetail,
+  AdminIncidentRow,
+  AdminLowRating,
+  AdminSosDetail,
+  AdminSosRow,
+  IncidentNoteKind,
+  IncidentStatus,
+  SosStatus,
   AdminTripDetail,
   AdminTripRow,
   ChatHistory,
@@ -294,4 +302,73 @@ export function resolveAdminDispute(
     method: 'POST',
     body: { status, resolution },
   });
+}
+
+// ---- safety (SAFETY_REVIEW): SOS alerts, incident reports, low ratings
+export function listAdminSos(
+  accessToken: string,
+  params: { status?: string; page?: number; pageSize?: number },
+) {
+  return adminRequest<{ items: AdminSosRow[]; total: number }>(
+    `/sos${toQuery(params)}`,
+    accessToken,
+  );
+}
+export function getAdminSos(accessToken: string, id: string) {
+  return adminRequest<AdminSosDetail>(`/sos/${id}`, accessToken);
+}
+export function moveAdminSos(
+  accessToken: string,
+  id: string,
+  to: Exclude<SosStatus, 'ACTIVE' | 'CANCELLED'>,
+  note?: string,
+) {
+  const step = to === 'ACKNOWLEDGED' ? 'acknowledge' : 'resolve';
+  return adminRequest<unknown>(`/sos/${id}/${step}`, accessToken, {
+    method: 'POST',
+    body: note ? { note } : {},
+  });
+}
+export function listAdminIncidents(
+  accessToken: string,
+  params: { status?: string; category?: string; page?: number; pageSize?: number },
+) {
+  return adminRequest<{ items: AdminIncidentRow[]; total: number }>(
+    `/incidents${toQuery(params)}`,
+    accessToken,
+  );
+}
+export function getAdminIncident(accessToken: string, id: string) {
+  return adminRequest<AdminIncidentDetail>(`/incidents/${id}`, accessToken);
+}
+export function setAdminIncidentStatus(
+  accessToken: string,
+  id: string,
+  status: IncidentStatus,
+  note?: string,
+) {
+  return adminRequest<unknown>(`/incidents/${id}/status`, accessToken, {
+    method: 'POST',
+    body: note ? { status, note } : { status },
+  });
+}
+export function addAdminIncidentNote(
+  accessToken: string,
+  id: string,
+  kind: Extract<IncidentNoteKind, 'NOTE' | 'ACTION'>,
+  body: string,
+) {
+  return adminRequest<unknown>(`/incidents/${id}/notes`, accessToken, {
+    method: 'POST',
+    body: { kind, body },
+  });
+}
+export function listAdminLowRatings(
+  accessToken: string,
+  params: { maxStars?: number; page?: number; pageSize?: number },
+) {
+  return adminRequest<{ items: AdminLowRating[]; total: number }>(
+    `/ratings/low${toQuery(params)}`,
+    accessToken,
+  );
 }

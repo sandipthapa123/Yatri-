@@ -6,10 +6,15 @@ import type { TripFare, TripPlace, TripStatus, WaitingInfo } from './trip';
 
 /**
  * Admin permissions — the one list. `DRIVER_LOCATION_VIEW` reveals exact driver coordinates;
- * `TRIP_CHAT_VIEW` reveals what was said in a trip's chat. Every use is written to the
+ * `TRIP_CHAT_VIEW` reveals what was said in a trip's chat, and `SAFETY_REVIEW` opens SOS alerts (with
+ * their recorded position), incident reports and the low-rating list. Every use is written to the
  * admin access log. Without a permission the admin sees status and metadata only.
  */
-export const ADMIN_PERMISSIONS = ['DRIVER_LOCATION_VIEW', 'TRIP_CHAT_VIEW'] as const;
+export const ADMIN_PERMISSIONS = [
+  'DRIVER_LOCATION_VIEW',
+  'TRIP_CHAT_VIEW',
+  'SAFETY_REVIEW',
+] as const;
 export type AdminPermission = (typeof ADMIN_PERMISSIONS)[number];
 
 /** Everything an admin needs to understand one trip, from the same authoritative records the apps use. */

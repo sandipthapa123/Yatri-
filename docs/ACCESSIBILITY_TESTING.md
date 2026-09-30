@@ -101,7 +101,7 @@ Nothing here has been run on a device yet.
    confirmation that states how long they waited.
 5. Start → "Your ride has started." End → fare in words; the driver hears/reads the cash instruction;
    the passenger hears "Please pay your driver NPR … in cash."
-6. After the driver confirms cash: **Rate your driver** appears; stars are a radio group read as
+6. As soon as the ride completes (payment is separate): **Rate your driver** appears; stars are a radio group read as
    "3 stars out of 5, selected". **Report a problem** works with the keyboard/screen reader.
 7. Reconnect test: airplane mode for 30 s during the wait, then restore. You hear "Live updates
    restored." and anything you missed **once, batched**; opening the screen never replays history.
@@ -121,3 +121,30 @@ Nothing here has been run on a device yet.
 6. Decline / miss / end / ride ends during a call: the reason is spoken in words for each side.
 7. **Requires a development build with WebRTC (not Expo Go).** In a build without it the Call tab must
    say calling is unavailable and point to chat.
+
+## J. Safety: SOS, contacts, reports (passenger + driver)
+
+Nothing here has been run with a real screen reader yet; do all of it with TalkBack, VoiceOver and
+a hardware keyboard (or switch access) before relying on it.
+
+1. During an assigned ride the trip tab has an **Emergency help** card near the top, in reading order,
+   with a button labelled **Emergency SOS** (text, not just red). Focus order reaches it without
+   passing through the map or any timer.
+2. Activate it: the card switches to **Send an emergency alert?** with **Send emergency alert now**
+   and **Not now**. No system dialog. Confirm: hear (once, assertive) "Emergency alert sent. The Yatri
+   safety team has been notified." (plus how many contacts were sent a link).
+3. The card then shows **Call emergency services (100)** and **I am safe: cancel the alert**. Both work
+   by touch and keyboard. Cancelling is spoken: "You cancelled the emergency alert."
+4. From the admin side acknowledge the alert: the person hears "The Yatri safety team has seen your
+   alert and is responding." once. The **other** person on the ride hears and sees nothing.
+5. Turn off the network and press the alert: hear "The alert could not be sent. Call 100 now…" and find
+   the **Call emergency services** button under it. Confirm the failure is never silent.
+6. Report a safety concern (any active or finished ride): the form is a radio group of categories plus
+   a labelled text box; **Send report** says why it is disabled ("Choose what kind of concern this
+   is"). After sending, hear "Your report was sent. The safety team will review it."
+7. Emergency contacts (Home, both apps): the count is read as a sentence; **Remove {name}** asks for a
+   second step ("Yes, remove {name}") in the page; adding and removing are announced politely.
+8. Admin dashboard, keyboard only: **Safety** page, filters, the SOS alert (Acknowledge; **Resolve this
+   alert…** needs the in-page confirmation and a note), an incident (status form offers only the
+   moves the ride's state allows). Every result is announced in a status region. There is no browser
+   alert/confirm dialog anywhere.

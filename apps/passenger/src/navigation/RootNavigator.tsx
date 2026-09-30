@@ -2,6 +2,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '@yatri/mobile-auth';
 
+import { EmergencyContactsScreen } from '../screens/EmergencyContactsScreen';
 import { HomeScreen } from '../screens/HomeScreen';
 import { OtpVerificationScreen } from '../screens/OtpVerificationScreen';
 import { PhoneEntryScreen } from '../screens/PhoneEntryScreen';
@@ -26,6 +27,7 @@ export type RootStackParamList = {
   TripTracking: { tripId: string };
   RequestRide: undefined;
   RideHistory: undefined;
+  EmergencyContacts: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -57,6 +59,7 @@ export function RootNavigator() {
             <Stack.Screen name="TripTracking" component={TripTrackingScreen} />
             <Stack.Screen name="RequestRide" component={RequestRideScreen} />
             <Stack.Screen name="RideHistory" component={RideHistoryScreen} />
+            <Stack.Screen name="EmergencyContacts" component={EmergencyContactsScreen} />
           </>
         ) : (
           <>

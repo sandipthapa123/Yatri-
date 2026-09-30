@@ -14,7 +14,15 @@ import {
  * never be forced.)
  */
 export type RideActionId =
-  'cancel' | 'arrived' | 'start' | 'complete' | 'noShow' | 'confirmPayment' | 'rate' | 'dispute';
+  | 'cancel'
+  | 'arrived'
+  | 'start'
+  | 'complete'
+  | 'noShow'
+  | 'confirmPayment'
+  | 'rate'
+  | 'dispute'
+  | 'incident';
 
 export interface RideAction {
   id: RideActionId;
@@ -51,6 +59,12 @@ const cancelFor = (role: TripRole, status: TripStatus, feeNpr: number): RideActi
   };
 };
 
+const INCIDENT_ACTION: RideAction = {
+  id: 'incident',
+  label: 'Report a safety concern',
+  tone: 'neutral',
+};
+
 export function rideActions(
   role: TripRole,
   trip: {
@@ -72,7 +86,7 @@ export function rideActions(
       if (role === 'DRIVER') {
         out.push({ id: 'arrived', label: 'I have arrived at the pickup', tone: 'primary' });
       }
-      out.push(cancelFor(role, trip.status, fee));
+      out.push(cancelFor(role, trip.status, fee), INCIDENT_ACTION);
       break;
     case 'DRIVER_ARRIVED':
       if (role === 'DRIVER') {
@@ -90,7 +104,7 @@ export function rideActions(
           });
         }
       }
-      out.push(cancelFor(role, trip.status, fee));
+      out.push(cancelFor(role, trip.status, fee), INCIDENT_ACTION);
       break;
     case 'IN_PROGRESS':
       if (role === 'DRIVER') {
@@ -104,12 +118,14 @@ export function rideActions(
           },
         });
       }
+      out.push(INCIDENT_ACTION);
       break;
     case 'COMPLETED':
       if (role === 'DRIVER' && trip.paymentStatus === 'PENDING') {
         out.push({ id: 'confirmPayment', label: 'Confirm cash received', tone: 'primary' });
       }
-      if (trip.paymentStatus === 'PAID' && !trip.rated) {
+      // Ratings open when the ride is completed; how it was paid is a separate matter.
+      if (!trip.rated) {
         out.push({
           id: 'rate',
           label: role === 'PASSENGER' ? 'Rate your driver' : 'Rate the passenger',
@@ -117,6 +133,7 @@ export function rideActions(
         });
       }
       out.push({ id: 'dispute', label: 'Report a problem with this ride', tone: 'neutral' });
+      out.push(INCIDENT_ACTION);
       break;
     default:
   }

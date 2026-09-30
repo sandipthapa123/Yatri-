@@ -21,9 +21,15 @@ const ids = (a: ReturnType<typeof rideActions>) => a.map((x) => x.id);
 describe('rideActions: who sees which button', () => {
   it('passenger: can cancel while searching, en route and after arrival — nothing else mid-ride', () => {
     expect(ids(rideActions('PASSENGER', trip('SEARCHING'), null))).toEqual(['cancel']);
-    expect(ids(rideActions('PASSENGER', trip('DRIVER_EN_ROUTE'), null))).toEqual(['cancel']);
-    expect(ids(rideActions('PASSENGER', trip('DRIVER_ARRIVED'), waiting(30)))).toEqual(['cancel']);
-    expect(ids(rideActions('PASSENGER', trip('IN_PROGRESS'), null))).toEqual([]);
+    expect(ids(rideActions('PASSENGER', trip('DRIVER_EN_ROUTE'), null))).toEqual([
+      'cancel',
+      'incident',
+    ]);
+    expect(ids(rideActions('PASSENGER', trip('DRIVER_ARRIVED'), waiting(30)))).toEqual([
+      'cancel',
+      'incident',
+    ]);
+    expect(ids(rideActions('PASSENGER', trip('IN_PROGRESS'), null))).toEqual(['incident']);
   });
 
   it('driver: arrived, then start, then end — in that order', () => {
@@ -31,12 +37,14 @@ describe('rideActions: who sees which button', () => {
     expect(ids(rideActions('DRIVER', trip('DRIVER_EN_ROUTE'), null))).toEqual([
       'arrived',
       'cancel',
+      'incident',
     ]);
     expect(ids(rideActions('DRIVER', trip('DRIVER_ARRIVED'), waiting(30)))).toEqual([
       'start',
       'cancel',
+      'incident',
     ]);
-    expect(ids(rideActions('DRIVER', trip('IN_PROGRESS'), null))).toEqual(['complete']);
+    expect(ids(rideActions('DRIVER', trip('IN_PROGRESS'), null))).toEqual(['complete', 'incident']);
   });
 
   it('offers "passenger did not arrive" only once the server no-show wait has passed', () => {
@@ -58,22 +66,32 @@ describe('rideActions: who sees which button', () => {
     expect(rideActions('DRIVER', trip('IN_PROGRESS'), null)[0]!.confirm).toBeDefined();
   });
 
-  it('after the ride: the driver confirms cash, then both can rate once, and either can report a problem', () => {
+  it('after the ride: rating opens at once (payment is separate), once each, and either can report a problem', () => {
+    // the driver still has cash to confirm; nobody has to wait for that to rate
     expect(ids(rideActions('DRIVER', trip('COMPLETED', 'PENDING'), null))).toEqual([
       'confirmPayment',
+      'rate',
       'dispute',
+      'incident',
     ]);
-    expect(ids(rideActions('PASSENGER', trip('COMPLETED', 'PENDING'), null))).toEqual(['dispute']); // rating opens after payment
+    expect(ids(rideActions('PASSENGER', trip('COMPLETED', 'PENDING'), null))).toEqual([
+      'rate',
+      'dispute',
+      'incident',
+    ]);
     expect(ids(rideActions('PASSENGER', trip('COMPLETED', 'PAID'), null))).toEqual([
       'rate',
       'dispute',
+      'incident',
     ]);
     expect(ids(rideActions('PASSENGER', trip('COMPLETED', 'PAID', true), null))).toEqual([
       'dispute',
-    ]);
+      'incident',
+    ]); // already rated
     expect(ids(rideActions('DRIVER', trip('COMPLETED', 'PAID'), null))).toEqual([
       'rate',
       'dispute',
+      'incident',
     ]);
   });
 

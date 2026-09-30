@@ -7,6 +7,8 @@ describe('ride text helpers', () => {
     expect(ratingText(null)).toBe('No ratings yet');
     expect(ratingText(4.666)).toBe('Rating 4.7 out of 5');
     expect(ratingText(5)).toBe('Rating 5.0 out of 5');
+    expect(ratingText(4.5, 12)).toBe('Rating 4.5 out of 5, from 12 ratings');
+    expect(ratingText(5, 1)).toBe('Rating 5.0 out of 5, from 1 rating');
   });
 
   it("opens the platform's own maps app on the server's coordinates", () => {

@@ -2,7 +2,7 @@ export { LocationPicker } from './components/LocationPicker';
 export type { LocationPickerProps, SelectedPlace } from './components/LocationPicker';
 export { YatriMap } from './components/MapView';
 export type { MapColors, MapMarker, YatriMapProps } from './components/MapView';
-export { useCurrentLocation } from './useCurrentLocation';
+export { useCurrentLocation, quickFix } from './useCurrentLocation';
 export type { CurrentLocationState, LocationFix } from './useCurrentLocation';
 export { ISSUE_MESSAGES, POOR_ACCURACY_METERS, isPoorAccuracy } from './permissions';
 export type { LocationIssue } from './permissions';

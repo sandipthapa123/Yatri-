@@ -638,12 +638,18 @@ describe('payment, rating, disputes, history', () => {
     );
   });
 
-  it('opens ratings only after payment, one per person, 1 to 5 stars', async () => {
-    const w = await completedRide();
-    const early = await post(w.passenger.accessToken, `/${w.tripId}/rating`, { stars: 5 });
+  it('opens ratings when the ride is completed (not before, not gated on payment), one per person, 1 to 5 stars', async () => {
+    const running = await startedRide();
+    const early = await post(running.passenger.accessToken, `/${running.tripId}/rating`, {
+      stars: 5,
+    });
     expect(early.status).toBe(409);
-    expect(early.body.error.code).toBe('PAYMENT_NOT_SETTLED');
-    await post(w.driver.accessToken, `/${w.tripId}/payment/confirm`);
+    expect(early.body.error.code).toBe('TRIP_NOT_COMPLETED');
+
+    const w = await completedRide(); // the cash has NOT been confirmed: rating is open anyway
+    expect((await get(w.passenger.accessToken, `/${w.tripId}`)).body.data.paymentStatus).toBe(
+      'PENDING',
+    );
 
     for (const bad of [
       { stars: 0 },

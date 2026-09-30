@@ -33,8 +33,21 @@ const hashToken = (token: string) => createHash('sha256').update(token).digest('
 
 const ACTIVE_SQL = 'stopped_at IS NULL AND expires_at > now()';
 
-export async function createShare(tripId: string, userId: string): Promise<ShareCreated> {
-  const trip = await requirePassenger(tripId, userId);
+export type SharePurpose = 'TRIP' | 'SOS';
+
+/**
+ * Create a link to a ride. The CALLER has already established who may (a passenger sharing their own
+ * ride, or the SOS service acting for someone in an emergency). A TRIP share counts toward the
+ * per-ride limit and announces itself to both people; an SOS share does neither — the other person on
+ * the ride must never learn that an emergency alert went out.
+ */
+export async function issueShare(
+  tripId: string,
+  createdBy: string,
+  purpose: SharePurpose,
+): Promise<ShareCreated> {
+  const trip = await getTrip(tripId);
+  if (!trip) throw new HttpError(404, 'NOT_FOUND', 'Trip not found.');
   if (!trip.driver_id || !ASSIGNED_TRIP_STATUSES.includes(trip.status)) {
     throw new HttpError(
       409,
@@ -50,22 +63,25 @@ export async function createShare(tripId: string, userId: string): Promise<Share
     await client.query('BEGIN');
     // The ride row lock serialises concurrent creations so the per-ride limit cannot be raced past.
     await client.query('SELECT 1 FROM trips WHERE id = $1 FOR UPDATE', [tripId]);
-    const count = await client.query<{ n: string }>(
-      `SELECT count(*)::text AS n FROM trip_shares WHERE trip_id = $1 AND ${ACTIVE_SQL}`,
-      [tripId],
-    );
-    if (Number(count.rows[0]?.n ?? 0) >= env.SHARE_MAX_PER_TRIP) {
-      await client.query('ROLLBACK');
-      throw new HttpError(
-        409,
-        'SHARE_LIMIT',
-        `You can share a trip with up to ${env.SHARE_MAX_PER_TRIP} people at once. Stop one to add another.`,
+    if (purpose === 'TRIP') {
+      const count = await client.query<{ n: string }>(
+        `SELECT count(*)::text AS n FROM trip_shares
+         WHERE trip_id = $1 AND purpose = 'TRIP' AND ${ACTIVE_SQL}`,
+        [tripId],
       );
+      if (Number(count.rows[0]?.n ?? 0) >= env.SHARE_MAX_PER_TRIP) {
+        await client.query('ROLLBACK');
+        throw new HttpError(
+          409,
+          'SHARE_LIMIT',
+          `You can share a trip with up to ${env.SHARE_MAX_PER_TRIP} people at once. Stop one to add another.`,
+        );
+      }
     }
     const ins = await client.query<{ id: string; expires_at: Date }>(
-      `INSERT INTO trip_shares (trip_id, created_by, token_hash, expires_at)
-       VALUES ($1, $2, $3, now() + ($4::float * interval '1 hour')) RETURNING id, expires_at`,
-      [tripId, userId, hashToken(token), env.SHARE_DURATION_HOURS],
+      `INSERT INTO trip_shares (trip_id, created_by, token_hash, expires_at, purpose)
+       VALUES ($1, $2, $3, now() + ($4::float * interval '1 hour'), $5) RETURNING id, expires_at`,
+      [tripId, createdBy, hashToken(token), env.SHARE_DURATION_HOURS, purpose],
     );
     await client.query('COMMIT');
     shareId = (ins.rows[0] as { id: string }).id;
@@ -76,17 +92,25 @@ export async function createShare(tripId: string, userId: string): Promise<Share
   } finally {
     client.release();
   }
-  await recordTripEvent({
-    tripId,
-    type: 'TRIP_SHARE_STARTED',
-    actorId: userId,
-    dedupeKey: `shs:${shareId}`,
-  });
+  if (purpose === 'TRIP') {
+    await recordTripEvent({
+      tripId,
+      type: 'TRIP_SHARE_STARTED',
+      actorId: createdBy,
+      dedupeKey: `shs:${shareId}`,
+    });
+  }
   return {
     shareId,
     url: `${env.PUBLIC_BASE_URL.replace(/\/$/, '')}/share/${token}`,
     expiresAt: expiresAt.toISOString(),
   };
+}
+
+/** A passenger shares their own ride with someone they trust. */
+export async function createShare(tripId: string, userId: string): Promise<ShareCreated> {
+  await requirePassenger(tripId, userId);
+  return issueShare(tripId, userId, 'TRIP');
 }
 
 export async function listShares(tripId: string, userId: string): Promise<ShareInfo[]> {
@@ -98,7 +122,7 @@ export async function listShares(tripId: string, userId: string): Promise<ShareI
     active: boolean;
   }>(
     `SELECT id, created_at, expires_at, (${ACTIVE_SQL}) AS active
-     FROM trip_shares WHERE trip_id = $1 ORDER BY created_at DESC`,
+     FROM trip_shares WHERE trip_id = $1 AND purpose = 'TRIP' ORDER BY created_at DESC`,
     [tripId],
   );
   return r.rows.map((s) => ({
@@ -112,10 +136,10 @@ export async function listShares(tripId: string, userId: string): Promise<ShareI
 /** Stop one link now. Stopping twice is harmless. */
 export async function stopShare(tripId: string, shareId: string, userId: string): Promise<void> {
   await requirePassenger(tripId, userId);
-  const exists = await query('SELECT 1 FROM trip_shares WHERE id = $1 AND trip_id = $2', [
-    shareId,
-    tripId,
-  ]);
+  const exists = await query(
+    "SELECT 1 FROM trip_shares WHERE id = $1 AND trip_id = $2 AND purpose = 'TRIP'",
+    [shareId, tripId],
+  );
   if (!exists.rowCount) throw new HttpError(404, 'NOT_FOUND', 'Share not found.');
   const r = await query(
     `UPDATE trip_shares SET stopped_at = now(), stopped_reason = 'PASSENGER'
@@ -135,12 +159,12 @@ export async function stopShare(tripId: string, shareId: string, userId: string)
 
 /** The ride is over: every link stops sharing (they keep showing the outcome briefly). */
 export async function endSharesForTrip(tripId: string): Promise<void> {
-  const r = await query(
+  const r = await query<{ purpose: string }>(
     `UPDATE trip_shares SET stopped_at = now(), stopped_reason = 'RIDE_ENDED'
-     WHERE trip_id = $1 AND stopped_at IS NULL`,
+     WHERE trip_id = $1 AND stopped_at IS NULL RETURNING purpose`,
     [tripId],
   );
-  if (r.rowCount) {
+  if (r.rows.some((row) => row.purpose === 'TRIP')) {
     await recordTripEvent({
       tripId,
       type: 'TRIP_SHARE_STOPPED',
@@ -152,11 +176,11 @@ export async function endSharesForTrip(tripId: string): Promise<void> {
 
 /** Links whose sharing period ran out while the ride is still going. Safe on every instance. */
 export async function expireDueShares(): Promise<number> {
-  const r = await query<{ id: string; trip_id: string }>(
+  const r = await query<{ id: string; trip_id: string; purpose: string }>(
     `UPDATE trip_shares SET stopped_at = now(), stopped_reason = 'EXPIRED'
-     WHERE stopped_at IS NULL AND expires_at <= now() RETURNING id, trip_id`,
+     WHERE stopped_at IS NULL AND expires_at <= now() RETURNING id, trip_id, purpose`,
   );
-  for (const s of r.rows) {
+  for (const s of r.rows.filter((row) => row.purpose === 'TRIP')) {
     await recordTripEvent({
       tripId: s.trip_id,
       type: 'TRIP_SHARE_STOPPED',

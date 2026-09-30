@@ -1,6 +1,7 @@
 import type { DriverAvailabilityStatus, LocationFreshness } from './availability';
 import type { LiveTripSnapshot } from './trip';
 import type { TripOfferInfo } from './trip-commerce';
+import type { SosInfo } from './safety';
 import type { CallInfo, CallKind, CallSignal, ChatMessage } from './trip-comms';
 import type { TripEventRecord } from './trip-events';
 
@@ -74,6 +75,8 @@ export type ServerRealtimeMessage =
       reason: 'EXPIRED' | 'TAKEN' | 'CANCELLED' | 'DECLINED';
     }
   | { type: 'call_state'; call: CallInfo }
+  /** The person's own emergency alert changed. Sent only to the person who raised it. */
+  | { type: 'sos_state'; sos: SosInfo }
   | { type: 'call_signal'; callId: string; signal: CallSignal }
   | { type: 'rejected'; tripId: string; reason: string }
   | { type: 'error'; code: string; message: string }

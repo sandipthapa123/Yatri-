@@ -25,4 +25,13 @@ Yatri-specific reminders:
 - "Is this person on this ride?" is `trips/access.ts`. A feature about someone's ride calls
   `requireParticipant` / `requirePassenger`; it never compares `passenger_id` / `driver_id` itself.
   Notifications go through `lib/notifications`; nothing sends its own.
+- A legal move of a state machine (SOS, incident, trip, availability) is a constant table in
+  `@yatri/types` applied by ONE guarded update. Routes, admin forms and apps derive from the table
+  (`...LeadingTo`, `INCIDENT_TRANSITIONS[status]`); they never re-list allowed states.
+- Every sensitive admin read and every safety/admin action is written with `lib/audit.ts`
+  `recordAudit` into the ONE `audit_log` (never the reporter-visible tables, never a per-feature log,
+  never a phone number or message body in `detail`). A new admin capability is a new
+  `ADMIN_PERMISSIONS` entry, not a role check.
+- A safety event that could involve the other participant (SOS) is NOT a trip event: trip events go
+  to both people. It uses its own per-person message (`sos_state`) and the safety team's notification.
 - If you discover a duplicate, consolidate it or add it to "Known duplication" in the doc.

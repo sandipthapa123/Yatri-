@@ -106,3 +106,33 @@ export function useCurrentLocation() {
 
   return { state, request, openSettings, reset };
 }
+
+/**
+ * A position for an emergency: never asks for permission, never waits long. The last known fix if
+ * there is a recent one, otherwise one fresh reading raced against a short timer. Null is fine —
+ * an SOS is sent without a position rather than held up (the server has its own fallbacks).
+ */
+export async function quickFix(maxWaitMs = 3000): Promise<LocationFix | null> {
+  try {
+    const permission = await ExpoLocation.getForegroundPermissionsAsync();
+    if (!permission.granted) return null;
+    const last = await ExpoLocation.getLastKnownPositionAsync({ maxAge: 120_000 });
+    const position =
+      last ??
+      (await Promise.race([
+        ExpoLocation.getCurrentPositionAsync({ accuracy: ExpoLocation.Accuracy.Balanced }),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), maxWaitMs)),
+      ]));
+    if (!position) return null;
+    const { latitude, longitude, accuracy } = position.coords;
+    if (!isUsableFix(latitude, longitude)) return null;
+    return {
+      latitude,
+      longitude,
+      accuracyMeters: accuracy !== null && Number.isFinite(accuracy) ? accuracy : null,
+      timestamp: position.timestamp,
+    };
+  } catch {
+    return null;
+  }
+}

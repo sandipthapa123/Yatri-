@@ -54,7 +54,9 @@ export function CounterpartCard(
                   {'\n'}Registration {counterpart.vehicle.registrationNumber}
                 </Text>
               ) : null}
-              <Text style={{ color: colors.textSecondary }}>{ratingText(counterpart.rating)}</Text>
+              <Text style={{ color: colors.textSecondary }}>
+                {ratingText(counterpart.rating, counterpart.ratingCount)}
+              </Text>
             </>
           ) : null}
         </View>

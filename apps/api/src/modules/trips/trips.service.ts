@@ -48,7 +48,7 @@ import { requireParticipant } from './access';
 import { secondsSince } from './waiting';
 import { createPendingPayment } from './payments.service';
 import { measuredRideDistance, rideDurationSeconds } from './ride-actuals';
-import { averageRating } from './ratings.service';
+import { ratingSummary } from './ratings.service';
 import { recordTripEvent } from './trip-events.service';
 import { statusesLeadingTo } from './trip-machine';
 import {
@@ -97,10 +97,12 @@ async function counterpartOf(
     [otherId],
   );
   const vehicle = viewerIsPassenger ? await approvedVehicleOf(otherId) : null;
+  const rating = await ratingSummary(otherId);
   return {
     name: u.rows[0]?.full_name ?? null,
     vehicle,
-    rating: await averageRating(otherId),
+    rating: rating.average,
+    ratingCount: rating.count,
     // The passenger sees the driver's photo; the driver is only given the passenger's name.
     photoUrl: viewerIsPassenger
       ? await freshProfilePictureUrl(u.rows[0]?.profile_picture_url ?? null)

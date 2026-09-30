@@ -13,6 +13,7 @@ import { driversOverLimit } from '../availability/driver-limits';
 import { availabilityConfig } from '../availability/availability.service';
 import { isMatchable, locationFreshness } from '../availability/availability.machine';
 import { getLiveFix } from '../availability/presence.state';
+import { DRIVER_RIDEABLE_SQL, VEHICLE_RIDEABLE_SQL } from '../fleet/eligibility';
 import { activeZones } from '../operations/zones.service';
 import { settingNumber } from '../settings/settings.service';
 import { estimateEta } from '../tracking/eta';
@@ -119,10 +120,11 @@ export async function findEligibleDrivers(req: MatchRequest): Promise<MatchCandi
      WHERE a.state = 'ONLINE'
        AND l.latitude BETWEEN $1 AND $2 AND l.longitude BETWEEN $3 AND $4
        AND l.recorded_at > now() - (($5::int + $6::int) * interval '1 second')
-       AND ($8::uuid IS NULL OR EXISTS (
+       AND ${DRIVER_RIDEABLE_SQL}
+       AND EXISTS (
              SELECT 1 FROM vehicles v
-             WHERE v.driver_user_id = l.driver_id AND v.category_id = $8
-               AND v.verification_status = 'APPROVED'))
+             WHERE v.driver_user_id = l.driver_id AND ($8::uuid IS NULL OR v.category_id = $8)
+               AND ${VEHICLE_RIDEABLE_SQL})
        AND NOT EXISTS (SELECT 1 FROM trips t
                        WHERE t.driver_id = l.driver_id AND t.status IN ${sqlIn(ASSIGNED_TRIP_STATUSES)})
        AND ($7::uuid IS NULL OR NOT EXISTS (
@@ -217,6 +219,8 @@ export async function availableDriverPositions(): Promise<
      JOIN driver_profiles dp ON dp.user_id = a.driver_id AND dp.status = 'VERIFIED'
      WHERE a.state = 'ONLINE'
        AND l.recorded_at > now() - (($1::int + $2::int) * interval '1 second')
+       AND ${DRIVER_RIDEABLE_SQL}
+       AND EXISTS (SELECT 1 FROM vehicles v WHERE v.driver_user_id = l.driver_id AND ${VEHICLE_RIDEABLE_SQL})
        AND NOT EXISTS (SELECT 1 FROM trips t
                        WHERE t.driver_id = l.driver_id AND t.status IN ${sqlIn(ASSIGNED_TRIP_STATUSES)})
        AND NOT EXISTS (SELECT 1 FROM trip_offers o WHERE o.driver_id = l.driver_id AND o.status = 'OFFERED')`,

@@ -298,6 +298,25 @@ export const PLATFORM_SETTINGS = [
     min: 1,
     max: 20,
   },
+  {
+    key: 'EXPIRY_REMINDER_DAYS',
+    group: 'dispatch',
+    label: 'Expiry reminders at',
+    help: 'Days before a driver or vehicle document, licence, registration, insurance or service date runs out at which the person is reminded. Comma separated, for example 30,14,7,1. The largest number is also how early "expiring soon" shows.',
+    kind: 'intList',
+    min: 1,
+    max: 365,
+    unit: 'days',
+  },
+  {
+    key: 'RESTRICTED_DRIVER_MAX_RIDES_PER_DAY',
+    group: 'dispatch',
+    label: 'Most rides a restricted driver can take in a day',
+    help: 'A driver whose operational status is restricted is not offered more rides once they have finished this many today.',
+    kind: 'int',
+    min: 1,
+    max: 50,
+  },
 ] as const satisfies readonly SettingDef[];
 
 export type SettingKey = (typeof PLATFORM_SETTINGS)[number]['key'];

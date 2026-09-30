@@ -3,6 +3,7 @@ import type { EligibilitySummary } from '@yatri/types';
 import { query } from '../../lib/db';
 import { ACTIVE_SQL } from '../trips/trips.repository';
 import { checkVerificationEligibility } from '../drivers/onboarding.service';
+import { driverFleetProblems } from '../fleet/eligibility';
 import { limitReasonFor } from './driver-limits';
 
 /**
@@ -46,6 +47,9 @@ export async function evaluateDriverEligibility(driverId: string): Promise<Eligi
   if (Number(active.rows[0]?.n ?? 0) > 0) {
     reasons.push('You are already assigned to an active trip.');
   }
+
+  // Operations: suspension, the fleet, and whether any vehicle can be used (one place: fleet/eligibility).
+  reasons.push(...(await driverFleetProblems(driverId)));
 
   // Operational limits (most rides in a day): the reason is the sentence the driver is shown.
   const limit = await limitReasonFor(driverId);

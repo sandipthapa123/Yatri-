@@ -18,6 +18,8 @@ types.setTypeParser(1082, (value) => value);
  *  - the pool is bounded (DB_POOL_MAX) and a connection attempt or idle client cannot hang forever;
  *  - Postgres cancels any statement running longer than DB_STATEMENT_TIMEOUT_MS, so one slow query
  *    cannot hold a connection (and with it the API) hostage;
+ *  - the session time zone is the platform's (PLATFORM_TIME_ZONE), so SQL `current_date` and the code's
+ *    `todayKey()` always name the same day;
  *  - application_name shows in pg_stat_activity, so an operator can tell this service's sessions apart.
  */
 export const pool = new Pool({
@@ -27,6 +29,8 @@ export const pool = new Pool({
   connectionTimeoutMillis: 5_000,
   statement_timeout: env.DB_STATEMENT_TIMEOUT_MS,
   application_name: 'yatri-api',
+  // The database's "today" (current_date) is the platform's day, the same one every date rule in code uses.
+  options: `-c timezone=${env.PLATFORM_TIME_ZONE}`,
   ssl: env.DATABASE_SSL ? { rejectUnauthorized: env.DATABASE_SSL_REJECT_UNAUTHORIZED } : undefined,
 });
 

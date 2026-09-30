@@ -234,3 +234,24 @@ TalkBack or VoiceOver (and NVDA in the console), and with a keyboard:
    and the list of squares in words carry the same information; counts below the minimum read "fewer than 3".
 6. Console forms (zones, pricing, bonuses): every field has a label; the day checkboxes read their names; the
    confirmation sentence takes focus and Escape backs out; the result is announced; zoom to 200% and 400%.
+
+## O. Fleets, vehicles and driver operations (Phase 16)
+
+Automated: the admin pages are scanned by the console accessibility tests (labelled fields, table captions and
+headers, status regions, no dialogs) and every status is a word in the data the pages print. Check by hand with
+NVDA and a keyboard:
+
+1. **Fleet list and details:** the tables have captions and row headers; statuses read as words ("Active",
+   "Suspended"); the edit form opens from a button, every field has a label.
+2. **Vehicle page:** the summary says the status and whether the vehicle can be used for rides, then lists each
+   reason as a list item; the status change opens an in-page confirmation, focus moves to its sentence, and
+   Escape backs out; the result is announced.
+3. **Assign a vehicle:** the driver list says for each driver whether they can take rides; a refusal is read as
+   "Problem: ..." with every reason.
+4. **Driver page:** the five statuses are a table with a row header each (Account, Verification, Operational,
+   Availability, Ride); suspending needs a reason and a confirmation that says the driver goes offline now.
+5. **Expiring documents:** the state is its own column of words (Expired, Expiring soon, Missing), sorted worst
+   first; filter by state, kind and fleet with the keyboard; "Check documents and dates now" announces the result.
+6. **Maintenance:** in-progress records come first and say "In progress"; completing one asks where the vehicle
+   goes next; recording a failed inspection says the vehicle was taken out of service.
+7. Zoom to 200% and 400%: tables scroll sideways, nothing is cut off.

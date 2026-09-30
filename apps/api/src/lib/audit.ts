@@ -73,3 +73,48 @@ export async function auditTrail(subjectType: string, subjectId: string): Promis
     createdAt: row.created_at.toISOString(),
   }));
 }
+
+/** The newest entries about any of these kinds of record, newest first (for the operational history pages). */
+export async function recentAudit(
+  subjectTypes: readonly string[],
+  limit: number,
+  offset = 0,
+): Promise<{
+  items: Array<AuditEntry & { subjectType: string; subjectId: string | null }>;
+  total: number;
+}> {
+  const [rows, count] = await Promise.all([
+    query<{
+      id: string;
+      action: string;
+      actor_role: string | null;
+      detail: Record<string, unknown>;
+      created_at: Date;
+      full_name: string | null;
+      subject_type: string;
+      subject_id: string | null;
+    }>(
+      `SELECT a.id::text, a.action, a.actor_role, a.detail, a.created_at, u.full_name, a.subject_type, a.subject_id::text
+       FROM audit_log a LEFT JOIN users u ON u.id = a.actor_id
+       WHERE a.subject_type = ANY($1::text[]) ORDER BY a.id DESC LIMIT $2 OFFSET $3`,
+      [subjectTypes, limit, offset],
+    ),
+    query<{ n: string }>(
+      'SELECT count(*)::text AS n FROM audit_log WHERE subject_type = ANY($1::text[])',
+      [subjectTypes],
+    ),
+  ]);
+  return {
+    total: Number(count.rows[0]?.n ?? 0),
+    items: rows.rows.map((row) => ({
+      id: row.id,
+      action: row.action,
+      actorName: row.full_name,
+      actorRole: row.actor_role,
+      detail: row.detail,
+      createdAt: row.created_at.toISOString(),
+      subjectType: row.subject_type,
+      subjectId: row.subject_id,
+    })),
+  };
+}

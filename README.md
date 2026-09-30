@@ -139,6 +139,10 @@ Run from the repository root; each fans out to every workspace package via pnpm.
   with the fare always shown before confirming, ETA- and workload-aware dispatch with widening retries,
   driver limits and incentives, and a privacy-preserving demand and supply heatmap with a text equivalent.
   The fare arithmetic, geography and matching each still have exactly one implementation.
+- **Fleets and driver operations** (`docs/PHASE_16.md`): fleets, driver-to-vehicle assignment, a vehicle
+  lifecycle, expiry monitoring with automatic reminders, inspection and maintenance records, and an operational
+  status for drivers kept apart from account, verification, availability and ride status. An ineligible vehicle
+  or driver is never offered a ride; documents stay in the one document system.
 - Running it for real: [`docs/OPERATIONS.md`](docs/OPERATIONS.md) (architecture, deployment, backups,
   monitoring, incident recovery, release and rollback) and [`docs/SECURITY.md`](docs/SECURITY.md) (the controls,
   what was audited, what is still open). Container images and a full local stack are in [`deploy/`](deploy/).

@@ -35,7 +35,7 @@ export async function listVehiclesHandler(
   ];
   const from = `
     FROM vehicles v
-    JOIN users u ON u.id = v.driver_user_id
+    LEFT JOIN users u ON u.id = v.driver_user_id
     LEFT JOIN vehicle_categories c ON c.id = v.category_id
     WHERE ($1::text IS NULL OR v.verification_status::text = $1)
       AND ($2::text IS NULL OR c.code = $2)

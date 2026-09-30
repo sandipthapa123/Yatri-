@@ -52,6 +52,11 @@ Yatri-specific reminders:
   is `dispatch/matching.ts` (eligibility, strategy, `searchRadius`), driver limits are
   `availability/driver-limits.ts`, demand is `operations/demand.ts`, a rule time window is `windowActive`,
   and a bonus is calculated only in `evaluateIncentives` and recorded as an award, never as a fare change.
+- Who drives which vehicle is `vehicles.driver_user_id` and nothing else; a vehicle lifecycle move is
+  `setLifecycle` (table in `@yatri/types`); a driver operational status is its own model, apart from account,
+  verification, availability and ride; "may this be used for rides" is `fleet/eligibility.ts` (never a stored flag);
+  what expires is `expiryItems` over the existing document tables with `expiryState`; "today" is `todayKey()` and
+  the database session time zone. Maintenance records point only at a vehicle.
 - Do not put a backslash inside a SQL string written from a shell command: use `ESCAPE '!'` with
   `likeContains` for searches.
 - If you discover a duplicate, consolidate it or add it to "Known duplication" in the doc.

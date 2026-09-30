@@ -44,6 +44,7 @@ import {
 } from '../tracking/tracking.service';
 import { env } from '../../config/env';
 import { runRetention } from '../compliance/retention.service';
+import { runFleetMonitor } from '../fleet/monitor';
 import { sweepSupport } from '../support/tickets.service';
 import { expireDueShares } from '../sharing/sharing.service';
 import { sweepTrips } from '../trips/trip-maintenance';
@@ -515,6 +516,10 @@ export async function attachRealtimeGateway(server: HttpServer): Promise<Realtim
     setInterval(() => {
       sweepSupport().catch((err) => log.error('Support sweep error', err));
     }, env.SUPPORT_SWEEP_SECONDS * 1000),
+    // Fleet check: reminders for documents, licences and service dates, offline for the ineligible.
+    setInterval(() => {
+      runFleetMonitor().catch((err) => log.error('Fleet monitor error', err));
+    }, env.FLEET_MONITOR_MINUTES * 60_000),
     // Retention is slow housekeeping (each kind of record follows its retention policy): hourly.
     setInterval(() => {
       runRetention().catch((err) => log.error('Retention error', err));

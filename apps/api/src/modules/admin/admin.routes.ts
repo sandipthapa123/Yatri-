@@ -76,6 +76,47 @@ import {
 import { incentiveRuleSchema } from '../operations/incentives.service';
 import { pricingRuleSchema } from '../operations/pricing-rules.service';
 import { zoneBodySchema } from '../operations/zones.service';
+import {
+  assignHandler,
+  assignSchema,
+  completeMaintenanceHandler,
+  createFleetHandler,
+  createFleetVehicleHandler,
+  driverDetailHandler,
+  driverFleetHandler,
+  driverFleetSchema,
+  expiringHandler,
+  expiringQuerySchema,
+  fleetDetailHandler,
+  fleetDriversQuerySchema,
+  fleetVehicleSchema,
+  fleetVehiclesQuerySchema,
+  fleetHistoryHandler,
+  fleetHistoryQuerySchema,
+  inspectionHandler,
+  inspectionSchema,
+  lifecycleHandler,
+  lifecycleSchema,
+  listFleetDriversHandler,
+  listFleetsHandler,
+  listFleetVehiclesHandler,
+  maintenanceCompleteSchema,
+  maintenanceStartSchema,
+  operationalHandler,
+  operationalSchema,
+  fleetOptionsHandler,
+  runMonitorHandler,
+  serviceLogHandler,
+  serviceLogSchema,
+  serviceRecordsHandler,
+  serviceRecordsQuerySchema,
+  startMaintenanceHandler,
+  unassignHandler,
+  unassignSchema,
+  updateFleetHandler,
+  vehicleDetailHandler,
+} from './admin-fleet';
+import { fleetBodySchema } from '../fleet/fleets.service';
 import { adminAdminsRoutes } from './admin-admins.routes';
 import { analyticsHandler } from './admin-analytics';
 import { adminAuditQuerySchema, listAuditHandler } from './admin-audit';
@@ -584,3 +625,139 @@ adminRouter.get(
   validateQuery(awardsQuerySchema),
   listAwardsHandler,
 );
+
+// ---- fleets, vehicles and driver operations
+// Reading needs FLEET_VIEW; every change needs FLEET_MANAGE and is audited with its reason.
+adminRouter.get('/fleet/options', requirePermission('FLEET_VIEW'), fleetOptionsHandler);
+adminRouter.get('/fleet/fleets', requirePermission('FLEET_VIEW'), listFleetsHandler);
+adminRouter.get(
+  '/fleet/fleets/:id',
+  requirePermission('FLEET_VIEW'),
+  validateUuidParam('id'),
+  fleetDetailHandler,
+);
+adminRouter.post(
+  '/fleet/fleets',
+  requirePermission('FLEET_MANAGE'),
+  validateBody(fleetBodySchema),
+  createFleetHandler,
+);
+adminRouter.put(
+  '/fleet/fleets/:id',
+  requirePermission('FLEET_MANAGE'),
+  validateUuidParam('id'),
+  validateBody(fleetBodySchema),
+  updateFleetHandler,
+);
+adminRouter.get(
+  '/fleet/vehicles',
+  requirePermission('FLEET_VIEW'),
+  validateQuery(fleetVehiclesQuerySchema),
+  listFleetVehiclesHandler,
+);
+adminRouter.get(
+  '/fleet/vehicles/:id',
+  requirePermission('FLEET_VIEW'),
+  validateUuidParam('id'),
+  vehicleDetailHandler,
+);
+adminRouter.post(
+  '/fleet/vehicles',
+  requirePermission('FLEET_MANAGE'),
+  validateBody(fleetVehicleSchema),
+  createFleetVehicleHandler,
+);
+adminRouter.post(
+  '/fleet/vehicles/:id/lifecycle',
+  requirePermission('FLEET_MANAGE'),
+  validateUuidParam('id'),
+  validateBody(lifecycleSchema),
+  lifecycleHandler,
+);
+adminRouter.post(
+  '/fleet/vehicles/:id/assign',
+  requirePermission('FLEET_MANAGE'),
+  validateUuidParam('id'),
+  validateBody(assignSchema),
+  assignHandler,
+);
+adminRouter.post(
+  '/fleet/vehicles/:id/unassign',
+  requirePermission('FLEET_MANAGE'),
+  validateUuidParam('id'),
+  validateBody(unassignSchema),
+  unassignHandler,
+);
+adminRouter.post(
+  '/fleet/vehicles/:id/maintenance',
+  requirePermission('FLEET_MANAGE'),
+  validateUuidParam('id'),
+  validateBody(maintenanceStartSchema),
+  startMaintenanceHandler,
+);
+adminRouter.post(
+  '/fleet/vehicles/:id/inspections',
+  requirePermission('FLEET_MANAGE'),
+  validateUuidParam('id'),
+  validateBody(inspectionSchema),
+  inspectionHandler,
+);
+adminRouter.post(
+  '/fleet/vehicles/:id/services',
+  requirePermission('FLEET_MANAGE'),
+  validateUuidParam('id'),
+  validateBody(serviceLogSchema),
+  serviceLogHandler,
+);
+adminRouter.post(
+  '/fleet/service-records/:id/complete',
+  requirePermission('FLEET_MANAGE'),
+  validateUuidParam('id'),
+  validateBody(maintenanceCompleteSchema),
+  completeMaintenanceHandler,
+);
+adminRouter.get(
+  '/fleet/service-records',
+  requirePermission('FLEET_VIEW'),
+  validateQuery(serviceRecordsQuerySchema),
+  serviceRecordsHandler,
+);
+adminRouter.get(
+  '/fleet/drivers',
+  requirePermission('FLEET_VIEW'),
+  validateQuery(fleetDriversQuerySchema),
+  listFleetDriversHandler,
+);
+adminRouter.get(
+  '/fleet/drivers/:id',
+  requirePermission('FLEET_VIEW'),
+  validateUuidParam('id'),
+  driverDetailHandler,
+);
+adminRouter.post(
+  '/fleet/drivers/:id/operational',
+  requirePermission('FLEET_MANAGE'),
+  validateUuidParam('id'),
+  validateBody(operationalSchema),
+  operationalHandler,
+);
+adminRouter.post(
+  '/fleet/drivers/:id/fleet',
+  requirePermission('FLEET_MANAGE'),
+  validateUuidParam('id'),
+  validateBody(driverFleetSchema),
+  driverFleetHandler,
+);
+adminRouter.get(
+  '/fleet/expiring',
+  requirePermission('FLEET_VIEW'),
+  validateQuery(expiringQuerySchema),
+  expiringHandler,
+);
+adminRouter.get(
+  '/fleet/history',
+  requirePermission('FLEET_VIEW'),
+  validateQuery(fleetHistoryQuerySchema),
+  fleetHistoryHandler,
+);
+adminRouter.post('/fleet/monitor/run', requirePermission('FLEET_MANAGE'), runMonitorHandler);

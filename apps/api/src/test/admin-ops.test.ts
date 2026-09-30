@@ -15,6 +15,7 @@ import {
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { pool } from '../config/database';
+import { getRedisClient } from '../config/redis';
 import { adminRouter } from '../modules/admin/admin.routes';
 import { pricingConfig } from '../modules/pricing/pricing.config';
 import { getSetting, refreshSettings, settingDefault } from '../modules/settings/settings.service';
@@ -139,6 +140,13 @@ describe('RBAC: every admin route names a permission', () => {
     ['SETTINGS_VIEW', '/vehicle-categories'],
     ['AUDIT_VIEW', '/audit'],
     ['ADMINS_MANAGE', '/admins'],
+    ['FLEET_VIEW', '/fleet/fleets'],
+    ['FLEET_VIEW', '/fleet/vehicles'],
+    ['FLEET_VIEW', '/fleet/drivers'],
+    ['FLEET_VIEW', '/fleet/expiring'],
+    ['FLEET_VIEW', '/fleet/service-records'],
+    ['FLEET_VIEW', '/fleet/history'],
+    ['FLEET_VIEW', '/fleet/options'],
     ['OPERATIONS_VIEW', '/operations/heatmap'],
     ['OPERATIONS_VIEW', '/operations/options'],
     ['OPERATIONS_VIEW', '/operations/zones'],
@@ -156,7 +164,12 @@ describe('RBAC: every admin route names a permission', () => {
   ];
   it('opens each read to exactly the permission it names, and to no other', async () => {
     const holders = new Map<AdminPermission, string>();
-    for (const p of ADMIN_PERMISSIONS) holders.set(p, (await admin([p])).token);
+    let logins = 0;
+    for (const p of ADMIN_PERMISSIONS) {
+      // One administrator per permission: the sign-in limit (per address) is reset every few, as a person would wait.
+      if (++logins % 8 === 0) await getRedisClient().flushdb();
+      holders.set(p, (await admin([p])).token);
+    }
     const bad: string[] = [];
     for (const [needed, path] of READS) {
       for (const [held, token] of holders) {
@@ -1349,7 +1362,8 @@ describe('admin accessibility (static)', () => {
         offenders.push(`${f.replace(ADMIN_SRC, '')}: table without headers`);
       // (a status or alert region: either is announced without moving focus)
       const acts = /useActionState\(/.test(src);
-      if (acts && !/role="(status|alert)"|aria-live=/.test(src))
+      // (the shared <Feedback> renders the status region, so using it counts)
+      if (acts && !/role="(status|alert)"|aria-live=|<Feedback\b/.test(src))
         offenders.push(`${f.replace(ADMIN_SRC, '')}: action without a status region`);
     }
     expect(offenders).toEqual([]);

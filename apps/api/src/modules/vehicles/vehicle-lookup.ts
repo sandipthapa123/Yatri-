@@ -15,7 +15,8 @@ export async function approvedVehicleOf(
     registration_number: string;
   }>(
     `SELECT make, model, color, registration_number FROM vehicles
-     WHERE driver_user_id = $1 AND verification_status = 'APPROVED' ORDER BY created_at LIMIT 1`,
+     WHERE driver_user_id = $1 AND verification_status = 'APPROVED' AND lifecycle_status <> 'RETIRED'
+     ORDER BY (lifecycle_status = 'ACTIVE') DESC, created_at LIMIT 1`,
     [driverId],
   );
   const row = r.rows[0];

@@ -250,3 +250,23 @@ The controls and their evidence are in `docs/SECURITY.md`. What operators must d
   limit). A driver at a limit is told why and is not offered rides.
 - **Incentives** are recorded, not paid, by the platform: Admin > Driver incentives lists every award; pay
   from that list and keep your own payment record. Changing a rule never undoes bonuses already earned.
+
+## 11. Fleets, vehicles and driver operations
+
+- **Who does what.** `FLEET_VIEW` reads fleets, vehicles, drivers, expiring documents, maintenance and the
+  operational history; `FLEET_MANAGE` changes them. Vehicle and document approval stays with driver review.
+- **Fleets.** A fleet is a contact, a status and the vehicles and drivers that point at it. A fleet that is not
+  active stops its vehicles and drivers taking rides and takes its online drivers offline. A fleet vehicle is
+  registered by an administrator, then assigned to a driver of that fleet; the driver uploads its papers and
+  a reviewer approves it. Independent drivers keep their own vehicles.
+- **The check.** Every hour (`FLEET_MONITOR_MINUTES`) documents, licences, registration, insurance and service
+  dates are checked: drivers get reminders at the days in Settings (`EXPIRY_REMINDER_DAYS`), once each, and a
+  driver who can no longer take rides is taken offline. Use "Check documents and dates now" after a big
+  change. An expired required paper stops rides immediately, before the check runs.
+- **Vehicle status.** Put a vehicle in maintenance, inactive, suspended or retired from its page; retired
+  is final. A failed inspection puts it in maintenance and opens the repair; completing maintenance returns it.
+- **Driver operational status.** Restrict a driver (a lower daily ride cap, Settings) or suspend them (no
+  rides, offline now) with a reason and, if you like, an end date after which the system reinstates them. This is
+  separate from account suspension and from driver verification; reinstating needs no re-verification.
+- **The database time zone.** The API sets every connection to `PLATFORM_TIME_ZONE`, so date rules agree
+  between SQL and code; keep the setting correct for your country.

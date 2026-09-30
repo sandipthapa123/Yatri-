@@ -256,6 +256,11 @@ const envSchema = z
     DRIVER_MAX_ONLINE_HOURS: z.coerce.number().int().min(0).max(24).default(0),
     HEATMAP_CELL_METERS: z.coerce.number().int().min(500).max(5000).default(1000),
     HEATMAP_MIN_COUNT: z.coerce.number().int().min(1).max(20).default(3),
+    // --- Fleet and driver operations (defaults; an administrator can override them in Settings) ---
+    EXPIRY_REMINDER_DAYS: z.string().default('30,14,7,1').transform(numList),
+    RESTRICTED_DRIVER_MAX_RIDES_PER_DAY: z.coerce.number().int().min(1).max(50).default(3),
+    // How often documents, licences and service dates are checked and reminders are sent.
+    FLEET_MONITOR_MINUTES: z.coerce.number().int().positive().default(60),
     // How often the support sweep (escalations, auto-close) and the retention job run.
     SUPPORT_SWEEP_SECONDS: z.coerce.number().int().positive().default(300),
 

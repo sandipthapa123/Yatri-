@@ -76,6 +76,17 @@ export async function forceDriverOnline(
   category: string | null = 'CAR',
 ) {
   await makeEligibleDriver(driverId, category);
+  await putDriverOnline(driverId, at);
+}
+
+/**
+ * Marks a driver ONLINE with a fresh location and changes nothing else about them: for tests of a driver who
+ * went through the real verification flow (their own vehicle and documents), which must not be replaced.
+ */
+export async function putDriverOnline(
+  driverId: string,
+  at: { latitude: number; longitude: number } = north(THAMEL, 300),
+) {
   await pool.query(
     `INSERT INTO driver_availability (driver_id, state, online_since) VALUES ($1, 'ONLINE', now())
      ON CONFLICT (driver_id) DO UPDATE SET state = 'ONLINE', online_since = now()`,

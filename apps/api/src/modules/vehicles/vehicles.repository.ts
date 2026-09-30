@@ -22,15 +22,17 @@ export async function findVehicleCategoryById(id: string): Promise<VehicleCatego
 export type CreateVehicleInput = VehicleCreateBody;
 
 export async function createVehicle(
-  driverUserId: string,
+  driverUserId: string | null,
   input: CreateVehicleInput,
+  fleetId: string | null = null,
 ): Promise<VehicleRow> {
   const result = await query<VehicleRow>(
     `INSERT INTO vehicles (
        driver_user_id, category_id, make, model, year, color, registration_number, vin,
-       registration_expiry_date, insurance_provider, insurance_policy_number, insurance_expiry_date
+       registration_expiry_date, insurance_provider, insurance_policy_number, insurance_expiry_date,
+       fleet_id
      )
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
      RETURNING *`,
     [
       driverUserId,
@@ -45,6 +47,7 @@ export async function createVehicle(
       input.insuranceProvider ?? null,
       input.insurancePolicyNumber ?? null,
       input.insuranceExpiryDate ?? null,
+      fleetId,
     ],
   );
   const row = result.rows[0];

@@ -1,4 +1,9 @@
-import type { Vehicle, VehicleCategory, VehicleVerificationStatus } from '@yatri/types';
+import type {
+  Vehicle,
+  VehicleCategory,
+  VehicleLifecycle,
+  VehicleVerificationStatus,
+} from '@yatri/types';
 
 export type { VehicleVerificationStatus };
 
@@ -12,7 +17,10 @@ export interface VehicleCategoryRow {
 
 export interface VehicleRow {
   id: string;
-  driver_user_id: string;
+  /** The ONE record of who drives this vehicle; null for a fleet vehicle not yet assigned. */
+  driver_user_id: string | null;
+  fleet_id: string | null;
+  lifecycle_status: VehicleLifecycle;
   category_id: string;
   make: string;
   model: string;

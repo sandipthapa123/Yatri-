@@ -15,7 +15,19 @@ async function resolveDriverUserId(doc: DocumentRow): Promise<string> {
   if (doc.owner_type === 'DRIVER') return doc.driver_user_id!;
   const vehicle = await findVehicleById(doc.vehicle_id!);
   if (!vehicle) throw new HttpError(404, 'NOT_FOUND', 'Document not found.');
-  return vehicle.driver_user_id;
+  return unassignedGuard(vehicle.driver_user_id);
+}
+
+/** A review is recorded against a driver, so a vehicle with no driver waits until one is assigned. */
+function unassignedGuard(driverUserId: string | null): string {
+  if (!driverUserId) {
+    throw new HttpError(
+      409,
+      'VEHICLE_NOT_ASSIGNED',
+      'Assign this vehicle to a driver before reviewing it.',
+    );
+  }
+  return driverUserId;
 }
 
 async function loadDocumentOr404(id: string): Promise<DocumentRow> {
@@ -103,15 +115,16 @@ export async function approveVehicleHandler(
   const vehicle = await findVehicleById(requireParam(req, 'id'));
   if (!vehicle) throw new HttpError(404, 'NOT_FOUND', 'Vehicle not found.');
 
+  const driverUserId = unassignedGuard(vehicle.driver_user_id);
   await setVehicleVerification(vehicle.id, 'APPROVED', null, req.auth.userId);
   await recordVerificationEvent({
-    driverUserId: vehicle.driver_user_id,
+    driverUserId,
     actorUserId: req.auth.userId,
     action: 'VEHICLE_APPROVED',
     vehicleId: vehicle.id,
   });
   await notify({
-    userId: vehicle.driver_user_id,
+    userId: driverUserId,
     type: 'VEHICLE_APPROVED',
     title: 'Vehicle approved',
     body: `Your ${vehicle.make} ${vehicle.model} was approved.`,
@@ -129,16 +142,17 @@ export async function rejectVehicleHandler(
   if (!vehicle) throw new HttpError(404, 'NOT_FOUND', 'Vehicle not found.');
   const { reason } = req.body as { reason: string };
 
+  const driverUserId = unassignedGuard(vehicle.driver_user_id);
   await setVehicleVerification(vehicle.id, 'REJECTED', reason, req.auth.userId);
   await recordVerificationEvent({
-    driverUserId: vehicle.driver_user_id,
+    driverUserId,
     actorUserId: req.auth.userId,
     action: 'VEHICLE_REJECTED',
     vehicleId: vehicle.id,
     reason,
   });
   await notify({
-    userId: vehicle.driver_user_id,
+    userId: driverUserId,
     type: 'VEHICLE_REJECTED',
     title: 'Vehicle rejected',
     body: `Your ${vehicle.make} ${vehicle.model} was rejected: ${reason}`,

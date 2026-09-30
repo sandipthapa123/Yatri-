@@ -3,17 +3,16 @@ import type { DriverOnboardingProgress } from '@yatri/types';
 import { listRequiredDocumentTypes } from '../documents/document-types.repository';
 import { expireStaleDocuments, findDocumentsForDriver } from '../documents/documents.repository';
 import type { DocumentRow } from '../documents/documents.types';
+import { todayKey } from '../fleet/expiry.service';
 import { findVehiclesByDriver } from '../vehicles/vehicles.repository';
 import type { VehicleRow } from '../vehicles/vehicles.types';
 import { findDriverDetails, toDriverDetails } from './driver-details.repository';
 import type { DriverDetailsRow } from './driver-details.repository';
 import { findDriverProfileByUserId } from './drivers.repository';
 
-function isPastDate(dateStr: string | null): boolean {
-  if (!dateStr) return false;
-  const today = new Date();
-  today.setUTCHours(0, 0, 0, 0);
-  return new Date(dateStr) < today;
+export function isPastDate(dateStr: string | null): boolean {
+  // A date is valid through the day it names; "today" is the platform's day (see fleet/expiry.service).
+  return !!dateStr && dateStr.slice(0, 10) < todayKey();
 }
 
 function hasPersonalInfo(details: DriverDetailsRow | null): boolean {
@@ -29,7 +28,7 @@ function hasDriverInfo(details: DriverDetailsRow | null): boolean {
   return !!(details?.license_number && details.license_expiry_date);
 }
 
-function documentSatisfies(
+export function documentSatisfies(
   documents: DocumentRow[],
   documentTypeId: string,
   vehicleId: string | null,

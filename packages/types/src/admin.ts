@@ -21,6 +21,8 @@ export const ADMIN_PERMISSIONS = [
   'REFUNDS_MANAGE',
   'COMPLIANCE_MANAGE',
   'DISPATCH_MANAGE',
+  'FLEET_VIEW',
+  'FLEET_MANAGE',
   'USERS_VIEW',
   'USERS_MANAGE',
   'FINANCE_VIEW',
@@ -62,6 +64,14 @@ export const ADMIN_PERMISSION_LABELS: Record<AdminPermission, { label: string; h
   DISPATCH_MANAGE: {
     label: 'Dispatch, pricing and zones',
     help: 'Edit service zones, dynamic pricing rules and driver incentives, and read the demand and supply picture. Every change is audited.',
+  },
+  FLEET_VIEW: {
+    label: 'View fleets and driver operations',
+    help: 'Fleets, vehicles, assignments, expiring documents, maintenance, suspensions and operational history.',
+  },
+  FLEET_MANAGE: {
+    label: 'Manage fleets and driver operations',
+    help: 'Create fleets, assign vehicles, change vehicle and driver operational status, and record inspections and maintenance. Every change is audited.',
   },
   USERS_VIEW: { label: 'View users', help: 'Search and read user accounts.' },
   USERS_MANAGE: { label: 'Manage users', help: 'Suspend and reactivate accounts.' },
@@ -106,6 +116,7 @@ export const PERMISSION_IMPLIES: Partial<Record<AdminPermission, readonly AdminP
   DRIVERS_REVIEW: ['OPERATIONS_VIEW'],
   SUPPORT_MANAGE: ['DISPUTES_MANAGE'],
   DISPATCH_MANAGE: ['OPERATIONS_VIEW'],
+  FLEET_MANAGE: ['FLEET_VIEW'],
 };
 
 /** Whether a set of held permissions grants the one needed. The one rule; the API and the app use it. */

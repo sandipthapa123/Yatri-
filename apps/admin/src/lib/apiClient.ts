@@ -1,5 +1,22 @@
 import type {
   AdminAccountRow,
+  AdminFleetBody,
+  AdminFleetVehicleBody,
+  AdminInspectionBody,
+  AdminLifecycleBody,
+  AdminMaintenanceCompleteBody,
+  AdminMaintenanceStartBody,
+  AdminOperationalBody,
+  AdminServiceLogBody,
+  AuditEntry,
+  ExpiryItem,
+  FleetDetail,
+  FleetDriverDetail,
+  FleetDriverRow,
+  FleetInfo,
+  FleetVehicleDetail,
+  FleetVehicleRow,
+  ServiceRecordInfo,
   AdminIncentiveRuleBody,
   AdminPricingRuleBody,
   AdminZoneBody,
@@ -608,3 +625,74 @@ export const listIncentiveAwards = (t: string, p: { page?: number; pageSize?: nu
     `/operations/incentive-awards${toQuery(p)}`,
     t,
   );
+
+// ---- fleets, vehicles and driver operations (FLEET_VIEW to read, FLEET_MANAGE to change)
+type Page<T> = { items: T[]; total: number };
+export const getFleetOptions = (t: string) =>
+  adminRequest<{
+    fleets: Array<{ id: string; name: string }>;
+    categories: Array<{ id: string; label: string }>;
+  }>('/fleet/options', t);
+export const listFleetsApi = (t: string) => adminRequest<FleetInfo[]>('/fleet/fleets', t);
+export const getFleet = (t: string, id: string) =>
+  adminRequest<FleetDetail>(`/fleet/fleets/${id}`, t);
+export const saveFleet = (t: string, id: string | null, body: AdminFleetBody) =>
+  adminRequest<FleetDetail>(id ? `/fleet/fleets/${id}` : '/fleet/fleets', t, {
+    method: id ? 'PUT' : 'POST',
+    body,
+  });
+export const listFleetVehiclesApi = (
+  t: string,
+  p: {
+    fleetId?: string;
+    lifecycle?: string;
+    assigned?: string;
+    search?: string;
+    page?: number;
+    pageSize?: number;
+  },
+) => adminRequest<Page<FleetVehicleRow>>(`/fleet/vehicles${toQuery(p)}`, t);
+export const getFleetVehicle = (t: string, id: string) =>
+  adminRequest<FleetVehicleDetail>(`/fleet/vehicles/${id}`, t);
+export const createFleetVehicleApi = (t: string, body: AdminFleetVehicleBody) =>
+  post<FleetVehicleDetail>('/fleet/vehicles', t, body);
+export const setVehicleLifecycle = (t: string, id: string, body: AdminLifecycleBody) =>
+  post<FleetVehicleDetail>(`/fleet/vehicles/${id}/lifecycle`, t, body);
+export const assignVehicleApi = (t: string, id: string, driverId: string) =>
+  post<FleetVehicleDetail>(`/fleet/vehicles/${id}/assign`, t, { driverId });
+export const unassignVehicleApi = (t: string, id: string, reason: string) =>
+  post<FleetVehicleDetail>(`/fleet/vehicles/${id}/unassign`, t, { reason });
+export const startMaintenanceApi = (t: string, id: string, body: AdminMaintenanceStartBody) =>
+  post<ServiceRecordInfo>(`/fleet/vehicles/${id}/maintenance`, t, body);
+export const completeMaintenanceApi = (t: string, id: string, body: AdminMaintenanceCompleteBody) =>
+  post<ServiceRecordInfo>(`/fleet/service-records/${id}/complete`, t, body);
+export const recordInspectionApi = (t: string, id: string, body: AdminInspectionBody) =>
+  post<ServiceRecordInfo>(`/fleet/vehicles/${id}/inspections`, t, body);
+export const logServiceApi = (t: string, id: string, body: AdminServiceLogBody) =>
+  post<ServiceRecordInfo>(`/fleet/vehicles/${id}/services`, t, body);
+export const listServiceRecordsApi = (
+  t: string,
+  p: { status?: string; page?: number; pageSize?: number },
+) => adminRequest<Page<ServiceRecordInfo>>(`/fleet/service-records${toQuery(p)}`, t);
+export const listFleetDriversApi = (
+  t: string,
+  p: { fleetId?: string; operational?: string; search?: string; page?: number; pageSize?: number },
+) => adminRequest<Page<FleetDriverRow>>(`/fleet/drivers${toQuery(p)}`, t);
+export const getFleetDriver = (t: string, id: string) =>
+  adminRequest<FleetDriverDetail>(`/fleet/drivers/${id}`, t);
+export const setDriverOperational = (t: string, id: string, body: AdminOperationalBody) =>
+  post<FleetDriverDetail>(`/fleet/drivers/${id}/operational`, t, body);
+export const setDriverFleetApi = (
+  t: string,
+  id: string,
+  body: { fleetId: string | null; reason: string },
+) => post<FleetDriverDetail>(`/fleet/drivers/${id}/fleet`, t, body);
+export const listExpiring = (t: string, p: { state?: string; kind?: string; fleetId?: string }) =>
+  adminRequest<ExpiryItem[]>(`/fleet/expiring${toQuery(p)}`, t);
+export const getFleetHistory = (t: string, p: { page?: number; pageSize?: number }) =>
+  adminRequest<Page<AuditEntry & { subjectType: string; subjectId: string | null }>>(
+    `/fleet/history${toQuery(p)}`,
+    t,
+  );
+export const runFleetCheck = (t: string) =>
+  post<{ reminders: number; takenOffline: number; lifted: number }>('/fleet/monitor/run', t);

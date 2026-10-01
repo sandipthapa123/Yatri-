@@ -1,4 +1,5 @@
-import { Router, type Router as RouterType } from 'express';
+import { Router, type RequestHandler, type Router as RouterType } from 'express';
+import type { z } from 'zod';
 
 import { authenticate } from '../../middleware/authenticate';
 import { userMutationRateLimit } from '../../middleware/rateLimit';
@@ -235,6 +236,31 @@ import {
   voidSchema as orgVoidSchema,
   voidStatementHandler,
 } from './admin-organizations';
+import {
+  cityAnalyticsHandler,
+  cityAnalyticsQuerySchema,
+  cityCategoriesHandler,
+  cityDetailHandler,
+  cityDocumentsHandler,
+  cityHoursHandler,
+  cityPaymentsHandler,
+  citySettingsHandler,
+  cityStatusHandler,
+  cityZonesHandler,
+  createCityHandler,
+  listCitiesHandler,
+  updateCityHandler,
+} from './admin-cities';
+import {
+  cityBodySchema,
+  cityCategoriesSchema,
+  cityDocumentsSchema,
+  cityHoursSchema,
+  cityPaymentsSchema,
+  citySettingsSchema,
+  cityStatusSchema,
+  cityZonesSchema,
+} from '../cities/cities-admin.service';
 import { auditAdminAction, requirePermission } from './permissions';
 
 /**
@@ -875,6 +901,47 @@ adminRouter.get(
   riskHistoryHandler,
 );
 adminRouter.post('/risk/sweep/run', requirePermission('RISK_MANAGE'), riskSweepHandler);
+
+// Cities: reading needs OPERATIONS_VIEW, every change DISPATCH_MANAGE (the same permission as zones and pricing).
+adminRouter.get('/cities', requirePermission('OPERATIONS_VIEW'), listCitiesHandler);
+adminRouter.post(
+  '/cities',
+  requirePermission('DISPATCH_MANAGE'),
+  validateBody(cityBodySchema),
+  createCityHandler,
+);
+adminRouter.get(
+  '/cities/:id',
+  requirePermission('OPERATIONS_VIEW'),
+  validateUuidParam('id'),
+  cityDetailHandler,
+);
+adminRouter.get(
+  '/cities/:id/analytics',
+  requirePermission('OPERATIONS_VIEW'),
+  validateUuidParam('id'),
+  validateQuery(cityAnalyticsQuerySchema),
+  cityAnalyticsHandler,
+);
+const cityEdits: Array<[string, z.ZodType, RequestHandler]> = [
+  ['', cityBodySchema, updateCityHandler],
+  ['/status', cityStatusSchema, cityStatusHandler],
+  ['/hours', cityHoursSchema, cityHoursHandler],
+  ['/categories', cityCategoriesSchema, cityCategoriesHandler],
+  ['/payments', cityPaymentsSchema, cityPaymentsHandler],
+  ['/settings', citySettingsSchema, citySettingsHandler],
+  ['/documents', cityDocumentsSchema, cityDocumentsHandler],
+  ['/zones', cityZonesSchema, cityZonesHandler],
+];
+for (const [path, schema, handler] of cityEdits) {
+  adminRouter.put(
+    `/cities/:id${path}`,
+    requirePermission('DISPATCH_MANAGE'),
+    validateUuidParam('id'),
+    validateBody(schema),
+    handler,
+  );
+}
 
 // Business accounts, from the platform's side: ORGANIZATIONS_VIEW reads, ORGANIZATIONS_MANAGE changes.
 adminRouter.get(

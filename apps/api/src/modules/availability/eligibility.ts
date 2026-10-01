@@ -1,8 +1,9 @@
-import type { EligibilitySummary } from '@yatri/types';
+import type { EligibilitySummary, LatLng } from '@yatri/types';
 
 import { query } from '../../lib/db';
 import { ACTIVE_SQL } from '../trips/trips.repository';
 import { checkVerificationEligibility } from '../drivers/onboarding.service';
+import { cityProblemsForDriver } from '../cities/driver-city';
 import { driverFleetProblems } from '../fleet/eligibility';
 import { limitReasonFor } from './driver-limits';
 
@@ -13,7 +14,11 @@ import { limitReasonFor } from './driver-limits';
  * an APPROVED and unexpired vehicle, every required document APPROVED and
  * unexpired) and adds the availability-specific rules on top.
  */
-export async function evaluateDriverEligibility(driverId: string): Promise<EligibilitySummary> {
+export async function evaluateDriverEligibility(
+  driverId: string,
+  /** Where the driver is (their opening fix): the city there adds its own rules. */
+  at?: LatLng,
+): Promise<EligibilitySummary> {
   const reasons: string[] = [];
 
   const row = await query<{ account_status: string; driver_status: string | null }>(
@@ -50,6 +55,9 @@ export async function evaluateDriverEligibility(driverId: string): Promise<Eligi
 
   // Operations: suspension, the fleet, and whether any vehicle can be used (one place: fleet/eligibility).
   reasons.push(...(await driverFleetProblems(driverId)));
+
+  // The city the driver is in: whether it is open, and any extra documents it requires.
+  if (at) reasons.push(...(await cityProblemsForDriver(driverId, at)));
 
   // Operational limits (most rides in a day): the reason is the sentence the driver is shown.
   const limit = await limitReasonFor(driverId);

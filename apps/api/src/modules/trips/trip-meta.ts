@@ -20,5 +20,6 @@ export function metaFromRow(t: TripRow): TripMeta {
     arrivedAtMs: t.arrived_at?.getTime() ?? null,
     passengerNotifiedAtMs: t.passenger_notified_at?.getTime() ?? null,
     driverNotifiedAtMs: null,
+    cityId: t.city_id,
   };
 }

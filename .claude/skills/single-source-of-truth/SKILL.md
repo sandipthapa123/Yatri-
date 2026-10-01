@@ -68,6 +68,9 @@ Yatri-specific reminders:
 - A personal setting is a row of `PREFERENCE_DEFS` (types) stored by `preferences.service.ts`; the apps read it through
   `useUiPreferences` and never keep their own copy; whether a notification is pushed is `shouldDeliver` over
   `notificationCategoryOf`; a preference is never a business rule and a platform-controlled default is a platform setting.
+- Where Yatri operates is `service_zones` (one geofence); a place's city is `cityAtPoint` (zone `city_id`); whether service
+  is on is `cityServiceState` via `assertRideService`; a city's fare, waiting and cancellation values are the platform setting
+  overlaid by `city_settings` in `city-rules.ts` (`pricingConfigFor`, `cancellationRulesFor`). No code or app names a city.
 - Do not put a backslash inside a SQL string written from a shell command: use `ESCAPE '!'` with
   `likeContains` for searches.
 - If you discover a duplicate, consolidate it or add it to "Known duplication" in the doc.

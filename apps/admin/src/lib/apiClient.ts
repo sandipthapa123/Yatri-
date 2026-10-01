@@ -1,5 +1,9 @@
 import type {
   AdminAccountRow,
+  AdminCityBody,
+  AdminCityRow,
+  CityAnalytics,
+  CityDetail,
   AdminFleetBody,
   AdminMarkStatementPaidBody,
   AdminOrganizationDetail,
@@ -788,3 +792,15 @@ export const markStatementPaidApi = (t: string, id: string, body: AdminMarkState
   post<OrgStatementDetail>(`/organizations/statements/${id}/paid`, t, body);
 export const voidStatementApi = (t: string, id: string, reason: string) =>
   post<OrgStatementDetail>(`/organizations/statements/${id}/void`, t, { reason });
+
+// ---- cities (OPERATIONS_VIEW to read, DISPATCH_MANAGE to change)
+
+export const listCitiesApi = (t: string) => adminRequest<AdminCityRow[]>('/cities', t);
+export const getCityApi = (t: string, id: string) => adminRequest<CityDetail>(`/cities/${id}`, t);
+export const createCityApi = (t: string, body: AdminCityBody) =>
+  post<CityDetail>('/cities', t, body);
+/** One edit of a city: `part` is '' (the profile), '/status', '/hours', '/categories', '/payments', '/settings', '/documents' or '/zones'. */
+export const putCityApi = (t: string, id: string, part: string, body: object) =>
+  adminRequest<CityDetail>(`/cities/${id}${part}`, t, { method: 'PUT', body });
+export const getCityAnalyticsApi = (t: string, id: string, range: string) =>
+  adminRequest<CityAnalytics>(`/cities/${id}/analytics?range=${range}`, t);

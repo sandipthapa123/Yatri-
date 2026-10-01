@@ -564,6 +564,8 @@ export interface PublicPlatformConfig {
   pausedMessage: string | null;
   /** The language people get until they choose (the apps show it before anyone signs in). */
   defaultLanguage: string;
+  /** The cities Yatri is set up in, with whether each is open now and what it offers (never a hard-coded list). */
+  cities: import('./cities').PublicCity[];
   fare: { baseNpr: number; perKmNpr: number; perMinuteNpr: number; minimumNpr: number };
   cancellation: { freeSeconds: number; feeNpr: number };
   waiting: { freeSeconds: number; perMinuteNpr: number; noShowAfterSeconds: number };

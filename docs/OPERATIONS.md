@@ -320,3 +320,20 @@ The controls and their evidence are in `docs/SECURITY.md`. What operators must d
   history (marked not pushed). There is no push provider yet, so nothing is pushed in a real deployment until one is added.
 - **When someone cannot sign in on a new phone or sees a device they do not know.** They sign it out themselves in
   Settings > Devices; sessions are the existing ones.
+
+## 15. Cities and service areas
+
+- **Adding a city.** Cities and service areas > Add a city (name, code, province, map centre, time zone). It starts as
+  coming soon. In Service zones, draw its service area (kind "Service area" or "City boundary"), then on the city page tick
+  the area under Boundary, review hours, vehicle types, fares and driver requirements, and Open it. A city with no active
+  service area cannot be opened.
+- **Opening and pausing.** Pausing stops new rides and new drivers going online at once; rides under way finish. Riders and
+  drivers are told in words ("Yatri is paused in Pokhara for now").
+- **Hours.** No window means open all day. A closing time earlier than the opening time runs past midnight. Hours are read
+  in the city's time zone.
+- **Fares, waiting and cancellation.** Leave a box empty to use the platform value (Settings). Changing a city's value
+  affects new estimates and rides in that city only; changing the platform value reaches every city that has not set its own.
+- **Driver requirements.** Ticking a document means a driver must hold an approved, unexpired copy to go online in that city;
+  the refusal names it. Yatri-wide required documents stay in driver verification.
+- **Two administrators at once.** The second save is refused with "changed by someone else": reload and make the change again.
+- **Existing deployments** have no cities until one is added: the platform-wide rules and service areas apply as before.

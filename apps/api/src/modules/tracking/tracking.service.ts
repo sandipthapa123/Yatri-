@@ -12,7 +12,7 @@ import { env } from '../../config/env';
 import { getRedisClient } from '../../config/redis';
 import { reverseGeocode } from '../location/location.service';
 import { getRouteProvider } from '../location/providers';
-import { pricingConfig } from '../pricing/pricing.config';
+import { pricingConfigForCityId } from '../cities/city-rules';
 import { settingList } from '../settings/settings.service';
 import { publishTripChange } from '../realtime/bus';
 import { getLastEventSeq, recordTripEvent } from '../trips/trip-events.service';
@@ -63,6 +63,8 @@ export interface TripMeta {
   passengerNotifiedAtMs: number | null;
   /** When the driver was last told the passenger is waiting. */
   driverNotifiedAtMs: number | null;
+  /** The city the ride belongs to: its waiting rules are this city's. */
+  cityId: string | null;
 }
 
 interface PartyState {
@@ -430,7 +432,7 @@ export async function buildSnapshot(
     driverArrival,
     trip,
     // Waiting is computed from server timestamps only; both apps render exactly this.
-    waiting: computeWaiting(meta, nowMs, pricingConfig()),
+    waiting: computeWaiting(meta, nowMs, await pricingConfigForCityId(meta.cityId)),
   };
 }
 

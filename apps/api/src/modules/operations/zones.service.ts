@@ -35,9 +35,10 @@ interface Row {
   note: string | null;
   priority: number;
   is_active: boolean;
+  city_id: string | null;
 }
 const COLS =
-  'id, code, name, kind, polygon, pickup_allowed, dropoff_allowed, note, priority, is_active';
+  'id, code, name, kind, polygon, pickup_allowed, dropoff_allowed, note, priority, is_active, city_id';
 const toZone = (r: Row): ZoneDef => ({
   id: r.id,
   code: r.code,
@@ -49,6 +50,7 @@ const toZone = (r: Row): ZoneDef => ({
   note: r.note,
   priority: r.priority,
   isActive: r.is_active,
+  cityId: r.city_id,
 });
 
 const CACHE_MS = 5_000;
@@ -98,6 +100,7 @@ export const zoneBodySchema = z
     note: z.string().trim().max(ZONE_NOTE_MAX).nullable(),
     priority: z.number().int().min(0).max(1000),
     isActive: z.boolean(),
+    cityId: z.string().uuid().nullable().optional(),
     reason: z.string().trim().min(3).max(300),
   })
   .strict();
@@ -112,8 +115,8 @@ export async function createZone(body: AdminZoneBody, adminId: string): Promise<
   check(body);
   try {
     const r = await query<Row>(
-      `INSERT INTO service_zones (code, name, kind, polygon, pickup_allowed, dropoff_allowed, note, priority, is_active)
-       VALUES ($1, $2, $3, $4::jsonb, $5, $6, $7, $8, $9) RETURNING ${COLS}`,
+      `INSERT INTO service_zones (code, name, kind, polygon, pickup_allowed, dropoff_allowed, note, priority, is_active, city_id)
+       VALUES ($1, $2, $3, $4::jsonb, $5, $6, $7, $8, $9, $10) RETURNING ${COLS}`,
       [
         body.code,
         body.name,
@@ -124,6 +127,7 @@ export async function createZone(body: AdminZoneBody, adminId: string): Promise<
         body.note,
         body.priority,
         body.isActive,
+        body.cityId ?? null,
       ],
     );
     dropZoneCache();
@@ -154,7 +158,8 @@ export async function updateZone(
   try {
     const r = await query<Row>(
       `UPDATE service_zones SET code = $2, name = $3, kind = $4, polygon = $5::jsonb, pickup_allowed = $6,
-         dropoff_allowed = $7, note = $8, priority = $9, is_active = $10, updated_at = now()
+         dropoff_allowed = $7, note = $8, priority = $9, is_active = $10, updated_at = now(),
+         city_id = CASE WHEN $11::boolean THEN $12::uuid ELSE city_id END
        WHERE id = $1 RETURNING ${COLS}`,
       [
         id,
@@ -167,6 +172,8 @@ export async function updateZone(
         body.note,
         body.priority,
         body.isActive,
+        body.cityId !== undefined,
+        body.cityId ?? null,
       ],
     );
     if (!r.rows[0]) throw new HttpError(404, 'NOT_FOUND', 'Zone not found.');

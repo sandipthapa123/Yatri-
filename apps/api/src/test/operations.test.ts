@@ -219,6 +219,7 @@ describe('geometry: one point-in-polygon', () => {
 });
 
 const zone = (over: Partial<ZoneDef>): ZoneDef => ({
+  cityId: null,
   id: over.code ?? 'Z',
   code: 'Z',
   name: 'Zone',

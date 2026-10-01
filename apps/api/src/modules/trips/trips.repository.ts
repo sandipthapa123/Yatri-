@@ -40,6 +40,7 @@ export interface TripRow {
   surge_multiplier: string;
   surge_label: string | null;
   pickup_zone_id: string | null;
+  city_id: string | null;
   organization_id: string | null;
   booked_by: string | null;
   cost_center_id: string | null;
@@ -65,7 +66,7 @@ const SELECT = `
          t.started_latitude, t.started_longitude, t.ended_latitude, t.ended_longitude,
          t.actual_distance_meters, t.actual_duration_seconds,
          t.surge_multiplier, t.surge_label, t.pickup_zone_id,
-         t.organization_id, t.booked_by, t.cost_center_id, t.purpose,
+         t.city_id, t.organization_id, t.booked_by, t.cost_center_id, t.purpose,
          pl.place_name AS pickup_name, pl.address AS pickup_address,
          pl.latitude AS pickup_lat, pl.longitude AS pickup_lng,
          dl.place_name AS dest_name, dl.address AS dest_address,
@@ -107,6 +108,8 @@ export interface BusinessRequest {
 
 export async function createTripRequest(input: {
   business?: BusinessRequest | undefined;
+  /** The city the ride was requested in (its fare, waiting and cancellation rules follow the ride). */
+  cityId?: string | null;
   passengerId: string;
   vehicleCategoryId: string;
   pickup: LocationFields;
@@ -130,9 +133,9 @@ export async function createTripRequest(input: {
       `INSERT INTO trips
          (passenger_id, pickup_location_id, destination_location_id, status,
           distance_meters, duration_seconds, fare_estimate_npr, search_deadline_at, vehicle_category_id,
-          surge_multiplier, surge_label, pickup_zone_id, organization_id, booked_by, cost_center_id, purpose)
+          surge_multiplier, surge_label, pickup_zone_id, organization_id, booked_by, cost_center_id, purpose, city_id)
        VALUES ($1, $2, $3, 'SEARCHING', $4, $5, $6, now() + ($7::int * interval '1 second'), $8, $9, $10, $11,
-               $12, $13, $14, $15)
+               $12, $13, $14, $15, $16)
        RETURNING id`,
       [
         input.passengerId,
@@ -150,6 +153,7 @@ export async function createTripRequest(input: {
         input.business?.bookedBy ?? null,
         input.business?.costCenterId ?? null,
         input.business?.purpose ?? null,
+        input.cityId ?? null,
       ],
     );
     await client.query('COMMIT');

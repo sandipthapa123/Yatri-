@@ -142,6 +142,8 @@ export interface ZoneDef {
   /** Higher wins when zones overlap. */
   priority: number;
   isActive: boolean;
+  /** The city this zone's boundary belongs to (see cities.ts); null keeps the platform-wide rules. */
+  cityId: string | null;
 }
 
 export const ZONE_NAME_MAX = 80;
@@ -211,6 +213,8 @@ export interface AdminZoneBody {
   note: string | null;
   priority: number;
   isActive: boolean;
+  /** The city this zone belongs to; omitted keeps what it is, null makes it platform-wide. */
+  cityId?: string | null;
   reason: string;
 }
 

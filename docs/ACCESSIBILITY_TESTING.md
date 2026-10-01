@@ -318,3 +318,21 @@ with TalkBack or VoiceOver in both apps:
 8. **Emergency alert:** with "ask before sending" off, the button's hint says it alerts straight away.
 9. **Recent destinations:** the location picker lists them under a heading; "Clear my recent destinations" announces that the
    history is unchanged.
+
+## S. Cities and service areas (Phase 20)
+
+Automated: the console accessibility tests scan the new pages (labelled fields, table captions and headers, status regions,
+in-page confirmations), and a test keeps city names out of the apps' code. Check by hand with NVDA and a keyboard:
+
+1. **Cities list:** a table with a caption and row headers; the status and "Open now" are words (Open, Paused, Coming soon; Yes, No).
+2. **A city page:** each part is its own section with a heading; the summary says whether the city is taking rides now and why not.
+3. **Opening hours:** each window is a fieldset with a legend; the days are checkboxes inside a labelled group; opening and
+   closing times are labelled time fields and the hint explains an overnight window.
+4. **Checkbox lists** (boundary, vehicle types, payment options, driver documents) sit in a fieldset with a legend and each box
+   reads its own label; notes such as "not in use" or "now in another city" are part of the label.
+5. **Saving:** every part asks for a reason, then an in-page confirmation that says what will happen; focus moves to it,
+   Escape backs out, and the result (or a refusal such as "changed by someone else") is announced as a status.
+6. **Passenger and driver apps:** when a ride is refused because of the city (paused, closed, another city, vehicle type not
+   offered) the message is read as an alert in words; a driver refused at go-online hears each reason, including a missing
+   city document by name.
+7. **Maps:** the picker starts on the city's centre, but selecting a place never needs the map; search and saved places do the same.

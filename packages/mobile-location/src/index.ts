@@ -16,7 +16,9 @@ export {
 export { SearchController } from './searchController';
 export type { SearchState } from './searchController';
 export * as locationApi from './locationApi';
-export { driverLocationApi, savedPlacesApi } from './locationApi';
+export { driverLocationApi, savedPlacesApi, serviceApi } from './locationApi';
+export { startCenterOf } from './startCenter';
+export { useStartCenter } from './useStartCenter';
 export type { SavedPlaceInput } from './locationApi';
 export { LiveTripView } from './components/LiveTripView';
 export type { LiveTripViewProps } from './components/LiveTripView';

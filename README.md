@@ -155,6 +155,9 @@ Run from the repository root; each fans out to every workspace package via pnpm.
   accessibility, notifications, privacy, safety, ride defaults) consumed by both apps, the notification service and the API;
   recent destinations, device management, and administrator-managed platform defaults. A preference never overrides a
   server rule.
+- **Multi-city service** (`docs/PHASE_20.md`): cities as data (status, hours, vehicle types, fares, cancellation and waiting
+  values, payment options, driver requirements), bounded by the existing service zones. A driver and a passenger operate
+  under the city their location is in; rides cannot be made where service is off, outside hours or across a city line.
 - Running it for real: [`docs/OPERATIONS.md`](docs/OPERATIONS.md) (architecture, deployment, backups,
   monitoring, incident recovery, release and rollback) and [`docs/SECURITY.md`](docs/SECURITY.md) (the controls,
   what was audited, what is still open). Container images and a full local stack are in [`deploy/`](deploy/).

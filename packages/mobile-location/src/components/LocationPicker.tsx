@@ -1,4 +1,4 @@
-import type { PlaceSummary, SavedPlace } from '@yatri/types';
+import { NEPAL_VIEW, type PlaceSummary, type SavedPlace } from '@yatri/types';
 import { useEffect, useMemo, useState } from 'react';
 import {
   AccessibilityInfo,
@@ -39,6 +39,8 @@ export interface LocationPickerProps {
   onConfirm: (place: SelectedPlace) => void;
   onCancel?: () => void;
   savedPlaces?: SavedPlace[];
+  /** Where the map starts when nothing is chosen yet: a city's centre from the platform configuration (never a limit on service). */
+  startCenter?: { latitude: number; longitude: number } | null;
   /** Places the person recently went to (from the server; only offered when they have not hidden them). */
   recentPlaces?: Array<{
     name: string | null;
@@ -56,7 +58,6 @@ export interface LocationPickerProps {
 }
 
 const NOUN = { pickup: 'Pickup', destination: 'Destination', place: 'Place' } as const;
-const DEFAULT_CENTER = { latitude: 27.7172, longitude: 85.324 }; // Kathmandu; only a starting view, not a service limit
 
 /** Polite announcement that also works on iOS, where live regions are unreliable. */
 function announce(message: string) {
@@ -83,6 +84,7 @@ export function LocationPicker({
   onCancel,
   savedPlaces = [],
   recentPlaces = [],
+  startCenter = null,
   initial = null,
   allowCurrentLocation = purpose === 'pickup',
   showMap = true,
@@ -198,7 +200,7 @@ export function LocationPicker({
   const canOpenSettings = gps.state.status === 'error' && gps.state.issue === 'blocked';
 
   const results = search.status === 'success' ? search.results : [];
-  const mapCenter = draft ?? DEFAULT_CENTER;
+  const mapCenter = draft ?? startCenter ?? NEPAL_VIEW;
   const markers = useMemo(
     () =>
       draft
@@ -469,6 +471,7 @@ export function LocationPicker({
               </Text>
               <YatriMap
                 center={mapCenter}
+                {...(draft || startCenter ? {} : { zoom: NEPAL_VIEW.zoom })}
                 markers={markers}
                 onPick={(pt) => void resolvePoint(pt, 'map')}
                 colors={colors}

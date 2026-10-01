@@ -1,11 +1,13 @@
 import { authApi } from '@yatri/mobile-auth';
 import type {
+  CityAtPlace,
   DistanceResult,
   DriverAvailabilityStatus,
   DriverLocationSample,
   DriverLocation,
   LiveTripSnapshot,
   PlaceSummary,
+  PublicPlatformConfig,
   ReverseGeocodeResult,
   SavedPlace,
   SavedPlaceKind,
@@ -131,4 +133,17 @@ export const driverAvailabilityApi = {
       method: 'POST',
       accessToken,
     }),
+};
+
+/**
+ * What the platform says about where it operates: the cities (open now or not, what they offer) and what applies at a
+ * place. Public and the same for every app; the apps show it and never decide with it (the server refuses a ride where
+ * service is unavailable whatever a client believes).
+ */
+export const serviceApi = {
+  config: () => authApi.request<PublicPlatformConfig>('/config/platform'),
+  at: (p: { latitude: number; longitude: number }) =>
+    authApi.request<CityAtPlace>(
+      `/config/service-at?latitude=${p.latitude}&longitude=${p.longitude}`,
+    ),
 };

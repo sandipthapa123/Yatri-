@@ -19,7 +19,6 @@ import {
   requestAndOffer,
   respondOffer,
 } from '../dispatch/dispatch.service';
-import { pricingConfig } from '../pricing/pricing.config';
 import { buildSnapshot, isActive, loadMeta } from '../tracking/tracking.service';
 import { getPaymentFor, settlePayment } from './payments.service';
 import { rateTrip } from './ratings.service';
@@ -62,8 +61,7 @@ export async function estimateHandler(
   res: Response<ApiResponse<FareEstimateResponse>>,
 ) {
   const body = req.body as TripEstimateBody;
-  const { fare, category, options, notices } = await estimateForRequest(body);
-  const cfg = pricingConfig();
+  const { fare, category, options, notices, pricing: cfg } = await estimateForRequest(body);
   res.json({
     success: true,
     data: {

@@ -195,7 +195,8 @@ export async function updateSetting(
 }
 
 /** What the apps may know, from the same store. */
-export function publicPlatformConfig(): PublicPlatformConfig {
+/** The platform-wide part; the route adds the cities (which come from the cities module). */
+export function publicPlatformConfig(): Omit<PublicPlatformConfig, 'cities'> {
   const requestsEnabled = settingBool('SERVICE_REQUESTS_ENABLED');
   return {
     requestsEnabled,

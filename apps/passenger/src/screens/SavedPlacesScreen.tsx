@@ -1,6 +1,11 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ApiError, useAuth } from '@yatri/mobile-auth';
-import { LocationPicker, savedPlacesApi, type SelectedPlace } from '@yatri/mobile-location';
+import {
+  LocationPicker,
+  savedPlacesApi,
+  useStartCenter,
+  type SelectedPlace,
+} from '@yatri/mobile-location';
 import type { SavedPlace, SavedPlaceKind } from '@yatri/types';
 import { useCallback, useEffect, useState } from 'react';
 import {
@@ -34,6 +39,7 @@ type Mode =
 export function SavedPlacesScreen({ navigation }: Props) {
   const theme = useTheme();
   const { getAccessToken } = useAuth();
+  const startCenter = useStartCenter();
   const [places, setPlaces] = useState<SavedPlace[] | null>(null);
   const [mode, setMode] = useState<Mode>({ type: 'list' });
   const [error, setError] = useState<string | null>(null);
@@ -191,6 +197,7 @@ export function SavedPlacesScreen({ navigation }: Props) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }}>
         <LocationPicker
+          startCenter={startCenter}
           purpose="place"
           getAccessToken={getAccessToken}
           allowCurrentLocation

@@ -1,6 +1,6 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useAuth } from '@yatri/mobile-auth';
-import { LocationPicker, savedPlacesApi } from '@yatri/mobile-location';
+import { LocationPicker, savedPlacesApi, useStartCenter } from '@yatri/mobile-location';
 import { preferencesApi } from '@yatri/mobile-preferences';
 import type { RecentPlace, SavedPlace } from '@yatri/types';
 import { useEffect, useState } from 'react';
@@ -19,6 +19,7 @@ export function PickLocationScreen({ navigation, route }: Props) {
   const { pickup, destination, setPickup, setDestination } = useTripLocations();
   const [saved, setSaved] = useState<SavedPlace[]>([]);
   const [recent, setRecent] = useState<RecentPlace[]>([]);
+  const startCenter = useStartCenter();
 
   useEffect(() => {
     let cancelled = false;
@@ -52,6 +53,7 @@ export function PickLocationScreen({ navigation, route }: Props) {
         getAccessToken={getAccessToken}
         savedPlaces={saved}
         recentPlaces={recent}
+        startCenter={startCenter}
         initial={purpose === 'pickup' ? pickup : destination}
         colors={theme.colors}
         minTouchTarget={theme.minTouchTarget}

@@ -31,7 +31,12 @@ import {
   pricingFor,
 } from '../pricing/categories';
 import { estimateFare, finalFare, waitingCharge } from '../pricing/pricing';
-import { pricingConfig } from '../pricing/pricing.config';
+import { assertRideService, offeredCategoryIds } from '../cities/cities.service';
+import {
+  cancellationRulesForCityId,
+  pricingConfigFor,
+  pricingConfigForCityId,
+} from '../cities/city-rules';
 import { metaFromRow } from './trip-meta';
 import { settingBool, settingText } from '../settings/settings.service';
 import { isCategoryAvailable } from '../dispatch/matching';
@@ -174,8 +179,11 @@ export async function buildTripSummary(t: TripRow, viewerId: string): Promise<Tr
     // What cancelling would cost right now, from THE cancellation rules (passenger of a live ride only).
     cancelFeeNpr:
       viewerIsPassenger && !TERMINAL_TRIP_STATUSES.includes(t.status)
-        ? decidePassengerCancellation({ status: t.status, matchedAt: t.matched_at }, new Date())
-            .feeNpr
+        ? decidePassengerCancellation(
+            { status: t.status, matchedAt: t.matched_at },
+            new Date(),
+            await cancellationRulesForCityId(t.city_id),
+          ).feeNpr
         : 0,
     cancellation:
       t.status === 'CANCELLED' && t.cancelled_from_status
@@ -220,8 +228,16 @@ export async function estimateForRequest(body: TripEstimateBody) {
   const notices = [
     ...new Set([...pickupZones, ...dropoffZones].flatMap((z) => (z.note ? [z.note] : []))),
   ];
+  // Which city this is, whether service is on there now, and that the ride stays inside it (cities module).
+  const offeredHere = await assertRideService({
+    pickup: body.pickup,
+    dropoff: body.destination,
+    at: new Date(),
+  });
+  const base = pricingConfigFor(offeredHere);
   const trip = await measureTrip(body);
-  const categories = await listActiveCategories();
+  const offered = await offeredCategoryIds(offeredHere);
+  const categories = (await listActiveCategories()).filter((c) => offered.has(c.id));
   const selected = body.vehicleCategory
     ? categories.find((c) => c.code === body.vehicleCategory)
     : categories[0]; // no choice yet: price the first category; the picker lists them all
@@ -234,7 +250,7 @@ export async function estimateForRequest(body: TripEstimateBody) {
       // The price the rider is shown includes demand pricing: the same engine a request will use.
       fare: estimateFare(
         trip,
-        pricingFor(c),
+        pricingFor(c, base),
         await surgeFor({ pickup: body.pickup, categoryId: c.id }),
       ),
     })),
@@ -247,6 +263,8 @@ export async function estimateForRequest(body: TripEstimateBody) {
     distanceMeters: trip.distanceMeters,
     durationSeconds: trip.durationSeconds,
     notices,
+    pricing: base,
+    cityId: offeredHere?.info.id ?? null,
   };
 }
 
@@ -264,11 +282,17 @@ export async function quoteTrip(body: TripRequestBody) {
   if (!category) throw unknownCategory();
   const pickupZones = await assertZoneAccess(body.pickup, 'PICKUP');
   const dropoffZones = await assertZoneAccess(body.destination, 'DROPOFF');
+  // The city the ride belongs to: it must be open now, the drop-off in the same city, the vehicle type offered there.
+  const city = await assertRideService({
+    pickup: body.pickup,
+    dropoff: body.destination,
+    categoryId: category.id,
+  });
   const trip = await measureTrip(body);
-  // The fare is priced by the server for the chosen category; the request carries no price.
+  // The fare is priced by the server for the chosen category and city; the request carries no price.
   const surge = await surgeFor({ pickup: body.pickup, categoryId: category.id });
-  const fare = estimateFare(trip, pricingFor(category), surge);
-  return { category, pickupZones, dropoffZones, trip, surge, fare };
+  const fare = estimateFare(trip, pricingFor(category, pricingConfigFor(city)), surge);
+  return { category, pickupZones, dropoffZones, trip, surge, fare, city };
 }
 
 export async function requestTrip(
@@ -277,7 +301,7 @@ export async function requestTrip(
   business?: BusinessRequest,
 ): Promise<TripRow> {
   await assertNotRestricted(passengerId);
-  const { category, pickupZones, trip, surge, fare } = await quoteTrip(body);
+  const { category, pickupZones, trip, surge, fare, city } = await quoteTrip(body);
   // Demand pricing may have moved since the rider saw the estimate: they must confirm the new total.
   if (body.confirmedTotalNpr !== undefined && body.confirmedTotalNpr !== fare.totalNpr) {
     throw new HttpError(
@@ -292,6 +316,7 @@ export async function requestTrip(
   try {
     row = await createTripRequest({
       business,
+      cityId: city?.info.id ?? null,
       passengerId,
       vehicleCategoryId: category.id,
       pickup: {
@@ -447,7 +472,7 @@ export async function startTrip(tripId: string, driverId: string): Promise<TripR
   const at = await requireDriverFix(tripId);
   // Waiting is priced once, from server timestamps, at the moment the ride starts.
   const waitedSeconds = trip.arrived_at ? secondsSince(trip.arrived_at.getTime(), Date.now()) : 0;
-  const { chargeNpr } = waitingCharge(waitedSeconds, pricingConfig());
+  const { chargeNpr } = waitingCharge(waitedSeconds, await pricingConfigForCityId(trip.city_id));
   return transition(tripId, {
     to: 'IN_PROGRESS',
     from: ['DRIVER_ARRIVED'],
@@ -487,7 +512,7 @@ export async function completeTrip(tripId: string, driverId: string): Promise<Tr
     : null;
   const { totalNpr: finalNpr } = finalFare(
     { distanceMeters, durationSeconds },
-    pricingFor(category),
+    pricingFor(category, await pricingConfigForCityId(trip.city_id)),
     trip.waiting_charge_npr,
     // The multiplier the rider was quoted when they requested, not whatever the rules say now.
     { multiplier: Number(trip.surge_multiplier), label: trip.surge_label },
@@ -531,7 +556,11 @@ export async function passengerCancel(
   if (!trip || trip.passenger_id !== passengerId) throw notFound();
   // THE cancellation rules decide whether this is allowed and what it costs (cancellation.ts).
   const feeNpr = requireCancellationAllowed(
-    decidePassengerCancellation({ status: trip.status, matchedAt: trip.matched_at }, new Date()),
+    decidePassengerCancellation(
+      { status: trip.status, matchedAt: trip.matched_at },
+      new Date(),
+      await cancellationRulesForCityId(trip.city_id),
+    ),
   );
   const cancelled = await transition(tripId, {
     to: 'CANCELLED',
@@ -588,7 +617,7 @@ export async function driverDropsOut(
 export async function driverNoShow(tripId: string, driverId: string): Promise<TripRow> {
   const trip = await getTrip(tripId);
   if (!trip || trip.driver_id !== driverId) throw notFound();
-  const cfg = pricingConfig();
+  const cfg = await pricingConfigForCityId(trip.city_id);
   const waited = trip.arrived_at ? secondsSince(trip.arrived_at.getTime(), Date.now()) : 0;
   if (trip.status !== 'DRIVER_ARRIVED' || waited < cfg.noShowAfterSeconds) {
     throw new HttpError(

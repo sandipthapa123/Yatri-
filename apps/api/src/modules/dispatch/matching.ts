@@ -9,6 +9,7 @@ import { env } from '../../config/env';
 import { query } from '../../lib/db';
 import { log } from '../../lib/logger';
 import { sqlIn } from '../../lib/sql';
+import { cityAtPoint } from '../cities/cities.service';
 import { driversOverLimit } from '../availability/driver-limits';
 import { availabilityConfig } from '../availability/availability.service';
 import { isMatchable, locationFreshness } from '../availability/availability.machine';
@@ -145,6 +146,8 @@ export async function findEligibleDrivers(req: MatchRequest): Promise<MatchCandi
 
   const now = Date.now();
   const zones: ZoneDef[] = await activeZones();
+  // Rides stay inside one city: a driver is only offered rides in the city they are in.
+  const pickupCityId = (await cityAtPoint(pickup)).city?.info.id ?? null;
   const inRange: Array<{ driverId: string; distanceMeters: number; etaSeconds: number }> = [];
   for (const row of r.rows) {
     const live = await getLiveFix(row.driver_id);
@@ -152,6 +155,7 @@ export async function findEligibleDrivers(req: MatchRequest): Promise<MatchCandi
     if (!live || !isMatchable('ONLINE', freshness)) continue;
     // A driver who has wandered outside the service area is not offered rides.
     if (!insideCoverage(zones, live.fix)) continue;
+    if (((await cityAtPoint(live.fix)).city?.info.id ?? null) !== pickupCityId) continue;
     const distanceMeters = haversineMeters(live.fix, pickup);
     if (distanceMeters <= radius) {
       inRange.push({

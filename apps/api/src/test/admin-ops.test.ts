@@ -149,6 +149,7 @@ describe('RBAC: every admin route names a permission', () => {
     ['FLEET_VIEW', '/fleet/options'],
     ['ORGANIZATIONS_VIEW', '/organizations'],
     ['ORGANIZATIONS_VIEW', '/organizations/statements'],
+    ['OPERATIONS_VIEW', '/cities'],
     ['RISK_VIEW', '/risk/overview'],
     ['RISK_VIEW', '/risk/events'],
     ['RISK_VIEW', '/risk/users'],
@@ -1114,6 +1115,7 @@ describe('platform settings', () => {
     expect(res.status).toBe(200);
     expect(Object.keys(res.body.data).sort()).toEqual([
       'cancellation',
+      'cities',
       'defaultLanguage',
       'fare',
       'pausedMessage',

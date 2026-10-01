@@ -7,6 +7,8 @@ import {
   type WebViewProps,
 } from 'react-native-webview';
 
+import { NEPAL_VIEW } from '@yatri/types';
+
 export interface MapMarker {
   id: string;
   latitude: number;
@@ -77,7 +79,7 @@ try{
   L.tileLayer(${JSON.stringify(tileUrl)},{maxZoom:19,attribution:${JSON.stringify(attribution)}}).addTo(map);
   layer=L.layerGroup().addTo(map);
   map.on('click',function(e){post({type:'pick',latitude:e.latlng.lat,longitude:e.latlng.lng});});
-  map.setView([27.7172,85.324],13);
+  map.setView([${NEPAL_VIEW.latitude},${NEPAL_VIEW.longitude}],${NEPAL_VIEW.zoom});
   post({type:'ready'});
 }catch(e){post({type:'error'});}
 window.setState=function(s){

@@ -260,7 +260,10 @@ export async function goOnline(
   }
 
   // 3. The server decides eligibility, from the database, every time.
-  const eligibility = await evaluateDriverEligibility(driverId);
+  const eligibility = await evaluateDriverEligibility(driverId, {
+    latitude: sample.latitude,
+    longitude: sample.longitude,
+  });
   if (!eligibility.eligible) {
     await recordAvailabilityEvent({
       driverId,

@@ -274,3 +274,25 @@ hand with NVDA and a keyboard:
 5. **Rules:** each rule is its own section with a heading; "Change this rule" is a disclosure that opens with the
    keyboard; every number has a label.
 6. Zoom to 200% and 400%: tables scroll sideways, nothing is cut off.
+
+## Q. Business accounts (Phase 18)
+
+Automated: the console pages are scanned by the console accessibility tests, and `packages/mobile-business` has static checks
+(every field labelled, every pressable with a role, radio groups and tabs grouped, news announced). Check by hand with
+TalkBack or VoiceOver in the passenger app, and NVDA in the console:
+
+1. **Business rides:** each organization is one button that says the person's role; invitations say who invited you and have
+   Accept and Decline buttons; creating an organization announces "was created" and moves to it.
+2. **Sections:** the sections are a tab list built from the role (a member sees My rides, My requests and Rules; an owner
+   also Members, Statements and Usage); the selected tab is announced as selected.
+3. **Rides, approvals, members:** each row reads as one sentence (who, where, how much, status in words). Approve, Decline,
+   Remove and Leave ask in an alert with a way back; the result is announced.
+4. **Rules form:** every number has a label; switches say "yes" or "no"; a problem is read as "Problem: ..." with the field.
+5. **Requesting a ride:** "Who pays for this ride" is a radio group; choosing an organization offers who the ride is for, the
+   cost centre and the purpose, and reads what the organization's rules say about this ride before you book; a refusal is read
+   as an alert and the book button is unavailable.
+6. **A business ride:** the rider and the driver hear that it is a business ride, who booked it, and that there is nothing to
+   pay or collect.
+7. **Console:** organizations and statements are tables with captions and row headers; recording payment asks for the amount
+   and reference, then an in-page confirmation, and announces the result.
+8. Zoom to 200% and 400%: tables scroll sideways, nothing is cut off.

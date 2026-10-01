@@ -2,6 +2,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '@yatri/mobile-auth';
 
+import { BusinessScreen } from '../screens/BusinessScreen';
 import { EmergencyContactsScreen } from '../screens/EmergencyContactsScreen';
 import { HomeScreen } from '../screens/HomeScreen';
 import { OtpVerificationScreen } from '../screens/OtpVerificationScreen';
@@ -18,6 +19,7 @@ import { WelcomeScreen } from '../screens/WelcomeScreen';
 
 export type RootStackParamList = {
   Support: { tripId?: string; ticketId?: string } | undefined;
+  Business: undefined;
   Welcome: undefined;
   PhoneEntry: undefined;
   OtpVerification: { phoneNumber: string };
@@ -63,6 +65,7 @@ export function RootNavigator() {
             <Stack.Screen name="RideHistory" component={RideHistoryScreen} />
             <Stack.Screen name="EmergencyContacts" component={EmergencyContactsScreen} />
             <Stack.Screen name="Support" component={SupportScreen} />
+            <Stack.Screen name="Business" component={BusinessScreen} />
           </>
         ) : (
           <>

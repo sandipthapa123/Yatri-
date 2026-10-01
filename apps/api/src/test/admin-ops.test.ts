@@ -147,6 +147,8 @@ describe('RBAC: every admin route names a permission', () => {
     ['FLEET_VIEW', '/fleet/service-records'],
     ['FLEET_VIEW', '/fleet/history'],
     ['FLEET_VIEW', '/fleet/options'],
+    ['ORGANIZATIONS_VIEW', '/organizations'],
+    ['ORGANIZATIONS_VIEW', '/organizations/statements'],
     ['RISK_VIEW', '/risk/overview'],
     ['RISK_VIEW', '/risk/events'],
     ['RISK_VIEW', '/risk/users'],
@@ -177,8 +179,11 @@ describe('RBAC: every admin route names a permission', () => {
     }
     const bad: string[] = [];
     for (const [needed, path] of READS) {
-      for (const [held, token] of holders) {
-        const res = await get(token, path);
+      // every holder asks at once: the check is per request, and this keeps the test quick as permissions grow
+      const answers = await Promise.all(
+        [...holders].map(async ([held, token]) => ({ held, res: await get(token, path) })),
+      );
+      for (const { held, res } of answers) {
         const allowed = holdsPermission([held], needed);
         if (allowed && res.status !== 200)
           bad.push(`${held} should open ${path}, got ${res.status}`);
@@ -187,7 +192,7 @@ describe('RBAC: every admin route names a permission', () => {
       }
     }
     expect(bad).toEqual([]);
-  }, 120_000); // one administrator per permission and several hundred requests
+  }, 240_000); // one administrator per permission and over a thousand requests
 
   it('says what an administrator may do, and a removed permission stops working at once', async () => {
     const a = await admin(['USERS_VIEW']);

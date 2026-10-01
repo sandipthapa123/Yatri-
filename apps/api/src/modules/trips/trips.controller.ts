@@ -13,7 +13,12 @@ import type {
 } from '@yatri/types';
 
 import { HttpError } from '../../middleware/errorHandler';
-import { currentOfferFor, offerNext, respondOffer } from '../dispatch/dispatch.service';
+import {
+  currentOfferFor,
+  offerNext,
+  requestAndOffer,
+  respondOffer,
+} from '../dispatch/dispatch.service';
 import { pricingConfig } from '../pricing/pricing.config';
 import { buildSnapshot, isActive, loadMeta } from '../tracking/tracking.service';
 import { getPaymentFor, settlePayment } from './payments.service';
@@ -31,7 +36,6 @@ import {
   metaFromRow,
   participantTrip,
   passengerCancel,
-  requestTrip,
   startTrip,
 } from './trips.service';
 
@@ -85,8 +89,7 @@ export async function estimateHandler(
 }
 
 export async function requestHandler(req: Request, res: Response<ApiResponse<TripSummary>>) {
-  const trip = await requestTrip(uid(req), req.body as TripRequestBody);
-  await offerNext(trip.id); // first offer immediately; the dispatch sweeper carries on from here
+  const trip = await requestAndOffer(uid(req), req.body as TripRequestBody);
   res.status(201).json({ success: true, data: await summaryFor(req, trip.id) });
 }
 

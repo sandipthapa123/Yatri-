@@ -153,6 +153,7 @@ export const RETENTION_RECORD_TYPES = [
   'COMPLIANCE_RECORDS',
   'DATA_REQUESTS',
   'RISK_EVENTS',
+  'ORGANIZATION_RECORDS',
 ] as const;
 export type RetentionRecordType = (typeof RETENTION_RECORD_TYPES)[number];
 

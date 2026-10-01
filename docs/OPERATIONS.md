@@ -290,3 +290,20 @@ The controls and their evidence are in `docs/SECURITY.md`. What operators must d
   reason) rather than ignoring the signals; putting the defaults back removes the override.
 - **Retention.** Signals are deleted after the `RISK_EVENTS` retention period (Compliance > Retention; default
   365 days). The audit log of what was done is kept.
+
+## 13. Business accounts
+
+- **Who does what.** An organization's owners and administrators run it themselves in the passenger app (Business rides):
+  members, rules, cost centres, approvals, statements and usage. Platform staff with `ORGANIZATIONS_VIEW` read
+  organizations and statements (Business accounts); `ORGANIZATIONS_MANAGE` suspends or reactivates an organization, issues
+  statements and records payment. Staff cannot change an organization's members, rules or rides.
+- **Statements.** The sweep (`ORG_SWEEP_MINUTES`) issues last month's statements in the first five days of each month and
+  expires approvals nobody decided (`ORG_APPROVAL_TTL_MINUTES`). Use Statements > Issue statements to issue one now or to
+  catch up a month; running it twice issues nothing twice. Payment terms are `ORG_PAYMENT_TERMS_DAYS`.
+- **Recording payment.** When the transfer arrives, open the statement and record the exact total with the bank reference.
+  Every ride on it becomes paid together. A mistake before payment: cancel the statement; its rides go onto the next one.
+- **The driver is not paid by the organization.** Rides billed to an organization have no cash for the driver; the platform
+  owes the driver and settles it outside Yatri (as with incentives). Keep your own record.
+- **Suspending.** Use it when statements are overdue or for misuse. New bookings and approvals stop and waiting approvals are
+  withdrawn; rides under way and money owed are untouched. The owners and administrators are told.
+- **Refunds.** A rider cannot ask for a refund on a ride billed to an organization; settle any dispute with the organization.

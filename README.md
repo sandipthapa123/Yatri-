@@ -147,6 +147,10 @@ Run from the repository root; each fans out to every workspace package via pnpm.
   systems already own (sign-in events, rides, ratings, disputes, refunds, location flags, incentives), derives a
   risk level, and gives administrators investigation, notes, temporary restrictions and the existing suspend and
   restore, all audited. It never suspends on its own and never acts on a single signal.
+- **Business and institutional transport** (`docs/PHASE_18.md`): organizations with their own roles (separate from platform
+  roles), members, a booking policy, rides booked for employees, approvals, spending limits, cost-centre tags, monthly
+  statements on the existing payment records, and usage reports. A business ride is an ordinary ride; the booker and the
+  rider stay different people.
 - Running it for real: [`docs/OPERATIONS.md`](docs/OPERATIONS.md) (architecture, deployment, backups,
   monitoring, incident recovery, release and rollback) and [`docs/SECURITY.md`](docs/SECURITY.md) (the controls,
   what was audited, what is still open). Container images and a full local stack are in [`deploy/`](deploy/).

@@ -274,6 +274,13 @@ const envSchema = z
     // How often the risk detectors run.
     RISK_SWEEP_MINUTES: z.coerce.number().int().positive().default(15),
 
+    // --- Business accounts (defaults; an administrator can override them in Settings) ---
+    ORG_APPROVAL_TTL_MINUTES: z.coerce.number().int().min(5).max(1440).default(60),
+    ORG_PAYMENT_TERMS_DAYS: z.coerce.number().int().min(1).max(90).default(15),
+    ORG_MAX_PER_USER: z.coerce.number().int().min(1).max(20).default(3),
+    // How often waiting approvals are expired and monthly statements are issued (it only acts in the first days of a month).
+    ORG_SWEEP_MINUTES: z.coerce.number().int().positive().default(10),
+
     MAX_UPLOAD_FILE_SIZE_BYTES: z.coerce
       .number()
       .int()

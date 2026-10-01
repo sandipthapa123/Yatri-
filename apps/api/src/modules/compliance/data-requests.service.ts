@@ -179,7 +179,8 @@ export async function deletionBlockers(userId: string): Promise<string[]> {
   if (trip.rowCount) blockers.push('a ride is still under way');
   const pay = await query(
     `SELECT 1 FROM trip_payments p JOIN trips t ON t.id = p.trip_id
-     WHERE (t.passenger_id = $1 OR t.driver_id = $1) AND p.status = 'PENDING' LIMIT 1`,
+     WHERE (t.passenger_id = $1 OR t.driver_id = $1) AND p.status = 'PENDING'
+       AND NOT (p.method = 'ORGANIZATION' AND t.passenger_id = $1) LIMIT 1`,
     [userId],
   );
   if (pay.rowCount) blockers.push('a ride has a payment that is not settled yet');
@@ -189,6 +190,17 @@ export async function deletionBlockers(userId: string): Promise<string[]> {
     [userId],
   );
   if (refund.rowCount) blockers.push('a refund is still being handled');
+  // An organization must not be left without an owner by one person leaving.
+  const sole = await query(
+    `SELECT 1 FROM organization_members m
+     WHERE m.user_id = $1 AND m.role = 'OWNER' AND m.status = 'ACTIVE'
+       AND NOT EXISTS (SELECT 1 FROM organization_members o
+                       WHERE o.organization_id = m.organization_id AND o.role = 'OWNER'
+                         AND o.status = 'ACTIVE' AND o.user_id <> $1) LIMIT 1`,
+    [userId],
+  );
+  if (sole.rowCount)
+    blockers.push('you are the only owner of an organization: make someone else an owner first');
   return blockers;
 }
 

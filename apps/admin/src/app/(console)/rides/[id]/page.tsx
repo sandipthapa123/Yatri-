@@ -6,7 +6,7 @@ import {
   formatDistance,
   formatElapsed,
   formatNpr,
-  PAYMENT_STATUS_LABELS,
+  describePayment,
   TICKET_STATUS_LABELS,
   TRIP_STATUS_LABELS,
 } from '@yatri/types';
@@ -142,6 +142,22 @@ export default async function RideDetailPage({ params }: PageProps) {
         />
       </section>
 
+      {d.business ? (
+        <section style={styles.section} aria-labelledby="business">
+          <h2 id="business" style={styles.sectionTitle}>
+            Business ride
+          </h2>
+          <Facts
+            rows={[
+              ['Organization', d.business.organizationName],
+              ['Booked by', d.business.bookedByName ?? 'Unknown'],
+              ['Cost centre', d.business.costCenterCode ?? 'None'],
+              ['Purpose', d.business.purpose ?? 'None given'],
+            ]}
+          />
+        </section>
+      ) : null}
+
       <section style={styles.section} aria-labelledby="money">
         <h2 id="money" style={styles.sectionTitle}>
           Fare and payment
@@ -159,7 +175,7 @@ export default async function RideDetailPage({ params }: PageProps) {
               [
                 'Payment',
                 d.payment
-                  ? `${PAYMENT_STATUS_LABELS[d.payment.status]}, ${formatNpr(d.payment.amountNpr)}${d.payment.paidAt ? `, ${at(d.payment.paidAt)}` : ''}`
+                  ? `${describePayment(d.payment.method, d.payment.status)}, ${formatNpr(d.payment.amountNpr)}${d.payment.paidAt ? `, ${at(d.payment.paidAt)}` : ''}`
                   : 'No payment record yet',
               ],
             ]}

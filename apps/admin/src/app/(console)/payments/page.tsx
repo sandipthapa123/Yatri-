@@ -1,5 +1,11 @@
 import Link from 'next/link';
-import { formatNpr, PAYMENT_STATUS_LABELS, PAYMENT_STATUSES } from '@yatri/types';
+import {
+  describePayment,
+  formatNpr,
+  PAYMENT_STATUS_LABELS,
+  PAYMENT_STATUSES,
+  type PaymentMethod,
+} from '@yatri/types';
 
 import { getFinanceSummary, listAdminPayments, listDriverEarnings } from '../../../lib/apiClient';
 import { loadOrDenied } from '../../../lib/access';
@@ -239,7 +245,9 @@ export default async function PaymentsPage({ searchParams }: PageProps) {
                     <td style={styles.td}>{p.passengerName ?? 'Unnamed'}</td>
                     <td style={styles.td}>{p.driverName ?? '—'}</td>
                     <td style={styles.td}>{formatNpr(p.amountNpr)}</td>
-                    <td style={styles.td}>{PAYMENT_STATUS_LABELS[p.status]}</td>
+                    <td style={styles.td}>
+                      {describePayment(p.method as PaymentMethod, p.status)}
+                    </td>
                     <td style={styles.td}>
                       {p.paidAt ? new Date(p.paidAt).toLocaleString() : '—'}
                     </td>

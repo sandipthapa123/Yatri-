@@ -1,6 +1,12 @@
 import type {
   AdminAccountRow,
   AdminFleetBody,
+  AdminMarkStatementPaidBody,
+  AdminOrganizationDetail,
+  AdminOrganizationRow,
+  AdminStatementRow,
+  AdminStatementRunResult,
+  OrgStatementDetail,
   AdminRiskNoteBody,
   AdminRiskRestrictBody,
   AdminRiskReviewBody,
@@ -751,3 +757,34 @@ export const getRiskHistory = (t: string, p: { page?: number; pageSize?: number 
     t,
   );
 export const runRiskSweepApi = (t: string) => post<RiskSweepResult>('/risk/sweep/run', t);
+
+// ---- business accounts, from the platform's side (ORGANIZATIONS_VIEW to read, ORGANIZATIONS_MANAGE to change)
+
+export const listOrganizationsApi = (
+  t: string,
+  p: { status?: string; search?: string; page?: number; pageSize?: number },
+) => adminRequest<Page<AdminOrganizationRow>>(`/organizations${toQuery(p)}`, t);
+export const getOrganizationApi = (t: string, id: string) =>
+  adminRequest<AdminOrganizationDetail>(`/organizations/${id}`, t);
+export const moveOrganizationApi = (
+  t: string,
+  id: string,
+  to: 'ACTIVE' | 'SUSPENDED',
+  reason: string,
+) => post<AdminOrganizationDetail>(`/organizations/${id}/status`, t, { to, reason });
+export const listOrgStatementsApi = (
+  t: string,
+  p: { status?: string; organizationId?: string; page?: number; pageSize?: number },
+) => adminRequest<Page<AdminStatementRow>>(`/organizations/statements${toQuery(p)}`, t);
+export const getOrgStatementApi = (t: string, id: string) =>
+  adminRequest<OrgStatementDetail>(`/organizations/statements/${id}`, t);
+export const issueStatementsApi = (t: string, periodKey?: string) =>
+  post<AdminStatementRunResult>(
+    '/organizations/statements/issue',
+    t,
+    periodKey ? { periodKey } : {},
+  );
+export const markStatementPaidApi = (t: string, id: string, body: AdminMarkStatementPaidBody) =>
+  post<OrgStatementDetail>(`/organizations/statements/${id}/paid`, t, body);
+export const voidStatementApi = (t: string, id: string, reason: string) =>
+  post<OrgStatementDetail>(`/organizations/statements/${id}/void`, t, { reason });

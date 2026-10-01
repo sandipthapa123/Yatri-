@@ -2,7 +2,8 @@ import type { TripPlace, TripSummary } from './trip';
 
 /** Payment and rating definitions (ride problems and disputes are support tickets: see support.ts) — separate axes from trip status. */
 
-export const PAYMENT_METHODS = ['CASH'] as const;
+/** CASH: the driver collects it. ORGANIZATION: billed to the rider's organization on a monthly statement. */
+export const PAYMENT_METHODS = ['CASH', 'ORGANIZATION'] as const;
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 
 export const PAYMENT_STATUSES = ['PENDING', 'PAID', 'FAILED', 'VOID'] as const;
@@ -16,6 +17,21 @@ export const PAYMENT_STATUS_LABELS: Record<PaymentStatus | 'NONE', string> = {
   FAILED: 'Failed',
   VOID: 'Not due',
 };
+
+/**
+ * Words for a payment, from its method and status (a ride billed to an organization is never "awaiting cash").
+ * Prefer this to PAYMENT_STATUS_LABELS wherever the method is known.
+ */
+export function describePayment(
+  method: PaymentMethod | null,
+  status: PaymentStatus | 'NONE',
+): string {
+  if (method === 'ORGANIZATION') {
+    if (status === 'PENDING') return 'Billed to the organization';
+    if (status === 'PAID') return 'Paid by the organization';
+  }
+  return PAYMENT_STATUS_LABELS[status];
+}
 
 export interface PaymentInfo {
   tripId: string;
@@ -132,5 +148,9 @@ export interface AdminTripRow {
   requestedAt: string;
   endedAt: string | null;
   paymentStatus: TripSummary['paymentStatus'];
+  /** How it is paid, so the words fit (an organization-billed ride is not awaiting cash). Null before a payment exists. */
+  paymentMethod: PaymentMethod | null;
+  /** The organization a business ride was booked for. */
+  organizationName: string | null;
   openDisputes: number;
 }

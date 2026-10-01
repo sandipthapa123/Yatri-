@@ -46,6 +46,7 @@ import { env } from '../../config/env';
 import { runRetention } from '../compliance/retention.service';
 import { runFleetMonitor } from '../fleet/monitor';
 import { runRiskSweep } from '../risk/sweep';
+import { runOrganizationSweep } from '../organizations/sweep';
 import { sweepSupport } from '../support/tickets.service';
 import { expireDueShares } from '../sharing/sharing.service';
 import { sweepTrips } from '../trips/trip-maintenance';
@@ -525,6 +526,10 @@ export async function attachRealtimeGateway(server: HttpServer): Promise<Realtim
     setInterval(() => {
       runRiskSweep().catch((err) => log.error('Risk sweep error', err));
     }, env.RISK_SWEEP_MINUTES * 60_000),
+    // Business accounts: expire approvals nobody decided, and issue last month's statements.
+    setInterval(() => {
+      runOrganizationSweep().catch((err) => log.error('Organization sweep error', err));
+    }, env.ORG_SWEEP_MINUTES * 60_000),
     // Retention is slow housekeeping (each kind of record follows its retention policy): hourly.
     setInterval(() => {
       runRetention().catch((err) => log.error('Retention error', err));

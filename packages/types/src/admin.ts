@@ -25,6 +25,8 @@ export const ADMIN_PERMISSIONS = [
   'FLEET_MANAGE',
   'RISK_VIEW',
   'RISK_MANAGE',
+  'ORGANIZATIONS_VIEW',
+  'ORGANIZATIONS_MANAGE',
   'USERS_VIEW',
   'USERS_MANAGE',
   'FINANCE_VIEW',
@@ -83,6 +85,14 @@ export const ADMIN_PERMISSION_LABELS: Record<AdminPermission, { label: string; h
     label: 'Manage fraud and risk',
     help: 'Review risk events, add internal notes, apply and lift temporary restrictions and change risk rules. Every change is audited. Suspending or restoring an account needs the user-management permission as well.',
   },
+  ORGANIZATIONS_VIEW: {
+    label: 'View organizations',
+    help: 'Business accounts, their members count, policies, spending and statements. Every read of one organization is audited.',
+  },
+  ORGANIZATIONS_MANAGE: {
+    label: 'Manage organizations and statements',
+    help: 'Suspend and reactivate organizations, issue statements, and record that a statement was paid or cancel it. Every change is audited with its reason.',
+  },
   USERS_VIEW: { label: 'View users', help: 'Search and read user accounts.' },
   USERS_MANAGE: { label: 'Manage users', help: 'Suspend and reactivate accounts.' },
   FINANCE_VIEW: {
@@ -128,6 +138,7 @@ export const PERMISSION_IMPLIES: Partial<Record<AdminPermission, readonly AdminP
   DISPATCH_MANAGE: ['OPERATIONS_VIEW'],
   FLEET_MANAGE: ['FLEET_VIEW'],
   RISK_MANAGE: ['RISK_VIEW'],
+  ORGANIZATIONS_MANAGE: ['ORGANIZATIONS_VIEW'],
 };
 
 /** Whether a set of held permissions grants the one needed. The one rule; the API and the app use it. */
@@ -139,7 +150,18 @@ export function holdsPermission(
 }
 
 /** Everything an admin needs to understand one trip, from the same authoritative records the apps use. */
+/** For staff handling a business ride: which organization, who booked it, the tag and the purpose. */
+export interface AdminTripBusiness {
+  organizationId: string;
+  organizationName: string;
+  bookedByName: string | null;
+  costCenterCode: string | null;
+  purpose: string | null;
+}
+
 export interface AdminTripDetail {
+  /** Set when the ride was booked for an organization (the rider and the booker can differ). */
+  business: AdminTripBusiness | null;
   id: string;
   status: TripStatus;
   requestedAt: string;

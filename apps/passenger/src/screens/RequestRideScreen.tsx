@@ -1,5 +1,11 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ApiError, useAuth } from '@yatri/mobile-auth';
+import {
+  BusinessBookingPanel,
+  bookingNews,
+  submitBusinessBooking,
+  type BusinessChoice,
+} from '@yatri/mobile-business';
 import { ActionButton, CategoryPicker, Card, Fact, rideApi } from '@yatri/mobile-ride';
 import {
   describeSurge,
@@ -40,6 +46,8 @@ export function RequestRideScreen({ navigation }: Props) {
   const [chosen, setChosen] = useState<string | null>(null);
   const [requestError, setRequestError] = useState<string | null>(null);
   const [requesting, setRequesting] = useState(false);
+  const [business, setBusiness] = useState<BusinessChoice | null>(null);
+  const [businessNews, setBusinessNews] = useState<string | null>(null);
 
   const places = useMemo(
     () =>
@@ -110,6 +118,17 @@ export function RequestRideScreen({ navigation }: Props) {
       confirmedTotalNpr: selected?.fare.totalNpr,
     };
     try {
+      if (business) {
+        // A business ride: the organization's rules are applied by the server, which answers with a ride
+        // (followed here when it is for this person), a refusal in words, or a request waiting for approval.
+        const result = await submitBusinessBooking(await getAccessToken(), business, body);
+        if (result.outcome === 'REQUESTED' && !business.passengerId && result.tripId) {
+          navigation.replace('TripTracking', { tripId: result.tripId });
+          return;
+        }
+        setBusinessNews(bookingNews(result, business.passengerName, !business.passengerId));
+        return;
+      }
       const trip = await rideApi.request(await getAccessToken(), body);
       navigation.replace('TripTracking', { tripId: trip.id });
     } catch (e) {
@@ -221,22 +240,44 @@ export function RequestRideScreen({ navigation }: Props) {
                     If your driver waits for you, the first{' '}
                     {formatElapsed(estimate.waitingRule.freeSeconds)} are free, then{' '}
                     {formatNpr(estimate.waitingRule.perMinuteNpr)} for each minute. You pay your
-                    driver in cash.
+                    driver in cash{business ? ' unless your organization pays' : ''}.
                   </Text>
                 </Card>
               </>
+            ) : null}
+
+            <BusinessBookingPanel
+              {...ui}
+              getAccessToken={getAccessToken}
+              request={
+                places && selectedCode && selected
+                  ? {
+                      ...places,
+                      vehicleCategory: selectedCode,
+                      confirmedTotalNpr: selected.fare.totalNpr,
+                    }
+                  : null
+              }
+              onChange={setBusiness}
+            />
+            {businessNews ? (
+              <View accessibilityLiveRegion="polite" accessibilityRole="alert">
+                <Text style={{ color: theme.colors.textPrimary, fontWeight: '700' }}>
+                  {businessNews}
+                </Text>
+              </View>
             ) : null}
 
             <ActionButton
               {...ui}
               label={
                 selected
-                  ? `Request ${selected.label} for ${formatNpr(selected.fare.totalNpr)}`
+                  ? `${business ? 'Book' : 'Request'} ${selected.label} for ${formatNpr(selected.fare.totalNpr)}`
                   : 'Request ride'
               }
               tone="primary"
               busy={requesting}
-              disabled={!selected}
+              disabled={!selected || business?.preview?.outcome === 'DENIED' || !!businessNews}
               hint="Looks for a nearby driver"
               onPress={() => void request()}
             />

@@ -1,6 +1,6 @@
 export { rideApi } from './rideApi';
 export type { RideApi } from './rideApi';
-export { rideActions, paymentText, outcomeText } from './rideActions';
+export { rideActions, paymentText, outcomeText, businessText } from './rideActions';
 export type { RideAction, RideActionId } from './rideActions';
 export { ChatController } from './chatController';
 export type { ChatEntry, ChatState, MessageStatus } from './chatController';

@@ -1,6 +1,8 @@
 import {
+  ORG_PAYMENT_MODE_METHOD,
   TERMINAL_TRIP_STATUSES,
   haversineMeters,
+  type OrgPaymentMode,
   type TripCounterpart,
   type TripEventPayload,
   type TripEventType,
@@ -64,6 +66,7 @@ import {
   destinationOf,
   getTrip,
   pickupOf,
+  type BusinessRequest,
   type TripPatch,
   type TripRow,
 } from './trips.repository';
@@ -104,15 +107,34 @@ async function counterpartOf(
   };
 }
 
+/** What a rider or driver is told about a business ride (null for an ordinary one). */
+async function businessInfoOf(t: TripRow): Promise<TripSummary['business']> {
+  if (!t.organization_id) return null;
+  const r = await query<{ name: string; payment_mode: OrgPaymentMode }>(
+    `SELECT o.name, p.payment_mode FROM organizations o
+     JOIN organization_policies p ON p.organization_id = o.id WHERE o.id = $1`,
+    [t.organization_id],
+  );
+  const o = r.rows[0];
+  if (!o) return null;
+  return {
+    organizationName: o.name,
+    purpose: t.purpose,
+    billedToOrganization: ORG_PAYMENT_MODE_METHOD[o.payment_mode] === 'ORGANIZATION',
+    bookedByOther: !!t.booked_by && t.booked_by !== t.passenger_id,
+  };
+}
+
 /** THE trip summary: built once, here, for whoever asks (passenger, driver, history). */
 export async function buildTripSummary(t: TripRow, viewerId: string): Promise<TripSummary> {
   const viewerIsPassenger = t.passenger_id === viewerId;
-  const [pay, rated, counterpart] = await Promise.all([
+  const [pay, rated, counterpart, business] = await Promise.all([
     query<{ status: TripPaymentStatus }>('SELECT status FROM trip_payments WHERE trip_id = $1', [
       t.id,
     ]),
     query('SELECT 1 FROM trip_ratings WHERE trip_id = $1 AND rater_id = $2', [t.id, viewerId]),
     counterpartOf(t, viewerIsPassenger),
+    businessInfoOf(t),
   ]);
   return {
     id: t.id,
@@ -155,6 +177,7 @@ export async function buildTripSummary(t: TripRow, viewerId: string): Promise<Tr
         ? { fromStatus: t.cancelled_from_status, feeNpr: t.cancellation_fee_npr }
         : null,
     rated: !!rated.rowCount,
+    business,
   };
 }
 
@@ -222,20 +245,34 @@ export async function estimateForRequest(body: TripEstimateBody) {
   };
 }
 
-export async function requestTrip(passengerId: string, body: TripRequestBody): Promise<TripRow> {
+/**
+ * Everything about a request that does not depend on who asks: the service is on, the category exists, both
+ * ends are allowed by the service zones, and the route, demand pricing and fare. Used by ride requests and by
+ * business bookings (which need the fare and zones to apply an organization's policy before anything is created).
+ */
+export async function quoteTrip(body: TripRequestBody) {
   // Operations can pause new requests (an outage, an incident); rides under way carry on.
   if (!settingBool('SERVICE_REQUESTS_ENABLED')) {
     throw new HttpError(503, 'SERVICE_PAUSED', settingText('SERVICE_PAUSED_MESSAGE'));
   }
-  await assertNotRestricted(passengerId);
   const category = await getActiveCategoryByCode(body.vehicleCategory);
   if (!category) throw unknownCategory();
   const pickupZones = await assertZoneAccess(body.pickup, 'PICKUP');
-  await assertZoneAccess(body.destination, 'DROPOFF');
+  const dropoffZones = await assertZoneAccess(body.destination, 'DROPOFF');
   const trip = await measureTrip(body);
   // The fare is priced by the server for the chosen category; the request carries no price.
   const surge = await surgeFor({ pickup: body.pickup, categoryId: category.id });
   const fare = estimateFare(trip, pricingFor(category), surge);
+  return { category, pickupZones, dropoffZones, trip, surge, fare };
+}
+
+export async function requestTrip(
+  passengerId: string,
+  body: TripRequestBody,
+  business?: BusinessRequest,
+): Promise<TripRow> {
+  await assertNotRestricted(passengerId);
+  const { category, pickupZones, trip, surge, fare } = await quoteTrip(body);
   // Demand pricing may have moved since the rider saw the estimate: they must confirm the new total.
   if (body.confirmedTotalNpr !== undefined && body.confirmedTotalNpr !== fare.totalNpr) {
     throw new HttpError(
@@ -249,6 +286,7 @@ export async function requestTrip(passengerId: string, body: TripRequestBody): P
   let row: TripRow;
   try {
     row = await createTripRequest({
+      business,
       passengerId,
       vehicleCategoryId: category.id,
       pickup: {

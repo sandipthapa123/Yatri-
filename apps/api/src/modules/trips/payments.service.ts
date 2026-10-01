@@ -1,4 +1,10 @@
-import type { PaymentInfo, PaymentMethod, PaymentStatus } from '@yatri/types';
+import {
+  ORG_PAYMENT_MODE_METHOD,
+  type OrgPaymentMode,
+  type PaymentInfo,
+  type PaymentMethod,
+  type PaymentStatus,
+} from '@yatri/types';
 
 import { query } from '../../lib/db';
 import { HttpError } from '../../middleware/errorHandler';
@@ -34,7 +40,26 @@ export const cashProvider: PaymentProvider = {
   },
 };
 
-const providers: Record<PaymentMethod, PaymentProvider> = { CASH: cashProvider };
+/**
+ * A ride billed to an organization has nothing to collect: nobody can "settle" it from the ride. It is paid
+ * when the organization pays its monthly statement, which an administrator records (organizations/statements.ts,
+ * the only writer of that change).
+ */
+export const organizationProvider: PaymentProvider = {
+  method: 'ORGANIZATION',
+  async settle() {
+    throw new HttpError(
+      409,
+      'BILLED_TO_ORGANIZATION',
+      "This ride is billed to the rider's organization. There is no cash to collect.",
+    );
+  },
+};
+
+const providers: Record<PaymentMethod, PaymentProvider> = {
+  CASH: cashProvider,
+  ORGANIZATION: organizationProvider,
+};
 
 interface PaymentRow {
   trip_id: string;
@@ -54,10 +79,20 @@ const toInfo = (r: PaymentRow): PaymentInfo => ({
 
 /** Created once, when the trip completes, for exactly the server-calculated final fare. */
 export async function createPendingPayment(tripId: string, amountNpr: number): Promise<void> {
+  // The method follows the organization's payment mode when the ride was booked for one (the one rule is
+  // ORG_PAYMENT_MODE_METHOD); every other ride is cash.
+  const org = await query<{ payment_mode: OrgPaymentMode }>(
+    `SELECT p.payment_mode FROM trips t JOIN organization_policies p ON p.organization_id = t.organization_id
+     WHERE t.id = $1`,
+    [tripId],
+  );
+  const method: PaymentMethod = org.rows[0]
+    ? ORG_PAYMENT_MODE_METHOD[org.rows[0].payment_mode]
+    : 'CASH';
   await query(
     `INSERT INTO trip_payments (trip_id, amount_npr, method, status)
-     VALUES ($1, $2, 'CASH', 'PENDING') ON CONFLICT (trip_id) DO NOTHING`,
-    [tripId, amountNpr],
+     VALUES ($1, $2, $3, 'PENDING') ON CONFLICT (trip_id) DO NOTHING`,
+    [tripId, amountNpr, method],
   );
 }
 

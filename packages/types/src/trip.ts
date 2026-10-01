@@ -97,6 +97,20 @@ export interface TripCounterpart {
 
 export type TripPaymentStatus = 'NONE' | 'PENDING' | 'PAID' | 'FAILED' | 'VOID';
 
+/**
+ * Set when the ride was booked for an organization. The rider and the driver are told, in the apps, that it
+ * is a business ride and whether the organization pays (so no cash is collected). The booker is not a
+ * participant of the ride: this is all either of them learns about the organization.
+ */
+export interface TripBusinessInfo {
+  organizationName: string;
+  purpose: string | null;
+  /** True when the organization is billed: the driver collects nothing. */
+  billedToOrganization: boolean;
+  /** True when someone else booked it for the rider. */
+  bookedByOther: boolean;
+}
+
 export interface TripSummary {
   id: string;
   status: TripStatus;
@@ -125,6 +139,8 @@ export interface TripSummary {
   cancellation: { fromStatus: TripStatus; feeNpr: number } | null;
   /** True when this viewer has already rated the trip. */
   rated: boolean;
+  /** Null for an ordinary ride. */
+  business: TripBusinessInfo | null;
 }
 
 /** live: fresh fix. stale: fix is old but recent enough to show with a warning. lost: treat as GPS lost. */

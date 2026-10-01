@@ -212,6 +212,17 @@ export function HomeScreen({ navigation }: Props) {
             </Text>
           </Pressable>
           <Pressable
+            onPress={() => navigation.navigate('Business')}
+            accessibilityRole="button"
+            accessibilityLabel="Business rides"
+            accessibilityHint="Your organizations, rides booked for them, approvals and statements"
+            style={[styles.profileLink, { minHeight: theme.minTouchTarget }]}
+          >
+            <Text style={[styles.profileLinkText, { color: theme.colors.primary }]}>
+              Business rides
+            </Text>
+          </Pressable>
+          <Pressable
             onPress={() => navigation.navigate('Support')}
             accessibilityRole="button"
             accessibilityLabel="Help and support"

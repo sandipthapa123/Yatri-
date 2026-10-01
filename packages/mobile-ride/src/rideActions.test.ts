@@ -1,7 +1,7 @@
 import type { WaitingInfo } from '@yatri/types';
 import { describe, expect, it } from 'vitest';
 
-import { outcomeText, paymentText, rideActions } from './rideActions';
+import { businessText, outcomeText, paymentText, rideActions } from './rideActions';
 
 const waiting = (driverSeconds: number): WaitingInfo => ({
   driver: { startedAt: '', seconds: driverSeconds, notifiedAt: null },
@@ -148,5 +148,46 @@ describe('words for money and outcomes', () => {
     expect(
       outcomeText({ status: 'NO_DRIVERS', cancelledBy: null, cancelReason: null }, 'PASSENGER'),
     ).toBe('No driver was available.');
+  });
+});
+
+describe('business rides billed to an organization', () => {
+  const billed = {
+    organizationName: 'Acme',
+    purpose: 'Client visit',
+    billedToOrganization: true,
+    bookedByOther: true,
+  };
+  it('gives the driver nothing to collect', () => {
+    const base = { status: 'COMPLETED' as const, paymentStatus: 'PENDING' as const, rated: true };
+    expect(rideActions('DRIVER', base, null).map((a) => a.id)).toContain('confirmPayment');
+    expect(
+      rideActions('DRIVER', { ...base, billedToOrganization: true }, null).map((a) => a.id),
+    ).not.toContain('confirmPayment');
+  });
+  it('says who pays, in words, to the rider and the driver', () => {
+    expect(paymentText('PASSENGER', 'PENDING', 500, billed)).toBe(
+      'Nothing to pay: Acme pays for this ride (NPR 500).',
+    );
+    expect(paymentText('DRIVER', 'PENDING', 500, billed)).toBe(
+      'Nothing to collect: Acme is billed NPR 500 for this ride.',
+    );
+    expect(paymentText('PASSENGER', 'PENDING', 500, null)).toBe(
+      'Please pay your driver NPR 500 in cash.',
+    );
+    expect(
+      paymentText('PASSENGER', 'PENDING', 500, { ...billed, billedToOrganization: false }),
+    ).toMatch(/in cash/);
+  });
+  it('names the business ride, who booked it and the purpose', () => {
+    expect(businessText('PASSENGER', billed)).toBe(
+      'Business ride for Acme, booked for you by someone there. Purpose: Client visit.',
+    );
+    expect(businessText('DRIVER', billed)).toBe(
+      'Business ride for Acme. Purpose: Client visit. No cash to collect.',
+    );
+    expect(businessText('PASSENGER', { ...billed, purpose: null, bookedByOther: false })).toBe(
+      'Business ride for Acme.',
+    );
   });
 });

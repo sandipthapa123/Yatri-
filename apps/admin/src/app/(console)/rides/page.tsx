@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import {
   formatNpr,
-  PAYMENT_STATUS_LABELS,
+  describePayment,
   TRIP_STATUS_LABELS,
   TRIP_STATUSES,
   type TripStatus,
@@ -214,7 +214,7 @@ export default async function RidesPage({ searchParams }: PageProps) {
                   {t.pickupName} to {t.destinationName}
                 </td>
                 <td style={styles.td}>{t.fareNpr === null ? '—' : formatNpr(t.fareNpr)}</td>
-                <td style={styles.td}>{PAYMENT_STATUS_LABELS[t.paymentStatus]}</td>
+                <td style={styles.td}>{describePayment(t.paymentMethod, t.paymentStatus)}</td>
                 <td style={styles.td}>{t.openDisputes > 0 ? `${t.openDisputes} open` : 'None'}</td>
               </tr>
             ))}

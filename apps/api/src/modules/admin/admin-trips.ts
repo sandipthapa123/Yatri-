@@ -95,6 +95,8 @@ export async function listTripsHandler(
       ended_at: Date | null;
       fare: number | null;
       payment_status: AdminTripRow['paymentStatus'] | null;
+      payment_method: AdminTripRow['paymentMethod'];
+      organization_name: string | null;
       open_disputes: string;
     }>(
       `SELECT t.id, t.status, p.full_name AS passenger_name, d.full_name AS driver_name,
@@ -102,6 +104,8 @@ export async function listTripsHandler(
               dl.place_name AS dest_name, dl.address AS dest_address,
               t.requested_at, t.ended_at, COALESCE(t.fare_final_npr, t.fare_estimate_npr) AS fare,
               (SELECT status FROM trip_payments WHERE trip_id = t.id) AS payment_status,
+              (SELECT method FROM trip_payments WHERE trip_id = t.id) AS payment_method,
+              (SELECT name FROM organizations WHERE id = t.organization_id) AS organization_name,
               (SELECT count(*) FROM support_tickets WHERE trip_id = t.id AND is_dispute AND status NOT IN ('RESOLVED', 'CLOSED'))::text AS open_disputes
        ${from}
        ORDER BY ${order}, t.id
@@ -125,6 +129,8 @@ export async function listTripsHandler(
         endedAt: r.ended_at?.toISOString() ?? null,
         fareNpr: r.fare,
         paymentStatus: r.payment_status ?? 'NONE',
+        paymentMethod: r.payment_method,
+        organizationName: r.organization_name,
         openDisputes: Number(r.open_disputes),
       })),
     },
@@ -185,6 +191,16 @@ export async function tripDetailHandler(req: Request, res: Response<ApiResponse<
       ),
       getDriverFix(trip.id),
     ]);
+  const business = trip.organization_id
+    ? (
+        await query<{ name: string; booked_by: string | null; code: string | null }>(
+          `SELECT o.name, b.full_name AS booked_by, cc.code
+           FROM organizations o LEFT JOIN users b ON b.id = $2
+           LEFT JOIN organization_cost_centers cc ON cc.id = $3 WHERE o.id = $1`,
+          [trip.organization_id, trip.booked_by, trip.cost_center_id],
+        )
+      ).rows[0]
+    : undefined;
   const nameOf = (id: string | null) => names.rows.find((n) => n.id === id)?.full_name ?? null;
   const now = Date.now();
 
@@ -194,6 +210,16 @@ export async function tripDetailHandler(req: Request, res: Response<ApiResponse<
   res.json({
     success: true,
     data: {
+      business:
+        trip.organization_id && business
+          ? {
+              organizationId: trip.organization_id,
+              organizationName: business.name,
+              bookedByName: business.booked_by,
+              costCenterCode: business.code,
+              purpose: trip.purpose,
+            }
+          : null,
       id: trip.id,
       status: trip.status,
       requestedAt: trip.requested_at.toISOString(),

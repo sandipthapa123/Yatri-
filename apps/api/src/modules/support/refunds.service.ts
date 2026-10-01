@@ -198,6 +198,17 @@ async function createRefund(
   // Lock the payment so two requests for the same ride are worked out one after the other.
   await client.query('SELECT 1 FROM trip_payments WHERE trip_id = $1 FOR UPDATE', [ticket.trip_id]);
   const p = await paymentBasis(ticket.trip_id, client);
+  const billed = await client.query(
+    "SELECT 1 FROM trip_payments WHERE trip_id = $1 AND method = 'ORGANIZATION'",
+    [ticket.trip_id],
+  );
+  if (billed.rowCount) {
+    throw new HttpError(
+      409,
+      'BILLED_TO_ORGANIZATION',
+      'This ride was billed to an organization, so it is not refunded to the rider. Support will settle it with the organization.',
+    );
+  }
   if (!p || p.status !== 'PAID') {
     throw new HttpError(409, 'PAYMENT_NOT_PAID', 'This ride has no confirmed payment to refund.');
   }

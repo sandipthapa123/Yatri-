@@ -139,7 +139,7 @@ export async function activeRestriction(userId: string): Promise<RiskRestriction
     restricted_until: Date;
     restriction_reason: string | null;
     restriction_source: RiskRestrictionSource;
-    restriction_set_at: Date;
+    restriction_set_at: Date | null;
   }>(
     `SELECT restricted_until, restriction_reason, restriction_source, restriction_set_at
      FROM risk_profiles WHERE user_id = $1 AND restricted_until > now()`,
@@ -151,7 +151,7 @@ export async function activeRestriction(userId: string): Promise<RiskRestriction
         until: x.restricted_until.toISOString(),
         reason: x.restriction_reason ?? '',
         source: x.restriction_source,
-        setAt: x.restriction_set_at.toISOString(),
+        setAt: (x.restriction_set_at ?? x.restricted_until).toISOString(),
       }
     : null;
 }

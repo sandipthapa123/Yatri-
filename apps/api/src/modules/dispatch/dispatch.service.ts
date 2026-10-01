@@ -1,4 +1,4 @@
-import type { TripOfferInfo } from '@yatri/types';
+import type { TripOfferInfo, TripRequestBody } from '@yatri/types';
 
 import { env } from '../../config/env';
 import { query } from '../../lib/db';
@@ -6,8 +6,14 @@ import { HttpError } from '../../middleware/errorHandler';
 import { getOrCreateAvailability } from '../availability/availability.repository';
 import { publishToUser } from '../realtime/bus';
 import { recordTripEvent } from '../trips/trip-events.service';
-import { getTrip, pickupOf, destinationOf, type TripRow } from '../trips/trips.repository';
-import { assignDriver, markNoDrivers } from '../trips/trips.service';
+import {
+  getTrip,
+  pickupOf,
+  destinationOf,
+  type BusinessRequest,
+  type TripRow,
+} from '../trips/trips.repository';
+import { assignDriver, markNoDrivers, requestTrip } from '../trips/trips.service';
 import { matchDrivers, searchRadius } from './matching';
 import {
   closeOffer,
@@ -49,6 +55,20 @@ function toOfferInfo(o: OfferRow, trip: TripRow): TripOfferInfo {
 export type OfferOutcome = 'offered' | 'waiting' | 'no_drivers' | 'not_searching';
 
 /** Offer the trip to the next best driver (or finish the search). Safe to call repeatedly. */
+/**
+ * A ride request and its first offer, as ONE step: every way of requesting a ride (a rider's own request, a
+ * business booking, an approved booking) goes through here, so none can create a ride that is never offered.
+ */
+export async function requestAndOffer(
+  passengerId: string,
+  body: TripRequestBody,
+  business?: BusinessRequest,
+): Promise<TripRow> {
+  const trip = await requestTrip(passengerId, body, business);
+  await offerNext(trip.id); // the dispatch sweeper carries on from here
+  return trip;
+}
+
 export async function offerNext(tripId: string): Promise<OfferOutcome> {
   const trip = await getTrip(tripId);
   if (!trip || trip.status !== 'SEARCHING') return 'not_searching';

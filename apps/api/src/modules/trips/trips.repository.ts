@@ -1,5 +1,7 @@
 import { ACTIVE_TRIP_STATUSES, type TripPlace, type TripStatus } from '@yatri/types';
 
+import type { PoolClient } from 'pg';
+
 import { pool } from '../../config/database';
 import { query } from '../../lib/db';
 import { sqlIn } from '../../lib/sql';
@@ -38,6 +40,10 @@ export interface TripRow {
   surge_multiplier: string;
   surge_label: string | null;
   pickup_zone_id: string | null;
+  organization_id: string | null;
+  booked_by: string | null;
+  cost_center_id: string | null;
+  purpose: string | null;
   created_at: Date;
   pickup_name: string | null;
   pickup_address: string;
@@ -59,6 +65,7 @@ const SELECT = `
          t.started_latitude, t.started_longitude, t.ended_latitude, t.ended_longitude,
          t.actual_distance_meters, t.actual_duration_seconds,
          t.surge_multiplier, t.surge_label, t.pickup_zone_id,
+         t.organization_id, t.booked_by, t.cost_center_id, t.purpose,
          pl.place_name AS pickup_name, pl.address AS pickup_address,
          pl.latitude AS pickup_lat, pl.longitude AS pickup_lng,
          dl.place_name AS dest_name, dl.address AS dest_address,
@@ -85,7 +92,21 @@ export async function getActiveTripFor(userId: string): Promise<TripRow | null> 
   return r.rows[0] ?? null;
 }
 
+/**
+ * What a ride booked for an organization adds to the ordinary request: who it is for, who booked it, the cost
+ * centre and purpose. `guard` runs inside the same transaction as the insert (after the organization row is
+ * locked by the guard itself), so a spending limit is checked and the ride created as one step.
+ */
+export interface BusinessRequest {
+  organizationId: string;
+  bookedBy: string;
+  costCenterId: string | null;
+  purpose: string | null;
+  guard: (client: PoolClient) => Promise<void>;
+}
+
 export async function createTripRequest(input: {
+  business?: BusinessRequest | undefined;
   passengerId: string;
   vehicleCategoryId: string;
   pickup: LocationFields;
@@ -104,12 +125,14 @@ export async function createTripRequest(input: {
     await client.query('BEGIN');
     const pickupId = await insertLocation(client, input.pickup);
     const destId = await insertLocation(client, input.destination);
+    if (input.business) await input.business.guard(client);
     const ins = await client.query<{ id: string }>(
       `INSERT INTO trips
          (passenger_id, pickup_location_id, destination_location_id, status,
           distance_meters, duration_seconds, fare_estimate_npr, search_deadline_at, vehicle_category_id,
-          surge_multiplier, surge_label, pickup_zone_id)
-       VALUES ($1, $2, $3, 'SEARCHING', $4, $5, $6, now() + ($7::int * interval '1 second'), $8, $9, $10, $11)
+          surge_multiplier, surge_label, pickup_zone_id, organization_id, booked_by, cost_center_id, purpose)
+       VALUES ($1, $2, $3, 'SEARCHING', $4, $5, $6, now() + ($7::int * interval '1 second'), $8, $9, $10, $11,
+               $12, $13, $14, $15)
        RETURNING id`,
       [
         input.passengerId,
@@ -123,6 +146,10 @@ export async function createTripRequest(input: {
         input.surgeMultiplier,
         input.surgeLabel,
         input.pickupZoneId,
+        input.business?.organizationId ?? null,
+        input.business?.bookedBy ?? null,
+        input.business?.costCenterId ?? null,
+        input.business?.purpose ?? null,
       ],
     );
     await client.query('COMMIT');

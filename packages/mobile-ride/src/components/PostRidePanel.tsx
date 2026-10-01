@@ -75,7 +75,7 @@ export function PostRidePanel(
         ) : null}
         {trip.status === 'COMPLETED' ? (
           <Text accessibilityRole="text" style={{ color: colors.textPrimary }}>
-            {paymentText(role, trip.paymentStatus, amount)}
+            {paymentText(role, trip.paymentStatus, amount, trip.business)}
           </Text>
         ) : null}
       </Card>

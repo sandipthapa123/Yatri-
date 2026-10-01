@@ -219,6 +219,22 @@ import {
   riskUsersHandler,
   riskUsersQuerySchema,
 } from './admin-risk';
+import {
+  adminOrganizationsQuerySchema,
+  adminStatementsQuerySchema,
+  issueStatementsHandler,
+  issueStatementsSchema,
+  listOrganizationsHandler,
+  listStatementsHandler,
+  markPaidHandler,
+  markPaidSchema,
+  moveOrganizationHandler,
+  organizationDetailHandler,
+  organizationMoveSchema,
+  adminStatementHandler,
+  voidSchema as orgVoidSchema,
+  voidStatementHandler,
+} from './admin-organizations';
 import { auditAdminAction, requirePermission } from './permissions';
 
 /**
@@ -859,3 +875,56 @@ adminRouter.get(
   riskHistoryHandler,
 );
 adminRouter.post('/risk/sweep/run', requirePermission('RISK_MANAGE'), riskSweepHandler);
+
+// Business accounts, from the platform's side: ORGANIZATIONS_VIEW reads, ORGANIZATIONS_MANAGE changes.
+adminRouter.get(
+  '/organizations',
+  requirePermission('ORGANIZATIONS_VIEW'),
+  validateQuery(adminOrganizationsQuerySchema),
+  listOrganizationsHandler,
+);
+adminRouter.get(
+  '/organizations/statements',
+  requirePermission('ORGANIZATIONS_VIEW'),
+  validateQuery(adminStatementsQuerySchema),
+  listStatementsHandler,
+);
+adminRouter.post(
+  '/organizations/statements/issue',
+  requirePermission('ORGANIZATIONS_MANAGE'),
+  validateBody(issueStatementsSchema),
+  issueStatementsHandler,
+);
+adminRouter.get(
+  '/organizations/statements/:id',
+  requirePermission('ORGANIZATIONS_VIEW'),
+  validateUuidParam('id'),
+  adminStatementHandler,
+);
+adminRouter.post(
+  '/organizations/statements/:id/paid',
+  requirePermission('ORGANIZATIONS_MANAGE'),
+  validateUuidParam('id'),
+  validateBody(markPaidSchema),
+  markPaidHandler,
+);
+adminRouter.post(
+  '/organizations/statements/:id/void',
+  requirePermission('ORGANIZATIONS_MANAGE'),
+  validateUuidParam('id'),
+  validateBody(orgVoidSchema),
+  voidStatementHandler,
+);
+adminRouter.get(
+  '/organizations/:id',
+  requirePermission('ORGANIZATIONS_VIEW'),
+  validateUuidParam('id'),
+  organizationDetailHandler,
+);
+adminRouter.post(
+  '/organizations/:id/status',
+  requirePermission('ORGANIZATIONS_MANAGE'),
+  validateUuidParam('id'),
+  validateBody(organizationMoveSchema),
+  moveOrganizationHandler,
+);

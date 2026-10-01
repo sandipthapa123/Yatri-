@@ -18,7 +18,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { useCall, useChat, useSos } from '../hooks';
-import { rideActions, type RideActionId } from '../rideActions';
+import { businessText, rideActions, type RideActionId } from '../rideActions';
 import { rideApi } from '../rideApi';
 import { CallPanel } from './CallPanel';
 import { CounterpartCard } from './CounterpartCard';
@@ -112,6 +112,7 @@ export function RideRoom(props: RideRoomProps) {
       paymentStatus: trip?.paymentStatus ?? 'NONE',
       rated: trip?.rated ?? false,
       cancelFeeNpr: trip?.cancelFeeNpr ?? 0,
+      billedToOrganization: trip?.business?.billedToOrganization ?? false,
     },
     live.snapshot?.waiting ?? null,
   );
@@ -243,6 +244,11 @@ export function RideRoom(props: RideRoomProps) {
 
           {tab === 'trip' ? (
             <View style={styles.block}>
+              {trip?.business ? (
+                <Text accessibilityRole="text" style={{ color: colors.textPrimary }}>
+                  {businessText(role, trip.business)}
+                </Text>
+              ) : null}
               {assigned || sosOpen ? (
                 <SosPanel {...ui} state={sos.state} controller={sos.controller} />
               ) : null}

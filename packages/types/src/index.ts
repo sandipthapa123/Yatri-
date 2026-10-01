@@ -21,6 +21,7 @@ export * from './support';
 export * from './operations';
 export * from './fleet';
 export * from './risk';
+export * from './organization';
 export * from './compliance';
 export * from './realtime';
 export * from './format';

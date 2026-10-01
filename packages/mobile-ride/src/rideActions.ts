@@ -73,6 +73,8 @@ export function rideActions(
     rated: boolean;
     /** What cancelling costs now, as the server's cancellation rules say (0 = free). */
     cancelFeeNpr?: number;
+    /** A ride billed to an organization has no cash for the driver to collect. */
+    billedToOrganization?: boolean;
   },
   waiting: WaitingInfo | null,
 ): RideAction[] {
@@ -121,7 +123,7 @@ export function rideActions(
       out.push(INCIDENT_ACTION);
       break;
     case 'COMPLETED':
-      if (role === 'DRIVER' && trip.paymentStatus === 'PENDING') {
+      if (role === 'DRIVER' && trip.paymentStatus === 'PENDING' && !trip.billedToOrganization) {
         out.push({ id: 'confirmPayment', label: 'Confirm cash received', tone: 'primary' });
       }
       // Ratings open when the ride is completed; how it was paid is a separate matter.
@@ -140,13 +142,29 @@ export function rideActions(
   return out;
 }
 
+/** One sentence saying a ride is a business ride, who it is for and who pays, for the rider and the driver. */
+export function businessText(role: TripRole, b: NonNullable<TripSummary['business']>): string {
+  const purpose = b.purpose ? ` Purpose: ${b.purpose}.` : '';
+  if (role === 'PASSENGER') {
+    return `Business ride for ${b.organizationName}${b.bookedByOther ? ', booked for you by someone there' : ''}.${purpose}`;
+  }
+  return `Business ride for ${b.organizationName}.${purpose}${b.billedToOrganization ? ' No cash to collect.' : ''}`;
+}
+
 /** One sentence about where the money stands, in words (never colour or an icon alone). */
 export function paymentText(
   role: TripRole,
   status: TripSummary['paymentStatus'],
   amountNpr: number | null,
+  /** Set for a business ride the organization pays for (the words differ: nobody pays the driver). */
+  business: TripSummary['business'] = null,
 ): string {
   const amount = amountNpr === null ? '' : ` ${formatNpr(amountNpr)}`;
+  if (business?.billedToOrganization && (status === 'PENDING' || status === 'PAID')) {
+    return role === 'PASSENGER'
+      ? `Nothing to pay: ${business.organizationName} pays for this ride${amount ? ` (${amount.trim()})` : ''}.`
+      : `Nothing to collect: ${business.organizationName} is billed${amount ? ` ${amount.trim()}` : ''} for this ride.`;
+  }
   switch (status) {
     case 'PENDING':
       return role === 'PASSENGER'

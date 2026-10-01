@@ -61,6 +61,10 @@ Yatri-specific reminders:
   risk level is `deriveRiskLevel` over the events, the restriction and `users.status` and is never stored; "is
   restricted" is `RISK_RESTRICTED_SQL`; a restriction is written only by `risk/restriction.service.ts`; suspend and
   restore stay in `admin-users`. A risk event holds counts and ids only (no phone, address or coordinates).
+- What an organization member may do is `ORG_ROLE_PERMISSIONS` (organization roles are NOT platform roles); a booking
+  is checked only by `evaluateBooking`; a business ride is an ordinary `trips` row (`booked_by` is the booker, `passenger_id`
+  the rider) created only through `requestAndOffer`; what it costs an organization is `ORG_TRIP_COST_SQL`; how it is paid is
+  `ORG_PAYMENT_MODE_METHOD`; a statement only groups `trip_payments` (`statement_id`) and never stores an amount.
 - Do not put a backslash inside a SQL string written from a shell command: use `ESCAPE '!'` with
   `likeContains` for searches.
 - If you discover a duplicate, consolidate it or add it to "Known duplication" in the doc.

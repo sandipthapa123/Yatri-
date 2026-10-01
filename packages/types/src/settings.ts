@@ -18,6 +18,7 @@ export const SETTING_GROUPS = [
   'support',
   'dispatch',
   'risk',
+  'business',
 ] as const;
 export type SettingGroup = (typeof SETTING_GROUPS)[number];
 
@@ -30,6 +31,7 @@ export const SETTING_GROUP_LABELS: Record<SettingGroup, string> = {
   support: 'Support and privacy',
   dispatch: 'Dispatch, surge limits and driver limits',
   risk: 'Fraud and risk',
+  business: 'Business accounts',
 };
 
 export type SettingKind = 'boolean' | 'int' | 'number' | 'intList' | 'text';
@@ -377,6 +379,35 @@ export const PLATFORM_SETTINGS = [
     min: 1,
     max: 90,
     unit: 'days',
+  },
+  {
+    key: 'ORG_APPROVAL_TTL_MINUTES',
+    group: 'business',
+    label: 'How long a ride waits for approval',
+    help: 'A business ride that needs approval is dropped if nobody decides within this time, so a rider is never sent a car for a trip they no longer need.',
+    kind: 'int',
+    min: 5,
+    max: 1440,
+    unit: 'minutes',
+  },
+  {
+    key: 'ORG_PAYMENT_TERMS_DAYS',
+    group: 'business',
+    label: 'Days to pay a statement',
+    help: 'A monthly statement is due this many days after it is issued.',
+    kind: 'int',
+    min: 1,
+    max: 90,
+    unit: 'days',
+  },
+  {
+    key: 'ORG_MAX_PER_USER',
+    group: 'business',
+    label: 'Most organizations one person can create',
+    help: 'A limit on how many business accounts a single person can start, to slow down misuse.',
+    kind: 'int',
+    min: 1,
+    max: 20,
   },
 ] as const satisfies readonly SettingDef[];
 

@@ -264,6 +264,16 @@ const envSchema = z
     // How often the support sweep (escalations, auto-close) and the retention job run.
     SUPPORT_SWEEP_SECONDS: z.coerce.number().int().positive().default(300),
 
+    // --- Fraud and risk (defaults; an administrator can override them in Settings) ---
+    RISK_REVIEW_SCORE: z.coerce.number().int().min(1).max(1000).default(40),
+    RISK_EVENT_WINDOW_DAYS: z.coerce.number().int().min(1).max(365).default(30),
+    RISK_AUTO_RESTRICT_SCORE: z.coerce.number().int().min(0).max(5000).default(0),
+    RISK_MIN_DISTINCT_RULES: z.coerce.number().int().min(2).max(10).default(3),
+    RISK_AUTO_RESTRICT_HOURS: z.coerce.number().int().min(1).max(168).default(24),
+    RISK_MAX_RESTRICTION_DAYS: z.coerce.number().int().min(1).max(90).default(14),
+    // How often the risk detectors run.
+    RISK_SWEEP_MINUTES: z.coerce.number().int().positive().default(15),
+
     MAX_UPLOAD_FILE_SIZE_BYTES: z.coerce
       .number()
       .int()

@@ -57,6 +57,10 @@ Yatri-specific reminders:
   verification, availability and ride; "may this be used for rides" is `fleet/eligibility.ts` (never a stored flag);
   what expires is `expiryItems` over the existing document tables with `expiryState`; "today" is `todayKey()` and
   the database session time zone. Maintenance records point only at a vehicle.
+- What is suspicious and how much is `RISK_RULES` (types) with one query per rule in `risk/detectors.ts`; a
+  risk level is `deriveRiskLevel` over the events, the restriction and `users.status` and is never stored; "is
+  restricted" is `RISK_RESTRICTED_SQL`; a restriction is written only by `risk/restriction.service.ts`; suspend and
+  restore stay in `admin-users`. A risk event holds counts and ids only (no phone, address or coordinates).
 - Do not put a backslash inside a SQL string written from a shell command: use `ESCAPE '!'` with
   `likeContains` for searches.
 - If you discover a duplicate, consolidate it or add it to "Known duplication" in the doc.

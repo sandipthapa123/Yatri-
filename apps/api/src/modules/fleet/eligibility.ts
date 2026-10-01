@@ -1,10 +1,13 @@
 import {
+  ACCOUNT_RESTRICTED_MESSAGE,
   VEHICLE_LIFECYCLE_LABELS,
   type RideEligibility,
   type VehicleLifecycle,
 } from '@yatri/types';
 
 import { query } from '../../lib/db';
+import { RISK_RESTRICTED_SQL } from '../risk/restricted-sql';
+import { activeRestriction } from '../risk/restriction.service';
 import { listRequiredDocumentTypes } from '../documents/document-types.repository';
 import { expireStaleDocuments } from '../documents/documents.repository';
 import { documentSatisfies, isPastDate } from '../drivers/onboarding.service';
@@ -39,6 +42,7 @@ export const VEHICLE_RIDEABLE_SQL = `v.verification_status = 'APPROVED'
 
 /** For a query that aliases `driver_profiles` as `dp`. */
 export const DRIVER_RIDEABLE_SQL = `dp.operational_status <> 'SUSPENDED'
+  AND NOT ${RISK_RESTRICTED_SQL('dp.user_id')}
   AND ${FLEET_ACTIVE('dp.fleet_id')}
   AND NOT EXISTS (SELECT 1 FROM driver_details dd
                   WHERE dd.user_id = dp.user_id AND dd.license_expiry_date < current_date)
@@ -130,6 +134,7 @@ export async function driverFleetProblems(driverId: string): Promise<string[]> {
     );
   }
   if (d.fleet_id && d.fleet_status !== 'ACTIVE') reasons.push('Your fleet is not active.');
+  if (await activeRestriction(driverId)) reasons.push(ACCOUNT_RESTRICTED_MESSAGE);
   const vehicles = await query<{ id: string; verification_status: string }>(
     `SELECT v.id, v.verification_status::text AS verification_status FROM vehicles v
      WHERE v.driver_user_id = $1 AND v.lifecycle_status <> 'RETIRED'`,

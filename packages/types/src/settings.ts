@@ -17,6 +17,7 @@ export const SETTING_GROUPS = [
   'notifications',
   'support',
   'dispatch',
+  'risk',
 ] as const;
 export type SettingGroup = (typeof SETTING_GROUPS)[number];
 
@@ -28,6 +29,7 @@ export const SETTING_GROUP_LABELS: Record<SettingGroup, string> = {
   notifications: 'Notification settings',
   support: 'Support and privacy',
   dispatch: 'Dispatch, surge limits and driver limits',
+  risk: 'Fraud and risk',
 };
 
 export type SettingKind = 'boolean' | 'int' | 'number' | 'intList' | 'text';
@@ -316,6 +318,65 @@ export const PLATFORM_SETTINGS = [
     kind: 'int',
     min: 1,
     max: 50,
+  },
+  {
+    key: 'RISK_REVIEW_SCORE',
+    group: 'risk',
+    label: 'Risk score that asks for a review',
+    help: 'When the points from open and confirmed risk events reach this, they are listed as needing review. Nothing happens to the person; a human decides.',
+    kind: 'int',
+    min: 1,
+    max: 1000,
+    unit: 'points',
+  },
+  {
+    key: 'RISK_EVENT_WINDOW_DAYS',
+    group: 'risk',
+    label: 'How long a risk event counts',
+    help: 'Risk events older than this no longer add to the score (they are kept for the retention period).',
+    kind: 'int',
+    min: 1,
+    max: 365,
+    unit: 'days',
+  },
+  {
+    key: 'RISK_AUTO_RESTRICT_SCORE',
+    group: 'risk',
+    label: 'Score that restricts temporarily without a person',
+    help: 'Reaching this score from several different kinds of signal restricts the account for a short time, then lifts itself unless an administrator acts. 0 turns this off, so only administrators restrict. It never suspends.',
+    kind: 'int',
+    min: 0,
+    max: 5000,
+    unit: 'points',
+  },
+  {
+    key: 'RISK_MIN_DISTINCT_RULES',
+    group: 'risk',
+    label: 'Different signals needed before an automatic restriction',
+    help: 'One kind of signal, however often it repeats, never restricts an account by itself: this many different rules must have fired.',
+    kind: 'int',
+    min: 2,
+    max: 10,
+  },
+  {
+    key: 'RISK_AUTO_RESTRICT_HOURS',
+    group: 'risk',
+    label: 'Length of an automatic restriction',
+    help: 'How long an automatic restriction lasts if nobody lifts it sooner.',
+    kind: 'int',
+    min: 1,
+    max: 168,
+    unit: 'hours',
+  },
+  {
+    key: 'RISK_MAX_RESTRICTION_DAYS',
+    group: 'risk',
+    label: 'Longest restriction an administrator can apply',
+    help: 'Restrictions are always temporary. A longer measure is a suspension, which is a separate, reversible decision.',
+    kind: 'int',
+    min: 1,
+    max: 90,
+    unit: 'days',
   },
 ] as const satisfies readonly SettingDef[];
 

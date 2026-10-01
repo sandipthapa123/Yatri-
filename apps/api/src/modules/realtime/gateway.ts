@@ -45,6 +45,7 @@ import {
 import { env } from '../../config/env';
 import { runRetention } from '../compliance/retention.service';
 import { runFleetMonitor } from '../fleet/monitor';
+import { runRiskSweep } from '../risk/sweep';
 import { sweepSupport } from '../support/tickets.service';
 import { expireDueShares } from '../sharing/sharing.service';
 import { sweepTrips } from '../trips/trip-maintenance';
@@ -520,6 +521,10 @@ export async function attachRealtimeGateway(server: HttpServer): Promise<Realtim
     setInterval(() => {
       runFleetMonitor().catch((err) => log.error('Fleet monitor error', err));
     }, env.FLEET_MONITOR_MINUTES * 60_000),
+    // Fraud and risk: run the detectors; the engine only raises signals (and, if switched on, short restrictions).
+    setInterval(() => {
+      runRiskSweep().catch((err) => log.error('Risk sweep error', err));
+    }, env.RISK_SWEEP_MINUTES * 60_000),
     // Retention is slow housekeeping (each kind of record follows its retention policy): hourly.
     setInterval(() => {
       runRetention().catch((err) => log.error('Retention error', err));

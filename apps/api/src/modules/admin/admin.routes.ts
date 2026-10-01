@@ -195,6 +195,30 @@ import {
 } from './admin-users';
 import { adminVehiclesQuerySchema, listVehiclesHandler } from './admin-vehicles';
 import { adminMeHandler } from './admin-admins';
+import {
+  riskEventHandler,
+  riskEventsHandler,
+  riskEventsQuerySchema,
+  riskHistoryHandler,
+  riskHistoryQuerySchema,
+  riskLiftHandler,
+  riskLiftSchema,
+  riskNoteHandler,
+  riskNoteSchema,
+  riskOverviewHandler,
+  riskRestrictHandler,
+  riskRestrictSchema,
+  riskReviewHandler,
+  riskReviewSchema,
+  riskRuleHandler,
+  riskRuleSchema,
+  riskRulesHandler,
+  riskSweepHandler,
+  riskTripHandler,
+  riskUserHandler,
+  riskUsersHandler,
+  riskUsersQuerySchema,
+} from './admin-risk';
 import { auditAdminAction, requirePermission } from './permissions';
 
 /**
@@ -761,3 +785,77 @@ adminRouter.get(
   fleetHistoryHandler,
 );
 adminRouter.post('/fleet/monitor/run', requirePermission('FLEET_MANAGE'), runMonitorHandler);
+
+// Fraud and risk: reading needs RISK_VIEW, every change RISK_MANAGE (and each change is audited by the service).
+adminRouter.get('/risk/overview', requirePermission('RISK_VIEW'), riskOverviewHandler);
+adminRouter.get(
+  '/risk/events',
+  requirePermission('RISK_VIEW'),
+  validateQuery(riskEventsQuerySchema),
+  riskEventsHandler,
+);
+adminRouter.get(
+  '/risk/events/:id',
+  requirePermission('RISK_VIEW'),
+  validateUuidParam('id'),
+  riskEventHandler,
+);
+adminRouter.post(
+  '/risk/events/:id/review',
+  requirePermission('RISK_MANAGE'),
+  validateUuidParam('id'),
+  validateBody(riskReviewSchema),
+  riskReviewHandler,
+);
+adminRouter.get(
+  '/risk/users',
+  requirePermission('RISK_VIEW'),
+  validateQuery(riskUsersQuerySchema),
+  riskUsersHandler,
+);
+adminRouter.get(
+  '/risk/users/:id',
+  requirePermission('RISK_VIEW'),
+  validateUuidParam('id'),
+  riskUserHandler,
+);
+adminRouter.post(
+  '/risk/users/:id/restrict',
+  requirePermission('RISK_MANAGE'),
+  validateUuidParam('id'),
+  validateBody(riskRestrictSchema),
+  riskRestrictHandler,
+);
+adminRouter.post(
+  '/risk/users/:id/lift',
+  requirePermission('RISK_MANAGE'),
+  validateUuidParam('id'),
+  validateBody(riskLiftSchema),
+  riskLiftHandler,
+);
+adminRouter.get(
+  '/risk/trips/:id',
+  requirePermission('RISK_VIEW'),
+  validateUuidParam('id'),
+  riskTripHandler,
+);
+adminRouter.post(
+  '/risk/notes',
+  requirePermission('RISK_MANAGE'),
+  validateBody(riskNoteSchema),
+  riskNoteHandler,
+);
+adminRouter.get('/risk/rules', requirePermission('RISK_VIEW'), riskRulesHandler);
+adminRouter.put(
+  '/risk/rules/:code',
+  requirePermission('RISK_MANAGE'),
+  validateBody(riskRuleSchema),
+  riskRuleHandler,
+);
+adminRouter.get(
+  '/risk/history',
+  requirePermission('RISK_VIEW'),
+  validateQuery(riskHistoryQuerySchema),
+  riskHistoryHandler,
+);
+adminRouter.post('/risk/sweep/run', requirePermission('RISK_MANAGE'), riskSweepHandler);

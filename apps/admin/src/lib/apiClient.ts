@@ -1,6 +1,19 @@
 import type {
   AdminAccountRow,
   AdminFleetBody,
+  AdminRiskNoteBody,
+  AdminRiskRestrictBody,
+  AdminRiskReviewBody,
+  AdminRiskRuleBody,
+  RiskEventInfo,
+  RiskNoteInfo,
+  RiskOverview,
+  RiskRestrictionInfo,
+  RiskRuleInfo,
+  RiskSweepResult,
+  RiskTripDetail,
+  RiskUserDetail,
+  RiskUserRow,
   AdminFleetVehicleBody,
   AdminInspectionBody,
   AdminLifecycleBody,
@@ -696,3 +709,45 @@ export const getFleetHistory = (t: string, p: { page?: number; pageSize?: number
   );
 export const runFleetCheck = (t: string) =>
   post<{ reminders: number; takenOffline: number; lifted: number }>('/fleet/monitor/run', t);
+
+// ---- fraud and risk (RISK_VIEW to read, RISK_MANAGE to change)
+
+export const getRiskOverview = (t: string) => adminRequest<RiskOverview>('/risk/overview', t);
+export const listRiskEvents = (
+  t: string,
+  p: {
+    status?: string;
+    category?: string;
+    userId?: string;
+    tripId?: string;
+    page?: number;
+    pageSize?: number;
+  },
+) => adminRequest<Page<RiskEventInfo>>(`/risk/events${toQuery(p)}`, t);
+export const getRiskEvent = (t: string, id: string) =>
+  adminRequest<RiskEventInfo>(`/risk/events/${id}`, t);
+export const reviewRiskEvent = (t: string, id: string, body: AdminRiskReviewBody) =>
+  post<RiskEventInfo>(`/risk/events/${id}/review`, t, body);
+export const listRiskUsersApi = (
+  t: string,
+  p: { level?: string; search?: string; page?: number; pageSize?: number },
+) => adminRequest<Page<RiskUserRow>>(`/risk/users${toQuery(p)}`, t);
+export const getRiskUser = (t: string, id: string) =>
+  adminRequest<RiskUserDetail>(`/risk/users/${id}`, t);
+export const getRiskTrip = (t: string, id: string) =>
+  adminRequest<RiskTripDetail>(`/risk/trips/${id}`, t);
+export const restrictRiskUser = (t: string, id: string, body: AdminRiskRestrictBody) =>
+  post<RiskRestrictionInfo>(`/risk/users/${id}/restrict`, t, body);
+export const liftRiskRestriction = (t: string, id: string, reason: string) =>
+  post<{ lifted: true }>(`/risk/users/${id}/lift`, t, { reason });
+export const addRiskNote = (t: string, body: AdminRiskNoteBody) =>
+  post<RiskNoteInfo>('/risk/notes', t, body);
+export const listRiskRules = (t: string) => adminRequest<RiskRuleInfo[]>('/risk/rules', t);
+export const saveRiskRule = (t: string, code: string, body: AdminRiskRuleBody) =>
+  adminRequest<RiskRuleInfo>(`/risk/rules/${code}`, t, { method: 'PUT', body });
+export const getRiskHistory = (t: string, p: { page?: number; pageSize?: number }) =>
+  adminRequest<Page<AuditEntry & { subjectType: string; subjectId: string | null }>>(
+    `/risk/history${toQuery(p)}`,
+    t,
+  );
+export const runRiskSweepApi = (t: string) => post<RiskSweepResult>('/risk/sweep/run', t);

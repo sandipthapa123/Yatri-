@@ -17,6 +17,7 @@ export const NAV: readonly NavItem[] = [
   { href: '/availability', label: 'Driver availability', permission: 'OPERATIONS_VIEW' },
   { href: '/operations', label: 'Demand, zones and pricing', permission: 'OPERATIONS_VIEW' },
   { href: '/fleet', label: 'Fleets and driver operations', permission: 'FLEET_VIEW' },
+  { href: '/risk', label: 'Fraud and risk', permission: 'RISK_VIEW' },
   { href: '/drivers', label: 'Driver verification', permission: 'DRIVERS_REVIEW' },
   { href: '/vehicles', label: 'Vehicles', permission: 'DRIVERS_REVIEW' },
   { href: '/users', label: 'Users', permission: 'USERS_VIEW' },

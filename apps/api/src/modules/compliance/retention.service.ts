@@ -10,6 +10,7 @@ import { query } from '../../lib/db';
 import { log } from '../../lib/logger';
 import { getStorageProvider } from '../../lib/storage/local-disk-provider';
 import { HttpError } from '../../middleware/errorHandler';
+import { purgeOldRiskEvents } from '../risk/sweep';
 
 /**
  * Data retention: how long each kind of record is kept is DATA in `retention_policies` (one row per kind),
@@ -126,6 +127,7 @@ const JOBS: Record<string, (days: number) => Promise<number>> = {
         [days],
       )
     ).rowCount ?? 0,
+  RISK_EVENTS: purgeOldRiskEvents,
   AUTH_EVENTS: async (days) =>
     (
       await query(

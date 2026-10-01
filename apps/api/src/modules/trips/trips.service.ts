@@ -16,6 +16,7 @@ import { env } from '../../config/env';
 import { query } from '../../lib/db';
 import { sqlIn } from '../../lib/sql';
 import { HttpError } from '../../middleware/errorHandler';
+import { assertNotRestricted } from '../risk/restriction.service';
 import { endLiveCallForTrip } from '../calls/calls.service';
 import { setDriverTrip } from '../availability/presence.state';
 import { cancelAcceptedOffer, cancelOpenOffersForTrip } from '../dispatch/offers.repository';
@@ -226,6 +227,7 @@ export async function requestTrip(passengerId: string, body: TripRequestBody): P
   if (!settingBool('SERVICE_REQUESTS_ENABLED')) {
     throw new HttpError(503, 'SERVICE_PAUSED', settingText('SERVICE_PAUSED_MESSAGE'));
   }
+  await assertNotRestricted(passengerId);
   const category = await getActiveCategoryByCode(body.vehicleCategory);
   if (!category) throw unknownCategory();
   const pickupZones = await assertZoneAccess(body.pickup, 'PICKUP');

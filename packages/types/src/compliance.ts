@@ -152,6 +152,7 @@ export const RETENTION_RECORD_TYPES = [
   'AUDIT_LOG',
   'COMPLIANCE_RECORDS',
   'DATA_REQUESTS',
+  'RISK_EVENTS',
 ] as const;
 export type RetentionRecordType = (typeof RETENTION_RECORD_TYPES)[number];
 

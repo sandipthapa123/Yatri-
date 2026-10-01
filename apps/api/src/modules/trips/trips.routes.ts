@@ -136,7 +136,13 @@ tripsRouter.get(
   validateQuery(eventsQuerySchema),
   eventsHandler,
 );
-tripsRouter.post('/:id/cancel', validateUuidParam('id'), validateBody(cancelSchema), cancelHandler);
+tripsRouter.post(
+  '/:id/cancel',
+  userRateLimit('trip-cancel', 20, 3600),
+  validateUuidParam('id'),
+  validateBody(cancelSchema),
+  cancelHandler,
+);
 
 // Driver-only lifecycle steps.
 for (const [path, action] of [
@@ -162,7 +168,14 @@ tripsRouter.get('/:id/payment', validateUuidParam('id'), getPaymentHandler);
 tripsRouter.post(
   '/:id/payment/confirm',
   requireRole('DRIVER'),
+  userRateLimit('payment-confirm', 60, 3600),
   validateUuidParam('id'),
   confirmPaymentHandler,
 );
-tripsRouter.post('/:id/rating', validateUuidParam('id'), validateBody(ratingSchema), rateHandler);
+tripsRouter.post(
+  '/:id/rating',
+  userRateLimit('trip-rating', 30, 3600),
+  validateUuidParam('id'),
+  validateBody(ratingSchema),
+  rateHandler,
+);

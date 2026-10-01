@@ -255,3 +255,22 @@ NVDA and a keyboard:
 6. **Maintenance:** in-progress records come first and say "In progress"; completing one asks where the vehicle
    goes next; recording a failed inspection says the vehicle was taken out of service.
 7. Zoom to 200% and 400%: tables scroll sideways, nothing is cut off.
+
+## P. Fraud and risk (Phase 17)
+
+Automated: the risk pages are scanned by the console accessibility tests (labelled fields, table captions and
+headers, status regions, no dialogs) and every level and status is a word in the data the pages print. Check by
+hand with NVDA and a keyboard:
+
+1. **Overview:** the counts are links with words ("3 need a review"); the people table has a caption and row
+   headers; the level is a column of words (Low risk, Review required, Restricted, Suspended), never colour.
+   "Check now" announces how many signals were raised.
+2. **Filters:** the level, status and kind selects have labels; Filter works with Enter.
+3. **A person:** the first section says the level and what it means; the actions shown are only those the server
+   allows; restricting and suspending open an in-page confirmation, focus moves to its sentence, Escape backs
+   out, and the result is announced as a status.
+4. **A signal:** it says what fired, the evidence in words (counts and kinds), and links to the person, the ride and
+   related people; the decision form says what dismissing does.
+5. **Rules:** each rule is its own section with a heading; "Change this rule" is a disclosure that opens with the
+   keyboard; every number has a label.
+6. Zoom to 200% and 400%: tables scroll sideways, nothing is cut off.

@@ -143,6 +143,10 @@ Run from the repository root; each fans out to every workspace package via pnpm.
   lifecycle, expiry monitoring with automatic reminders, inspection and maintenance records, and an operational
   status for drivers kept apart from account, verification, availability and ride status. An ineligible vehicle
   or driver is never offered a ride; documents stay in the one document system.
+- **Fraud, risk and trust** (`docs/PHASE_17.md`): one central rule table raises signals from the records other
+  systems already own (sign-in events, rides, ratings, disputes, refunds, location flags, incentives), derives a
+  risk level, and gives administrators investigation, notes, temporary restrictions and the existing suspend and
+  restore, all audited. It never suspends on its own and never acts on a single signal.
 - Running it for real: [`docs/OPERATIONS.md`](docs/OPERATIONS.md) (architecture, deployment, backups,
   monitoring, incident recovery, release and rollback) and [`docs/SECURITY.md`](docs/SECURITY.md) (the controls,
   what was audited, what is still open). Container images and a full local stack are in [`deploy/`](deploy/).

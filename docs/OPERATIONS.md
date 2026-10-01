@@ -270,3 +270,23 @@ The controls and their evidence are in `docs/SECURITY.md`. What operators must d
   separate from account suspension and from driver verification; reinstating needs no re-verification.
 - **The database time zone.** The API sets every connection to `PLATFORM_TIME_ZONE`, so date rules agree
   between SQL and code; keep the setting correct for your country.
+
+## 12. Fraud and risk
+
+- **Who does what.** `RISK_VIEW` reads signals, people, rides, rules and history; `RISK_MANAGE` reviews signals,
+  adds notes, restricts and lifts, and edits rules. Suspending or restoring needs `USERS_MANAGE` as well.
+- **What the system does by itself.** Every `RISK_SWEEP_MINUTES` it runs the detectors and raises signals (the
+  same signal is never raised twice in a window). It tells the risk team once a week per person that a review is
+  due. Automatic restriction is **off** (`RISK_AUTO_RESTRICT_SCORE=0`); if you switch it on in Settings it needs
+  several different kinds of signal, lasts `RISK_AUTO_RESTRICT_HOURS`, and never suspends. "Check now" on the
+  overview runs the sweep immediately.
+- **Investigating.** Open a person from the overview or from a signal. Read the signals and the context (rides,
+  cancellations, disputes, refund requests: a few signals on a long history usually mean nothing), add a note,
+  then choose: dismiss a false alarm, confirm, restrict for a few days, or suspend. Everything is in the audit trail.
+- **Restricting.** A restricted passenger cannot request rides and a restricted driver is not offered rides (and
+  is taken offline). Support still works. It ends by itself; lift it sooner from the person page. The person is
+  told their account is limited, with no reason.
+- **Tuning.** If a rule fires too often, raise its threshold or lower its points on the Rules page (with a
+  reason) rather than ignoring the signals; putting the defaults back removes the override.
+- **Retention.** Signals are deleted after the `RISK_EVENTS` retention period (Compliance > Retention; default
+  365 days). The audit log of what was done is kept.

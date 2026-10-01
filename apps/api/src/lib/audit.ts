@@ -49,8 +49,11 @@ export async function recordAudit(input: AuditInput): Promise<void> {
   );
 }
 
-/** The trail for one record, oldest first (for the admin pages). */
-export async function auditTrail(subjectType: string, subjectId: string): Promise<AuditEntry[]> {
+/** The trail for one record (or for one record under several kinds), oldest first (for the admin pages). */
+export async function auditTrail(
+  subjectType: string | readonly string[],
+  subjectId: string,
+): Promise<AuditEntry[]> {
   const r = await query<{
     id: string;
     action: string;
@@ -61,8 +64,8 @@ export async function auditTrail(subjectType: string, subjectId: string): Promis
   }>(
     `SELECT a.id::text, a.action, a.actor_role, a.detail, a.created_at, u.full_name
      FROM audit_log a LEFT JOIN users u ON u.id = a.actor_id
-     WHERE a.subject_type = $1 AND a.subject_id = $2 ORDER BY a.id`,
-    [subjectType, subjectId],
+     WHERE a.subject_type = ANY($1::text[]) AND a.subject_id = $2 ORDER BY a.id`,
+    [typeof subjectType === 'string' ? [subjectType] : [...subjectType], subjectId],
   );
   return r.rows.map((row) => ({
     id: row.id,

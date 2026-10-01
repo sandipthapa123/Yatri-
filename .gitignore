@@ -61,3 +61,7 @@ apps/api/storage-test/
 # the framework version) — regenerated locally, not repository content.
 apps/admin/AGENTS.md
 apps/admin/CLAUDE.md
+
+# Local assistant logs
+.recall/
+**/.recall/

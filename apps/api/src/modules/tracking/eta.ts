@@ -1,7 +1,11 @@
 import type { Coordinate } from '../location/coordinates';
 import { haversineMeters } from '../location/geo';
 import { LocationProviderError } from '../location/providers/location-provider';
-import type { RouteProvider } from '../location/providers/route-provider';
+import type {
+  RouteProvider,
+  RouteRequestOptions,
+  RouteResult,
+} from '../location/providers/route-provider';
 import { log } from '../../lib/logger';
 
 export interface EtaResult {
@@ -47,14 +51,31 @@ export async function computeEta(
   provider: RouteProvider,
   observedSpeedMps?: number | null,
 ): Promise<EtaResult> {
+  return (await planRoute(from, to, provider, observedSpeedMps)).eta;
+}
+
+/**
+ * The same question when the caller also wants the route itself (its line and turn-by-turn steps, if asked for). One
+ * provider call answers both, so navigation and the ETA are never two different routes.
+ */
+export async function planRoute(
+  from: Coordinate,
+  to: Coordinate,
+  provider: RouteProvider,
+  observedSpeedMps?: number | null,
+  opts: RouteRequestOptions = {},
+): Promise<{ eta: EtaResult; route?: RouteResult }> {
   const straight = haversineMeters(from, to);
   try {
-    const route = await provider.calculateRoute(from, to);
+    const route = await provider.calculateRoute(from, to, opts);
     if (route.method === 'route' && route.durationSeconds !== null) {
       return {
-        distanceMeters: Math.round(route.distanceMeters),
-        etaSeconds: Math.round(route.durationSeconds),
-        basis: 'route',
+        eta: {
+          distanceMeters: Math.round(route.distanceMeters),
+          etaSeconds: Math.round(route.durationSeconds),
+          basis: 'route',
+        },
+        route,
       };
     }
   } catch (err) {
@@ -62,8 +83,10 @@ export async function computeEta(
     log.error(`ETA route provider failure (${err.kind}); using estimate`);
   }
   return {
-    distanceMeters: Math.round(straight),
-    etaSeconds: estimateEta(straight, observedSpeedMps).etaSeconds,
-    basis: 'estimate',
+    eta: {
+      distanceMeters: Math.round(straight),
+      etaSeconds: estimateEta(straight, observedSpeedMps).etaSeconds,
+      basis: 'estimate',
+    },
   };
 }

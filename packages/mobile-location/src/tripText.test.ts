@@ -61,6 +61,7 @@ function snapshot(over: Partial<LiveTripSnapshot> = {}): LiveTripSnapshot {
     driverArrival: { distanceMeters: 180, etaSeconds: 120, basis: 'estimate' },
     trip: null,
     waiting: null,
+    navigation: null,
     ...over,
   };
 }

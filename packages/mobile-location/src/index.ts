@@ -53,3 +53,15 @@ export { driverAvailabilityApi } from './locationApi';
 export { RealtimeClient } from './realtimeClient';
 export { RECOVERED_NOTICE_MS, connectivityNotice } from './connectivityText';
 export type { ConnectivityNotice, ConnectivityNoticeKind } from './connectivityText';
+export {
+  NavigationController,
+  decideGuidanceAnnouncement,
+  INITIAL_GUIDANCE_MEMORY,
+} from './navigationController';
+export type {
+  NavigationState,
+  NavigationControllerOptions,
+  GuidanceMemory,
+} from './navigationController';
+export { useNavigation } from './useNavigation';
+export { NavigationPanel } from './components/NavigationPanel';

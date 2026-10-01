@@ -35,6 +35,7 @@ import {
   getTripHandler,
   historyHandler,
   liveSnapshotHandler,
+  navigationRouteHandler,
   offerResponseHandler,
   rateHandler,
   requestHandler,
@@ -44,6 +45,7 @@ import {
   cancelSchema,
   eventsQuerySchema,
   historyQuerySchema,
+  navigationQuerySchema,
   ratingSchema,
   tripEstimateSchema,
   tripRequestSchema,
@@ -135,6 +137,13 @@ tripsRouter.get('/active', activeTripHandler);
 tripsRouter.get('/history', validateQuery(historyQuerySchema), historyHandler);
 tripsRouter.get('/:id', validateUuidParam('id'), getTripHandler);
 tripsRouter.get('/:id/live', validateUuidParam('id'), liveSnapshotHandler);
+tripsRouter.get(
+  '/:id/navigation',
+  requireRole('DRIVER'),
+  validateUuidParam('id'),
+  validateQuery(navigationQuerySchema),
+  navigationRouteHandler,
+);
 tripsRouter.get(
   '/:id/events',
   validateUuidParam('id'),

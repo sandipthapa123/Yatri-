@@ -1,4 +1,5 @@
 import {
+  ROUTE_DEVIATION_RIDE_MIN_DEVIATIONS,
   RISK_CANCELLATION_MIN_SHARE_PERCENT,
   RISK_UNPAID_GRACE_HOURS,
   type RiskRuleCode,
@@ -73,6 +74,14 @@ export const DETECTORS: Record<RiskRuleCode, Detector> = {
     sql: `SELECT f.driver_id AS user_id, count(*)::int AS count, array_agg(DISTINCT f.kind) AS kinds
           FROM driver_location_flags f WHERE ${WINDOW('f.created_at')}
           GROUP BY f.driver_id HAVING count(*) >= $1`,
+  },
+  ROUTE_DEVIATION_PATTERN: {
+    sql: `SELECT t.driver_id AS user_id, count(*)::int AS count, ${IDS('t.id', 't.ended_at DESC')} AS trips
+          FROM trips t
+          WHERE t.status = 'COMPLETED' AND t.driver_id IS NOT NULL AND ${WINDOW('t.ended_at')}
+            AND t.route_deviations >= $3::int
+          GROUP BY t.driver_id HAVING count(*) >= $1`,
+    extra: [ROUTE_DEVIATION_RIDE_MIN_DEVIATIONS],
   },
   PASSENGER_CANCELLATIONS: {
     sql: `SELECT t.passenger_id AS user_id, ${OWN_CANCELS('PASSENGER')}::int AS count, count(*)::int AS total,

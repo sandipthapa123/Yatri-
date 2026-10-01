@@ -29,6 +29,7 @@ export const TRIP_EVENT_TYPES = [
   'TRIP_SHARE_STARTED',
   'TRIP_SHARE_STOPPED',
   'ACCESSIBILITY_UPDATED',
+  'DESTINATION_NEARBY',
 ] as const;
 export type TripEventType = (typeof TRIP_EVENT_TYPES)[number];
 
@@ -75,6 +76,8 @@ export const TRIP_EVENT_META: Record<TripEventType, TripEventMeta> = {
   // The passenger changed their pickup instructions: told politely, not by notification, and without the words
   // (the details are protected, so the event carries none; the driver reads them in the ride).
   ACCESSIBILITY_UPDATED: meta(false, false, false),
+  // Approaching, near and at the destination: said politely to both people, once each, never as a notification.
+  DESTINATION_NEARBY: meta(false, false, false),
 };
 
 export type TripEventPayload = Record<string, unknown>;
@@ -216,6 +219,30 @@ export function describeTripEvent(
         : why === 'EXPIRED'
           ? 'Trip sharing ended: the sharing period is over.'
           : 'You stopped sharing this trip.';
+    }
+    case 'DESTINATION_NEARBY': {
+      const m = str(p.milestone);
+      const d = num(p.distanceMeters);
+      const away = d === null ? '' : ` About ${formatDistance(d)} to go.`;
+      if (m === 'AT_DESTINATION') {
+        return isDriver
+          ? 'You have reached the destination. You can end the ride when the passenger is out.'
+          : viewer === 'ADMIN'
+            ? 'The vehicle reached the destination.'
+            : 'You have reached your destination.';
+      }
+      if (m === 'NEAR_DESTINATION') {
+        return isDriver
+          ? `You are near the destination.${away}`
+          : viewer === 'ADMIN'
+            ? 'The vehicle is near the destination.'
+            : `You are near your destination.${away}`;
+      }
+      return isDriver
+        ? `You are approaching the destination.${away}`
+        : viewer === 'ADMIN'
+          ? 'The vehicle is approaching the destination.'
+          : `You are approaching your destination.${away}`;
     }
     case 'ACCESSIBILITY_UPDATED':
       return isDriver

@@ -1,4 +1,4 @@
-import type { LiveTripSnapshot } from '@yatri/types';
+import { describeTripProgress, type LiveTripSnapshot } from '@yatri/types';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { AccessibilityInfo, Platform, StyleSheet, Text, View } from 'react-native';
 
@@ -15,6 +15,8 @@ export interface LiveTripViewProps {
   children?: ReactNode;
   /** Extra notice shown near the top, e.g. location-sharing problems. */
   notice?: string | null;
+  /** The driver's route line for the map (a visual extra). */
+  routeLine?: ReadonlyArray<readonly [number, number]>;
 }
 
 const AGE_TICK_MS = 5000;
@@ -41,6 +43,7 @@ export function LiveTripView({
   minTouchTarget,
   children,
   notice,
+  routeLine,
 }: LiveTripViewProps) {
   const { snapshot, receivedAtMs, polite, assertive, connection, connectionNotice } = live;
   useSpoken(polite);
@@ -167,6 +170,40 @@ export function LiveTripView({
         </View>
       ) : null}
 
+      {/* The passenger's trip so far, in plain sentences (read on request; the live region speaks only meaningful changes). */}
+      {viewer === 'PASSENGER' && aged?.status === 'IN_PROGRESS' && aged.trip ? (
+        <View
+          accessible
+          accessibilityRole="summary"
+          accessibilityLabel={describeTripProgress({
+            placeName: aged.driver?.placeName ?? null,
+            destinationName: aged.destination.name,
+            distanceRemainingMeters: aged.trip.distanceRemainingMeters,
+            etaSeconds: aged.trip.etaSeconds,
+            basis: aged.trip.basis,
+          }).join(' ')}
+          style={[
+            styles.list,
+            { borderColor: colors.border, backgroundColor: colors.surface, padding: 12, gap: 4 },
+          ]}
+        >
+          <Text style={[styles.heading, { color: colors.textPrimary, fontSize: 18 }]}>
+            Your trip so far
+          </Text>
+          {describeTripProgress({
+            placeName: aged.driver?.placeName ?? null,
+            destinationName: aged.destination.name,
+            distanceRemainingMeters: aged.trip.distanceRemainingMeters,
+            etaSeconds: aged.trip.etaSeconds,
+            basis: aged.trip.basis,
+          }).map((line) => (
+            <Text key={line} style={{ color: colors.textPrimary, fontSize: 16, lineHeight: 22 }}>
+              {line}
+            </Text>
+          ))}
+        </View>
+      ) : null}
+
       {/* The full journey as text — complete even if the map cannot be used at all. */}
       <View
         accessibilityRole="list"
@@ -199,6 +236,7 @@ export function LiveTripView({
           <YatriMap
             center={center}
             markers={markers}
+            routeLine={routeLine}
             colors={colors}
             minTouchTarget={minTouchTarget}
             zoom={15}

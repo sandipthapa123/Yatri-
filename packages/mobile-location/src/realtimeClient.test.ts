@@ -51,6 +51,7 @@ const snap = (version: number, extra: Partial<LiveTripSnapshot> = {}): LiveTripS
   driverArrival: null,
   trip: null,
   waiting: null,
+  navigation: null,
   ...extra,
 });
 

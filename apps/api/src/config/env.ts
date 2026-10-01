@@ -180,6 +180,16 @@ const envSchema = z
     // The driver must be this close to the pickup for the server to accept "I have arrived".
     TRIP_ARRIVAL_RADIUS_METERS: z.coerce.number().int().positive().default(150),
 
+    // --- Navigation: phases of an approach, off-route detection, new routes (platform settings; see PHASE_23) ---
+    NAV_APPROACHING_METERS: z.coerce.number().int().min(100).max(5000).default(500),
+    NAV_NEAR_METERS: z.coerce.number().int().min(30).max(2000).default(150),
+    NAV_AT_METERS: z.coerce.number().int().min(10).max(500).default(40),
+    NAV_LEAVING_METERS: z.coerce.number().int().min(20).max(1000).default(80),
+    NAV_DEVIATION_METERS: z.coerce.number().int().min(20).max(1000).default(60),
+    NAV_DEVIATION_CONFIRM_FIXES: z.coerce.number().int().min(1).max(10).default(3),
+    NAV_MAX_ACCURACY_METERS: z.coerce.number().int().min(10).max(500).default(50),
+    NAV_REROUTE_MIN_SECONDS: z.coerce.number().int().min(5).max(600).default(20),
+
     // --- Dispatch (matching) ---
     DISPATCH_RADIUS_METERS: z.coerce.number().int().positive().default(5000),
     DISPATCH_OFFER_TTL_SECONDS: z.coerce.number().int().positive().default(20),

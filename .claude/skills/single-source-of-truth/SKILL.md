@@ -78,6 +78,10 @@ Yatri-specific reminders:
   only by `modules/accessibility/accessibility.service.ts`; vehicle features hang off `vehicles` (`vehicle_accessibility`) and
   are matched by `attributesSatisfiedSql` in the one matching engine. Never infer a need, never copy the details into a
   notification, chat, event or shared link, and never let a driver mark a feature approved.
+- A route between two points is asked of the `RouteProvider` only (`computeEta`); the route and guidance of an active ride are
+  `navigation/navigation.service.ts` fed by the one accepted-fix path in `tracking.service.ts`; distance to a line, progress
+  along it and simplifying it are in `@yatri/types` `geo.ts`; the phase of an approach is `approachPhase`. Navigation never touches
+  the fare, never stores a track, and a deviation is a count, not a penalty.
 - Do not put a backslash inside a SQL string written from a shell command: use `ESCAPE '!'` with
   `likeContains` for searches.
 - If you discover a duplicate, consolidate it or add it to "Known duplication" in the doc.

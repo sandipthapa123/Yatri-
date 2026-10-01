@@ -149,6 +149,17 @@ export const RISK_RULES = [
     unit: 'flags',
   },
   {
+    code: 'ROUTE_DEVIATION_PATTERN',
+    category: 'GPS',
+    label: 'Repeatedly far off the planned route',
+    help: 'A driver was confirmed far off the planned route, several times on each of several rides. Roadworks, closed streets, passenger requests and poor maps do this innocently, so it adds few points and only a pattern across rides counts, never one ride.',
+    subject: 'DRIVER',
+    points: 5,
+    threshold: 3,
+    windowHours: 168,
+    unit: 'rides',
+  },
+  {
     code: 'PASSENGER_CANCELLATIONS',
     category: 'CANCELLATION',
     label: 'Passenger cancels most rides',

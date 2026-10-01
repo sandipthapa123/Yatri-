@@ -2,8 +2,10 @@ import { ApiError } from '@yatri/mobile-auth';
 import {
   BROADCAST_MESSAGES,
   LiveTripView,
+  NavigationPanel,
   useLiveTrip,
   useLocationBroadcast,
+  useNavigation,
 } from '@yatri/mobile-location';
 import {
   ACTIVE_TRIP_STATUSES,
@@ -19,7 +21,7 @@ import { useUiPreferences } from '@yatri/mobile-ui';
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { useCall, useChat, useSos } from '../hooks';
+import { useCall, useChat, useResyncOnReturn, useSos } from '../hooks';
 import { businessText, rideActions, type RideActionId } from '../rideActions';
 import { rideApi } from '../rideApi';
 import { AccessibilityRideCard } from './AccessibilityRideCard';
@@ -81,6 +83,15 @@ export function RideRoom(props: RideRoomProps) {
     getAccessToken,
     `${status}:${live.events.length}`,
   );
+  // The driver's directions follow the same live snapshot (no second socket). The passenger never gets a route.
+  const navigation = useNavigation(
+    tripId,
+    role === 'DRIVER' && (status === 'DRIVER_EN_ROUTE' || status === 'IN_PROGRESS'),
+    live.snapshot,
+    getAccessToken,
+  );
+  // Back from the background, or the connection returned: ask the server for the route again.
+  useResyncOnReturn(navigation.refresh);
   const chat = useChat({ socket: live.socket, tripId, role, getAccessToken });
   const call = useCall({ socket: live.socket, tripId, role, getAccessToken });
   const sos = useSos({ socket: live.socket, tripId, getAccessToken });
@@ -298,8 +309,17 @@ export function RideRoom(props: RideRoomProps) {
                   onChanged={reload}
                 />
               ) : null}
+              {role === 'DRIVER' ? (
+                <NavigationPanel
+                  state={navigation.state}
+                  snapshot={live.snapshot}
+                  colors={colors}
+                  minTouchTarget={minTouchTarget}
+                />
+              ) : null}
               <LiveTripView
                 live={live}
+                routeLine={navigation.state.route?.geometry}
                 viewer={role}
                 colors={colors}
                 minTouchTarget={minTouchTarget}

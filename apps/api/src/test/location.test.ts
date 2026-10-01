@@ -349,6 +349,7 @@ describe('POST /location/distance', () => {
     const { accessToken } = await onboardUser('PASSENGER');
     setRouteProviderForTests({
       name: 'fake-route',
+      capabilities: { steps: false, traffic: false },
       calculateETA: async () => 1000,
       calculateRoute: async () => ({
         distanceMeters: 200_000,
@@ -368,6 +369,7 @@ describe('POST /location/distance', () => {
 
     setRouteProviderForTests({
       name: 'broken',
+      capabilities: { steps: false, traffic: false },
       calculateETA: async () => null,
       calculateRoute: async () => {
         throw new LocationProviderError('UNAVAILABLE', 'down');

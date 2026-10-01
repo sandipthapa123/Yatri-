@@ -220,6 +220,7 @@ describe('live location, distance, ETA, place name and direction', () => {
     const dc = await login(port, w.driver.accessToken);
     await dc.waitFor((m) => m.type === 'availability');
     dc.send(fix(north(THAMEL, 400)));
+    await dc.waitFor((m) => m.type === 'location_ack'); // the reading is processed (route and all) before the snapshot is read
     const pc = await joined(w.passenger.accessToken, w.tripId);
     const meta = (await loadMeta(w.tripId))!;
     const t0 = Date.now();

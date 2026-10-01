@@ -3,6 +3,7 @@ import type {
   ApiResponse,
   FareEstimateResponse,
   LiveTripSnapshot,
+  NavigationRouteResponse,
   PaymentInfo,
   TripEventRecord,
   TripHistoryPage,
@@ -21,6 +22,7 @@ import {
   requestAndOffer,
   respondOffer,
 } from '../dispatch/dispatch.service';
+import { readRoute } from '../navigation/navigation.service';
 import { buildSnapshot, isActive, loadMeta } from '../tracking/tracking.service';
 import { getPaymentFor, settlePayment } from './payments.service';
 import { rateTrip } from './ratings.service';
@@ -157,6 +159,30 @@ export async function liveSnapshotHandler(
   const meta = (await loadMeta(trip.id)) ?? metaFromRow(trip);
   const viewer = trip.passenger_id === uid(req) ? 'PASSENGER' : 'DRIVER';
   res.json({ success: true, data: await buildSnapshot(meta, viewer) });
+}
+
+/**
+ * The driver's route for the current target (pickup, then destination): turn-by-turn steps and the line. Only the
+ * ASSIGNED driver of an ACTIVE ride may ask; a passenger (or anyone else) never receives the route, because it starts
+ * at the driver's position. The passenger's view of progress is the snapshot's text figures.
+ */
+export async function navigationRouteHandler(
+  req: Request,
+  res: Response<ApiResponse<NavigationRouteResponse>>,
+) {
+  const trip = await participantTrip(idParam(req), uid(req));
+  if (trip.driver_id !== uid(req)) {
+    throw new HttpError(403, 'FORBIDDEN', 'Only the driver of this ride has its route.');
+  }
+  if (!isActive(trip.status)) {
+    throw new HttpError(
+      409,
+      'TRIP_NOT_ACTIVE',
+      'Directions are only available during an active ride.',
+    );
+  }
+  const q = req.validatedQuery as { version?: number };
+  res.json({ success: true, data: await readRoute(trip.id, q.version ?? null) });
 }
 
 /** Missed something while offline? Ask for everything after the last event number you applied. */

@@ -123,3 +123,106 @@ export function polygonFromText(text: string): PolygonPoints | null {
   }
   return out;
 }
+
+// ---------------------------------------------------------------- routes (polylines)
+
+const METERS_PER_DEGREE = 111_195;
+
+/**
+ * Where a point stands against a route line: how far from it, and how far along it the nearest spot is. The ONE
+ * implementation (deviation detection, progress along a route and step tracking all use it). Distances are measured on a
+ * local flat projection around the point, which is exact enough over the few hundred metres that matter here.
+ * `line` is [latitude, longitude] pairs.
+ */
+export function nearestOnPolyline(
+  point: LatLng,
+  line: ReadonlyArray<readonly [number, number]>,
+): { distanceMeters: number; alongMeters: number; segmentIndex: number } | null {
+  if (line.length === 0) return null;
+  const cos = Math.cos((point.latitude * Math.PI) / 180);
+  const toXY = (p: readonly [number, number]) => ({
+    x: (p[1] - point.longitude) * METERS_PER_DEGREE * cos,
+    y: (p[0] - point.latitude) * METERS_PER_DEGREE,
+  });
+  if (line.length === 1) {
+    const only = toXY(line[0] as [number, number]);
+    return { distanceMeters: Math.hypot(only.x, only.y), alongMeters: 0, segmentIndex: 0 };
+  }
+  let best = { distanceMeters: Infinity, alongMeters: 0, segmentIndex: 0 };
+  let walked = 0;
+  for (let i = 0; i < line.length - 1; i += 1) {
+    const a = toXY(line[i] as [number, number]);
+    const b = toXY(line[i + 1] as [number, number]);
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const len2 = dx * dx + dy * dy;
+    const t = len2 === 0 ? 0 : Math.max(0, Math.min(1, -(a.x * dx + a.y * dy) / len2));
+    const d = Math.hypot(a.x + t * dx, a.y + t * dy);
+    const segLen = Math.sqrt(len2);
+    if (d < best.distanceMeters)
+      best = { distanceMeters: d, alongMeters: walked + t * segLen, segmentIndex: i };
+    walked += segLen;
+  }
+  return best;
+}
+
+/** The length of a route line in metres. */
+export function polylineLengthMeters(line: ReadonlyArray<readonly [number, number]>): number {
+  let total = 0;
+  for (let i = 0; i < line.length - 1; i += 1) {
+    const a = line[i] as [number, number];
+    const b = line[i + 1] as [number, number];
+    total += haversineMeters(
+      { latitude: a[0], longitude: a[1] },
+      { latitude: b[0], longitude: b[1] },
+    );
+  }
+  return total;
+}
+
+/**
+ * Fewer points for the same line (Douglas-Peucker): the route that goes over the network and onto the map. Keeps the
+ * first and last point and never moves the line more than `toleranceMeters` from where it was.
+ */
+export function simplifyPolyline(
+  line: ReadonlyArray<readonly [number, number]>,
+  toleranceMeters: number,
+  maxPoints = Infinity,
+): Array<[number, number]> {
+  const pts = line.map((p) => [p[0], p[1]] as [number, number]);
+  if (pts.length <= 2) return pts;
+  const simplify = (tol: number): Array<[number, number]> => {
+    const keep = new Array<boolean>(pts.length).fill(false);
+    keep[0] = true;
+    keep[pts.length - 1] = true;
+    const stack: Array<[number, number]> = [[0, pts.length - 1]];
+    while (stack.length > 0) {
+      const [lo, hi] = stack.pop() as [number, number];
+      let worst = -1;
+      let worstD = tol;
+      const a = pts[lo] as [number, number];
+      const b = pts[hi] as [number, number];
+      for (let i = lo + 1; i < hi; i += 1) {
+        const p = pts[i] as [number, number];
+        const near = nearestOnPolyline({ latitude: p[0], longitude: p[1] }, [a, b]);
+        if (near && near.distanceMeters > worstD) {
+          worstD = near.distanceMeters;
+          worst = i;
+        }
+      }
+      if (worst !== -1) {
+        keep[worst] = true;
+        stack.push([lo, worst], [worst, hi]);
+      }
+    }
+    return pts.filter((_, i) => keep[i]);
+  };
+  let tol = Math.max(0, toleranceMeters);
+  let out = simplify(tol);
+  // Too many points for the wire: widen the tolerance until it fits.
+  while (out.length > maxPoints && tol < 500) {
+    tol = tol === 0 ? 1 : tol * 1.6;
+    out = simplify(tol);
+  }
+  return out;
+}

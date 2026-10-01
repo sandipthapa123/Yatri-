@@ -166,6 +166,10 @@ Run from the repository root; each fans out to every workspace package via pnpm.
   help, blind or low vision, deaf or hard of hearing, service animal, pickup instructions, how to be reached); drivers declare
   vehicle features, approved by an administrator where checking is needed; the matching engine offers a ride only to vehicles
   with what it needs; a text version of the pickup; vibration and simpler-screen preferences; private by design.
+- **Advanced navigation** (`docs/PHASE_23.md`): the route of an active ride through the one route provider abstraction (steps,
+  geometry, traffic flag), turn-by-turn directions and deviation detection decided by the server, automatic rerouting, phases of
+  the approach (approaching, near, at, leaving), arrival detection, text-only trip progress for passengers, route and ETA metrics
+  for operations, and a low-weight risk signal only for a pattern across rides.
 - Running it for real: [`docs/OPERATIONS.md`](docs/OPERATIONS.md) (architecture, deployment, backups,
   monitoring, incident recovery, release and rollback) and [`docs/SECURITY.md`](docs/SECURITY.md) (the controls,
   what was audited, what is still open). Container images and a full local stack are in [`deploy/`](deploy/).

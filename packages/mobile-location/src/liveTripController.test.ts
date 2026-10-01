@@ -70,6 +70,7 @@ const snap = (
   driverArrival: { distanceMeters: meters, etaSeconds: meters / 5, basis: 'estimate' },
   trip: null,
   waiting: null,
+  navigation: null,
   ...over,
 });
 

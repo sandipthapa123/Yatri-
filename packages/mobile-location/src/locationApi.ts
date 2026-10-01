@@ -6,6 +6,7 @@ import type {
   DriverLocationSample,
   DriverLocation,
   LiveTripSnapshot,
+  NavigationRouteResponse,
   PlaceSummary,
   PublicPlatformConfig,
   ReverseGeocodeResult,
@@ -113,6 +114,12 @@ export const tripsApi = {
   /** REST snapshot: first paint and fallback while the socket connects. */
   live: (accessToken: string, tripId: string) =>
     authApi.request<LiveTripSnapshot>(`/trips/${tripId}/live`, { accessToken }),
+  /** The driver's route; `version` is the one already held, so an unchanged route is not sent again. */
+  navigation: (accessToken: string, tripId: string, version: number | null) =>
+    authApi.request<NavigationRouteResponse>(
+      `/trips/${tripId}/navigation${version === null ? '' : `?version=${version}`}`,
+      { accessToken },
+    ),
   events: (accessToken: string, tripId: string, afterSeq: number) =>
     authApi.request<TripEventRecord[]>(`/trips/${tripId}/events?after=${afterSeq}`, {
       accessToken,

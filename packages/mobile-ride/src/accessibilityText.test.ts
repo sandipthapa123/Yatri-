@@ -123,6 +123,7 @@ describe('the text version of the pickup', () => {
     driverArrival: { distanceMeters: 420, etaSeconds: 150, basis: 'route' },
     trip: null,
     waiting: null,
+    navigation: null,
     ...over,
   });
   const vehicle = { description: 'White Toyota Corolla', registrationNumber: 'BA 1 KHA 1234' };

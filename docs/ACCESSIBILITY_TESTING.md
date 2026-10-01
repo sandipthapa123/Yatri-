@@ -385,3 +385,25 @@ checks need a person, a device and a screen reader, and ideally someone who reli
 9. **Admin Accessible rides:** the stats list and the table have captions and row headers; each decision form names the
    feature and vehicle; results are announced as a status.
 10. **Text size, high contrast, reduced motion:** all of the above stay usable at the largest text size.
+
+## V. Navigation and route guidance (Phase 23)
+
+Automated: unit tests keep the sentences (the passenger's trip progress, the driver's next maneuver), when they are spoken
+(never for jitter), and that the controller keeps the last route offline; API tests cover deviation, rerouting, arrival and
+privacy. These need a person, a device, a screen reader and ideally a moving vehicle (or a recorded drive):
+
+1. **Driver, directions to the pickup:** "Directions to the pickup" gives the next maneuver as a sentence first, then the
+   distance remaining and estimated arrival as separate facts; the phase is text ("Approaching the pickup"); nothing needs the map.
+2. **Spoken updates are rare:** a maneuver is announced once at about 300 metres and once at about 40 metres; driving
+   straight or GPS wobble is silent; a deviation is announced at once and "New route found" when the route changes.
+3. **Off the route:** drive away from the route; after a few readings the driver hears that they are off it and then that a new
+   route was found; the step list starts again from the new position.
+4. **Offline:** turn the network off mid-ride: the last directions stay, with "Directions may be out of date"; on return they
+   refresh by themselves.
+5. **Show all steps:** the button says how many steps; the list reads each step with its distance.
+6. **Passenger, "Your trip so far":** read it with the screen reader when asked (it is not a live region); it matches the
+   example in the brief (travelling toward your destination, current location, distance remaining, estimated arrival, metres
+   from the destination). Approaching, near and at the destination are each said once, politely.
+7. **Estimate wording:** with the default engine the driver is told the estimate does not include live traffic; with no engine
+   they are told it is a straight-line estimate.
+8. **Text size and reduced motion:** all of it stays readable at the largest size; the map line is the only thing that depends on sight.

@@ -112,6 +112,7 @@ export interface TripBusinessInfo {
 }
 
 import type { TripAccessibility } from './accessibility';
+import type { NavigationGuidance } from './navigation';
 
 export interface TripSummary {
   id: string;
@@ -238,6 +239,8 @@ export interface LiveTripSnapshot {
   trip: TripProgressInfo | null;
   /** Present while a wait is running (EN_ROUTE: passenger waiting; ARRIVED: driver waiting). */
   waiting: WaitingInfo | null;
+  /** The driver's own route guidance (see navigation.ts); null for the passenger and when there is no route yet. */
+  navigation: NavigationGuidance | null;
 }
 
 export type { LocationFreshness };

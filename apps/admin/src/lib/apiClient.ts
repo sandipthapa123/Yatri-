@@ -5,6 +5,7 @@ import type {
   CityAnalytics,
   CityDetail,
   AccessibilityStats,
+  NavigationMetrics,
   AdminAttributeBody,
   AdminCapabilityDecisionBody,
   AdminCapabilityReview,
@@ -844,3 +845,8 @@ export const decideCapabilityApi = (
     t,
     body,
   );
+
+// ---- route and arrival-time figures (OPERATIONS_VIEW)
+
+export const getNavigationMetricsApi = (t: string) =>
+  adminRequest<NavigationMetrics>('/navigation/metrics?range=7d', t);

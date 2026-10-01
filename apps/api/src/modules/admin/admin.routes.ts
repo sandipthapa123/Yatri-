@@ -267,6 +267,7 @@ import {
   saveAttributeHandler,
   tripAccessibilityHandler,
 } from './admin-accessibility';
+import { navigationMetricsHandler, navigationMetricsQuerySchema } from './admin-navigation';
 import { attributeBodySchema, decisionSchema } from '../accessibility/accessibility.validators';
 import {
   cityBodySchema,
@@ -919,6 +920,14 @@ adminRouter.get(
   riskHistoryHandler,
 );
 adminRouter.post('/risk/sweep/run', requirePermission('RISK_MANAGE'), riskSweepHandler);
+
+// Navigation: route and arrival-time figures (counts and percentages, never a place or a track).
+adminRouter.get(
+  '/navigation/metrics',
+  requirePermission('OPERATIONS_VIEW'),
+  validateQuery(navigationMetricsQuerySchema),
+  navigationMetricsHandler,
+);
 
 // Accessibility: reading features, the review queue and counts needs ACCESSIBILITY_VIEW (no rider details); changing
 // features and deciding a driver's claim needs ACCESSIBILITY_MANAGE; a ride's protected details need SUPPORT_MANAGE and are audited.

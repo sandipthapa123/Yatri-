@@ -11,7 +11,6 @@ import {
 import { env } from '../../config/env';
 import { getRedisClient } from '../../config/redis';
 import { reverseGeocode } from '../location/location.service';
-import { getRouteProvider } from '../location/providers';
 import { pricingConfigForCityId } from '../cities/city-rules';
 import { settingList } from '../settings/settings.service';
 import { publishTripChange } from '../realtime/bus';
@@ -20,7 +19,14 @@ import { ODOMETER_MIN_STEP_METERS } from '../trips/ride-actuals';
 import { metaFromRow } from '../trips/trip-meta';
 import { getTrip } from '../trips/trips.repository';
 import { computeWaiting } from '../trips/waiting';
-import { computeEta, estimateEta } from './eta';
+import {
+  clearNavigation,
+  readGuidance,
+  readProgress,
+  targetOf,
+  updateNavigation,
+} from '../navigation/navigation.service';
+import { estimateEta } from './eta';
 import { trackingConfig } from './tracking.config';
 import {
   evaluateFix,
@@ -43,8 +49,6 @@ import { log } from '../../lib/logger';
  */
 const STATE_TTL_SECONDS = 6 * 60 * 60;
 const TERMINAL_META_TTL_SECONDS = 10 * 60;
-const ETA_ROUTE_REFRESH_MS = 30_000;
-const ETA_ROUTE_REFRESH_MOVE_M = 150;
 
 export type Party = 'driver' | 'passenger';
 
@@ -81,21 +85,11 @@ interface PlaceState {
   atMs: number;
   stale: boolean;
 }
-interface EtaState {
-  target: 'pickup' | 'destination';
-  computedAtMs: number;
-  fromLatitude: number;
-  fromLongitude: number;
-  baseDistanceMeters: number;
-  baseEtaSeconds: number | null;
-  basis: 'route' | 'estimate';
-}
 
 const k = {
   meta: (id: string) => `trk:${id}:meta`,
   party: (id: string, p: Party) => `trk:${id}:${p}`,
   place: (id: string, p: Party) => `trk:${id}:${p}:place`,
-  eta: (id: string) => `trk:${id}:eta`,
   version: (id: string) => `trk:${id}:seq`,
   near: (id: string) => `trk:${id}:near`,
   /** Metres driven since the ride started (sum of the driver's accepted location updates). */
@@ -167,17 +161,17 @@ export async function clearLiveState(tripId: string) {
     k.party(tripId, 'passenger'),
     k.place(tripId, 'driver'),
     k.place(tripId, 'passenger'),
-    k.eta(tripId),
     k.near(tripId),
     k.odo(tripId),
   );
+  await clearNavigation(tripId);
 }
 
 /** Called by the trip lifecycle after every DB status change (the event itself is recorded by the caller). */
 export async function onTripStatusChanged(meta: TripMeta): Promise<void> {
   await saveMeta(meta);
   const redis = getRedisClient();
-  await redis.del(k.eta(meta.tripId), k.near(meta.tripId)); // target changes (pickup -> destination)
+  await redis.del(k.near(meta.tripId)); // the target changes (pickup -> destination); navigation re-plans for it
   if (meta.status === 'IN_PROGRESS')
     await redis.set(k.odo(meta.tripId), '0', 'EX', STATE_TTL_SECONDS);
   if (!isActive(meta.status) || meta.status === 'SEARCHING') {
@@ -240,7 +234,9 @@ export async function applyLocationUpdate(input: {
     } satisfies PartyState);
 
     if (party === 'driver') {
-      await refreshEta(meta, decision.next, speed, nowMs);
+      // Route, deviation, phase and the figures the snapshot shows are navigation's (one provider call, one state).
+      await updateNavigation(meta, decision.next, speed, nowMs);
+      await maybeNearbyFor(meta, decision.next);
       // The distance actually driven, for the final fare: only while the ride runs, and only real movement.
       if (meta.status === 'IN_PROGRESS' && before) {
         const step = haversineMeters(before, decision.next);
@@ -277,38 +273,10 @@ async function maybeNearby(meta: TripMeta, distanceMeters: number) {
   });
 }
 
-async function refreshEta(meta: TripMeta, fix: StoredFix, speed: number | null, nowMs: number) {
-  const target =
-    meta.status === 'DRIVER_EN_ROUTE'
-      ? ('pickup' as const)
-      : meta.status === 'IN_PROGRESS'
-        ? ('destination' as const)
-        : null;
-  if (!target) return;
-  const to = target === 'pickup' ? meta.pickup : meta.destination;
-  const prev = await getJson<EtaState>(k.eta(meta.tripId));
-  const straight = haversineMeters(fix, to);
-  await maybeNearby(meta, straight);
-
-  const reusable =
-    prev &&
-    prev.target === target &&
-    prev.basis === 'route' &&
-    nowMs - prev.computedAtMs < ETA_ROUTE_REFRESH_MS &&
-    haversineMeters({ latitude: prev.fromLatitude, longitude: prev.fromLongitude }, fix) <
-      ETA_ROUTE_REFRESH_MOVE_M;
-  if (reusable) return; // snapshot scales the stored route ETA by remaining straight-line distance
-
-  const result = await computeEta(fix, to, getRouteProvider(), speed);
-  await setJson(k.eta(meta.tripId), {
-    target,
-    computedAtMs: nowMs,
-    fromLatitude: fix.latitude,
-    fromLongitude: fix.longitude,
-    baseDistanceMeters: Math.max(1, straight),
-    baseEtaSeconds: result.etaSeconds,
-    basis: result.basis,
-  } satisfies EtaState);
+/** "Driver is 500 meters away" events: judged on the straight-line distance, as before. */
+async function maybeNearbyFor(meta: TripMeta, fix: StoredFix) {
+  if (meta.status !== 'DRIVER_EN_ROUTE') return;
+  await maybeNearby(meta, haversineMeters(fix, meta.pickup));
 }
 
 async function refreshPlaceName(tripId: string, party: Party, fix: StoredFix, nowMs: number) {
@@ -381,15 +349,14 @@ export async function buildSnapshot(
   const redis = getRedisClient();
   const version = Number((await redis.get(k.version(meta.tripId))) ?? 0);
 
-  const [driverState, driverPlace, passengerState, passengerPlace, eta] = active
+  const [driverState, driverPlace, passengerState, passengerPlace] = active
     ? await Promise.all([
         getJson<PartyState>(k.party(meta.tripId, 'driver')),
         getJson<PlaceState>(k.place(meta.tripId, 'driver')),
         getJson<PartyState>(k.party(meta.tripId, 'passenger')),
         getJson<PlaceState>(k.place(meta.tripId, 'passenger')),
-        getJson<EtaState>(k.eta(meta.tripId)),
       ])
-    : [null, null, null, null, null];
+    : [null, null, null, null];
 
   const driver = toParty(driverState, driverPlace, nowMs);
   // A driver only sees the passenger while heading to pickup, and only if the passenger chose to share.
@@ -400,9 +367,14 @@ export async function buildSnapshot(
   let trip: LiveTripSnapshot['trip'] = null;
   if (driverState && (meta.status === 'DRIVER_EN_ROUTE' || meta.status === 'IN_PROGRESS')) {
     const target = meta.status === 'DRIVER_EN_ROUTE' ? meta.pickup : meta.destination;
-    const distance = Math.round(haversineMeters(driverState.fix, target));
-    const etaSeconds = etaFor(eta, meta.status, distance, driverState.speedMps);
-    const basis = eta?.basis ?? 'estimate';
+    // The distance left and the ETA are navigation's (along the route when there is one); without them, a straight-line estimate.
+    const progress = await readProgress(meta.tripId, targetOf(meta) ?? 'PICKUP');
+    const straight = Math.round(haversineMeters(driverState.fix, target));
+    const distance = progress?.distanceMeters ?? straight;
+    const etaSeconds = progress
+      ? progress.etaSeconds
+      : estimateEta(straight, driverState.speedMps).etaSeconds;
+    const basis = progress?.basis ?? 'estimate';
     if (meta.status === 'DRIVER_EN_ROUTE') {
       driverArrival = { distanceMeters: distance, etaSeconds, basis };
     } else {
@@ -431,24 +403,11 @@ export async function buildSnapshot(
     passenger,
     driverArrival,
     trip,
+    // What the driver's navigation says (the passenger sees progress as text from `trip`, never the route).
+    navigation: viewer === 'DRIVER' && active ? await readGuidance(meta.tripId) : null,
     // Waiting is computed from server timestamps only; both apps render exactly this.
     waiting: computeWaiting(meta, nowMs, await pricingConfigForCityId(meta.cityId)),
   };
-}
-
-function etaFor(
-  eta: EtaState | null,
-  status: TripStatus,
-  distanceNow: number,
-  speed: number | null,
-): number | null {
-  const wantTarget = status === 'DRIVER_EN_ROUTE' ? 'pickup' : 'destination';
-  if (eta && eta.target === wantTarget && eta.baseEtaSeconds !== null) {
-    // Scale the stored ETA by how much straight-line distance is left.
-    const ratio = Math.min(1.5, distanceNow / eta.baseDistanceMeters);
-    return Math.max(0, Math.round(eta.baseEtaSeconds * ratio));
-  }
-  return estimateEta(distanceNow, speed).etaSeconds;
 }
 
 /** Freshness of the driver's feed right now — used by the staleness sweeper. */

@@ -31,6 +31,8 @@ export interface MapColors {
 export interface YatriMapProps {
   center: { latitude: number; longitude: number };
   markers?: MapMarker[];
+  /** The route to draw as a line, [latitude, longitude] pairs. A visual extra: the directions are text. */
+  routeLine?: ReadonlyArray<readonly [number, number]>;
   zoom?: number;
   /** When set, tapping the map calls this with the tapped coordinates. */
   onPick?: (point: { latitude: number; longitude: number }) => void;
@@ -85,6 +87,7 @@ try{
 window.setState=function(s){
   if(!map)return;
   layer.clearLayers();
+  if(s.line&&s.line.length>1){L.polyline(s.line,{color:'#C81E3A',weight:5,opacity:0.8}).addTo(layer);}
   s.markers.forEach(function(m){
     L.marker([m.latitude,m.longitude],{keyboard:false,icon:L.divIcon({className:'',html:'<div class="g">'+m.glyph.replace(/[<>&]/g,'')+'</div>',iconSize:[28,28],iconAnchor:[14,14]})}).addTo(layer);
   });
@@ -141,6 +144,7 @@ function MapButton({
 export function YatriMap({
   center,
   markers = [],
+  routeLine,
   zoom = 15,
   onPick,
   colors,
@@ -155,10 +159,10 @@ export function YatriMap({
 
   const push = useCallback(
     (recenter: boolean) => {
-      const state = { markers, center, zoom, recenter };
+      const state = { markers, center, zoom, recenter, line: routeLine ?? null };
       webRef.current?.injectJavaScript(`window.setState(${JSON.stringify(state)});true;`);
     },
-    [markers, center, zoom],
+    [markers, center, zoom, routeLine],
   );
 
   // Give up (with a retry button) if the map library never reports ready — e.g. offline.

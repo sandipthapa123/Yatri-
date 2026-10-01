@@ -371,3 +371,20 @@ The controls and their evidence are in `docs/SECURITY.md`. What operators must d
 - **A support case about an accessible ride.** Open the ride's accessibility details (needs the support permission; the read
   is recorded). Do not copy them into tickets or messages.
 - **Retention.** A ride's accessibility details are deleted 30 days after it ends (Privacy and compliance > Retention).
+
+## 18. Navigation and routing
+
+- **Where to look.** Routes and arrival times: which routing engine is in use and what it supports, how many routes were
+  planned, how many fell back to a straight-line guide, new routes after deviations, arrivals detected, and how close the first
+  arrival estimate was to the real ride time.
+- **A high share of fallbacks** means the routing engine is down, slow or out of quota (see the engine's own logs). Drivers then
+  get a straight-line guide in words and an estimate; rides still work and fares are unaffected.
+- **Estimates that are consistently off** (average difference well above 20%) mean the engine's speeds do not match the
+  roads. A traffic-aware engine would help; none is configured by default.
+- **Thresholds** (Settings > Navigation and route guidance): how close is approaching, near and at; how far from the route is
+  "off it"; how many readings in a row confirm it; how often a new route may be planned. Too sensitive a deviation distance
+  causes needless new routes (more routing requests and data); too lax hides real wrong turns.
+- **A driver says "it keeps rerouting me".** Check whether the planned route uses a closed or one-way street the map has wrong;
+  a deviation is only a count on that ride, and the pattern rule needs three deviations on each of three rides in a week.
+- **The routing engine** is configured only through the existing settings (`LOCATION_ROUTING_PROVIDER`, base URL, key); changing
+  vendor needs no code in the apps.

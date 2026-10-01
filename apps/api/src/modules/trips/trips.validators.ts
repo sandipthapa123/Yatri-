@@ -64,6 +64,11 @@ export const historyQuerySchema = z.object({
   pageSize: z.coerce.number().int().min(1).max(50).default(20),
 });
 
+/** The version of the route the app already holds, so an unchanged route is not sent again. */
+export const navigationQuerySchema = z.object({
+  version: z.coerce.number().int().min(0).optional(),
+});
+
 export const eventsQuerySchema = z.object({
   after: z.coerce.number().int().min(0).default(0),
 });

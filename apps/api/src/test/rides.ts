@@ -140,7 +140,7 @@ export async function driverAt(
   tripId: string,
   driverId: string,
   p: { latitude: number; longitude: number },
-  extra: { headingDegrees?: number; deltaMs?: number } = {},
+  extra: { headingDegrees?: number; deltaMs?: number; accuracyMeters?: number } = {},
 ) {
   simClock = Math.max(simClock, Date.now()) + (extra.deltaMs ?? 20_000);
   return applyLocationUpdate({
@@ -150,7 +150,7 @@ export async function driverAt(
     fix: {
       latitude: p.latitude,
       longitude: p.longitude,
-      accuracyMeters: 8,
+      accuracyMeters: extra.accuracyMeters ?? 8,
       deviceTimeMs: simClock,
     },
     headingDegrees: extra.headingDegrees ?? null,

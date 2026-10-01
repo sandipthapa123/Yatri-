@@ -6,6 +6,7 @@ import {
   submitBusinessBooking,
   type BusinessChoice,
 } from '@yatri/mobile-business';
+import { usePreferences } from '@yatri/mobile-preferences';
 import { ActionButton, CategoryPicker, Card, Fact, rideApi } from '@yatri/mobile-ride';
 import {
   describeSurge,
@@ -43,6 +44,7 @@ export function RequestRideScreen({ navigation }: Props) {
   const { pickup, destination } = useTripLocations();
   const [result, setResult] = useState<Result | null>(null);
   const [attempt, setAttempt] = useState(0);
+  const preferred = usePreferences().data?.values.defaultVehicle;
   const [chosen, setChosen] = useState<string | null>(null);
   const [requestError, setRequestError] = useState<string | null>(null);
   const [requesting, setRequesting] = useState(false);
@@ -101,10 +103,12 @@ export function RequestRideScreen({ navigation }: Props) {
 
   // Until the passenger chooses, suggest the first type that has a driver nearby.
   const options = estimate?.categories ?? [];
+  // The person's preferred type is the first suggestion when it is on offer here and has a driver nearby.
+  const preferredOption = options.find((o) => o.code === preferred && o.available);
   const selectedCode =
     chosen && options.some((o) => o.code === chosen)
       ? chosen
-      : (options.find((o) => o.available) ?? options[0])?.code;
+      : (preferredOption ?? options.find((o) => o.available) ?? options[0])?.code;
   const selected = options.find((o) => o.code === selectedCode) ?? null;
 
   const request = async () => {

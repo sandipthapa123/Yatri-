@@ -289,6 +289,18 @@ export function DriverHomeScreen({ navigation }: Props) {
           <Text style={{ color: theme.colors.textPrimary, fontWeight: '600' }}>Your bonuses</Text>
         </Pressable>
         <Pressable
+          onPress={() => navigation.navigate('Settings')}
+          accessibilityRole="button"
+          accessibilityLabel="Settings"
+          accessibilityHint="Appearance, accessibility, notifications, safety and devices"
+          style={[
+            styles.secondary,
+            { minHeight: theme.minTouchTarget, borderColor: theme.colors.border },
+          ]}
+        >
+          <Text style={{ color: theme.colors.textPrimary, fontWeight: '600' }}>Settings</Text>
+        </Pressable>
+        <Pressable
           onPress={() => navigation.navigate('Support')}
           accessibilityRole="button"
           accessibilityLabel="Help and support"

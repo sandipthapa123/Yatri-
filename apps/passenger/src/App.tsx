@@ -1,4 +1,5 @@
 import { AuthProvider, useAuth } from '@yatri/mobile-auth';
+import { PreferencesProvider } from '@yatri/mobile-preferences';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -32,9 +33,11 @@ export default function App() {
           fallback={(error, reset) => <ErrorScreen message={error.message} onRetry={reset} />}
         >
           <AuthProvider role="PASSENGER">
-            <TripLocationsProvider>
-              <AppContent />
-            </TripLocationsProvider>
+            <PreferencesProvider>
+              <TripLocationsProvider>
+                <AppContent />
+              </TripLocationsProvider>
+            </PreferencesProvider>
           </AuthProvider>
         </ErrorBoundary>
       </SafeAreaProvider>

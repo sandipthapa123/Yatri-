@@ -212,6 +212,7 @@ async function anonymise(client: PoolClient, userId: string): Promise<string[]> 
     [userId],
   );
   await client.query('DELETE FROM saved_places WHERE user_id = $1', [userId]);
+  await client.query('DELETE FROM user_preferences WHERE user_id = $1', [userId]);
   await client.query('DELETE FROM emergency_contacts WHERE user_id = $1', [userId]);
   await client.query('DELETE FROM driver_details WHERE user_id = $1', [userId]);
   await client.query('DELETE FROM notifications WHERE user_id = $1', [userId]);
@@ -343,6 +344,7 @@ export async function buildPersonalDataExport(userId: string, role: TripRole, re
     policies,
     requests,
     notes,
+    prefs,
   ] = await Promise.all([
     query(
       `SELECT id, role, status, phone_number, email, full_name, created_at FROM users WHERE id = $1`,
@@ -393,6 +395,7 @@ export async function buildPersonalDataExport(userId: string, role: TripRole, re
       `SELECT type, title, body, created_at FROM notifications WHERE user_id = $1 ORDER BY created_at DESC LIMIT 200`,
       [userId],
     ),
+    query(`SELECT choices, updated_at FROM user_preferences WHERE user_id = $1`, [userId]),
   ]);
   await recordAudit({
     actorId: userId,
@@ -414,5 +417,6 @@ export async function buildPersonalDataExport(userId: string, role: TripRole, re
     policyAcceptances: policies.rows,
     privacyRequests: requests.rows,
     recentNotifications: notes.rows,
+    settings: prefs.rows[0] ?? null,
   };
 }

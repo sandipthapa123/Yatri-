@@ -307,3 +307,16 @@ The controls and their evidence are in `docs/SECURITY.md`. What operators must d
 - **Suspending.** Use it when statements are overdue or for misuse. New bookings and approvals stop and waiting approvals are
   withdrawn; rides under way and money owed are untouched. The owners and administrators are told.
 - **Refunds.** A rider cannot ask for a refund on a ride billed to an organization; settle any dispute with the organization.
+
+## 14. Passenger experience settings
+
+- **What an administrator can change.** Settings > Passenger experience: the default app language (only a language the apps are
+  translated into can be chosen) and how many recent destinations are offered. Both are versioned, audited edits like every
+  other setting, and take effect for everyone who has not chosen for themselves.
+- **What an administrator cannot see.** Personal preferences (theme, notification choices, how a name is shown) are the
+  person's own: no screen shows them, and support cannot change them for someone.
+- **Notifications.** A person can switch off ride updates, messages and calls, payments, support, business and bonus
+  notifications. Safety alerts and account notices are always sent. A switched-off notification is still recorded in their
+  history (marked not pushed). There is no push provider yet, so nothing is pushed in a real deployment until one is added.
+- **When someone cannot sign in on a new phone or sees a device they do not know.** They sign it out themselves in
+  Settings > Devices; sessions are the existing ones.

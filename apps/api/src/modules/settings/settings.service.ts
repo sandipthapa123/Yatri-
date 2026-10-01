@@ -200,6 +200,7 @@ export function publicPlatformConfig(): PublicPlatformConfig {
   return {
     requestsEnabled,
     pausedMessage: requestsEnabled ? null : settingText('SERVICE_PAUSED_MESSAGE'),
+    defaultLanguage: settingText('DEFAULT_LANGUAGE'),
     fare: {
       baseNpr: settingNumber('FARE_BASE_NPR'),
       perKmNpr: settingNumber('FARE_PER_KM_NPR'),

@@ -1,6 +1,8 @@
 import path from 'node:path';
 import { defineConfig } from 'vitest/config';
 
+import { TEST_WORKERS } from './src/test/workers';
+
 export default defineConfig({
   resolve: {
     // Tests run against the shared package's TypeScript source (production runs its compiled dist).
@@ -9,11 +11,15 @@ export default defineConfig({
   test: {
     environment: 'node',
     env: { NODE_ENV: 'test' },
-    setupFiles: ['./src/test/setup.ts'],
+    globalSetup: ['./src/test/global-setup.ts'],
+    // worker-env first: it points each worker at its own database before the app reads its configuration.
+    setupFiles: ['./src/test/worker-env.ts', './src/test/setup.ts'],
     testTimeout: 15000,
     hookTimeout: 15000,
-    // Tests share one Postgres/Redis instance and truncate between tests;
-    // running files in parallel would race on that shared state.
-    fileParallelism: false,
+    // Files run in parallel, each worker on its own database and Redis database (see src/test/workers.ts), so the
+    // truncating and flushing between tests cannot race. `maxWorkers` is the number of copies made.
+    fileParallelism: true,
+    maxWorkers: TEST_WORKERS,
+    minWorkers: 1,
   },
 });

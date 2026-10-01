@@ -1,3 +1,4 @@
+import { useUiPreferences } from '@yatri/mobile-ui';
 import { type ReactNode } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -40,6 +41,7 @@ export function ActionButton(
   },
 ) {
   const { colors, minTouchTarget, tone = 'neutral', disabled, busy } = props;
+  const { fontScale } = useUiPreferences();
   const bg = tone === 'primary' ? colors.primary : colors.surface;
   const fg =
     tone === 'primary' ? colors.textInverse : tone === 'danger' ? colors.error : colors.textPrimary;
@@ -65,7 +67,7 @@ export function ActionButton(
       ]}
     >
       {busy ? <ActivityIndicator color={fg} /> : null}
-      <Text style={{ color: fg, fontWeight: '600', fontSize: 16 }}>{props.label}</Text>
+      <Text style={{ color: fg, fontWeight: '600', fontSize: 16 * fontScale }}>{props.label}</Text>
     </Pressable>
   );
 }
@@ -82,6 +84,7 @@ export function Announcer(
   },
 ) {
   const { colors, polite, assertive } = props;
+  const { fontScale } = useUiPreferences();
   useSpeakOnIos(polite ?? null);
   useSpeakOnIos(assertive ?? null);
   return (
@@ -90,7 +93,10 @@ export function Announcer(
         {assertive ? (
           <Text
             key={assertive.id}
-            style={[styles.banner, { color: colors.textPrimary, borderColor: colors.primary }]}
+            style={[
+              styles.banner,
+              { color: colors.textPrimary, borderColor: colors.primary, fontSize: 17 * fontScale },
+            ]}
           >
             {assertive.text}
           </Text>
@@ -98,7 +104,7 @@ export function Announcer(
       </View>
       <View accessibilityLiveRegion="polite">
         {polite ? (
-          <Text key={polite.id} style={{ color: colors.textPrimary, fontSize: 16 }}>
+          <Text key={polite.id} style={{ color: colors.textPrimary, fontSize: 16 * fontScale }}>
             {polite.text}
           </Text>
         ) : null}
@@ -112,6 +118,7 @@ export function Card(
   props: UiProps & { title?: string; children: ReactNode; focusOnMount?: boolean },
 ) {
   const { colors } = props;
+  const { fontScale } = useUiPreferences();
   const titleRef = useFocusWhen(!!props.focusOnMount);
   return (
     <View style={[styles.card, { borderColor: colors.border, backgroundColor: colors.surface }]}>
@@ -119,7 +126,7 @@ export function Card(
         <Text
           ref={titleRef}
           accessibilityRole="header"
-          style={[styles.cardTitle, { color: colors.textPrimary }]}
+          style={[styles.cardTitle, { color: colors.textPrimary, fontSize: 18 * fontScale }]}
         >
           {props.title}
         </Text>
@@ -132,10 +139,11 @@ export function Card(
 /** A label/value pair read as one sentence ("Fare: NPR 320"). */
 export function Fact(props: UiProps & { label: string; value: string }) {
   const { colors } = props;
+  const { fontScale } = useUiPreferences();
   return (
     <View accessible accessibilityLabel={`${props.label}: ${props.value}`} style={styles.fact}>
-      <Text style={{ color: colors.textSecondary, fontSize: 13 }}>{props.label}</Text>
-      <Text style={{ color: colors.textPrimary, fontSize: 17, fontWeight: '600' }}>
+      <Text style={{ color: colors.textSecondary, fontSize: 13 * fontScale }}>{props.label}</Text>
+      <Text style={{ color: colors.textPrimary, fontSize: 17 * fontScale, fontWeight: '600' }}>
         {props.value}
       </Text>
     </View>

@@ -9,6 +9,8 @@
  * `getSetting` where it applies. Nothing else lists settings.
  */
 
+import { AVAILABLE_LANGUAGE_CODES } from './preferences';
+
 export const SETTING_GROUPS = [
   'availability',
   'fare',
@@ -19,6 +21,7 @@ export const SETTING_GROUPS = [
   'dispatch',
   'risk',
   'business',
+  'experience',
 ] as const;
 export type SettingGroup = (typeof SETTING_GROUPS)[number];
 
@@ -32,6 +35,7 @@ export const SETTING_GROUP_LABELS: Record<SettingGroup, string> = {
   dispatch: 'Dispatch, surge limits and driver limits',
   risk: 'Fraud and risk',
   business: 'Business accounts',
+  experience: 'Passenger experience',
 };
 
 export type SettingKind = 'boolean' | 'int' | 'number' | 'intList' | 'text';
@@ -47,6 +51,8 @@ export interface SettingDef {
   min?: number;
   max?: number;
   unit?: string;
+  /** For a text setting: the only values allowed (the admin picks one; the server refuses any other). */
+  options?: readonly string[];
 }
 
 export const PLATFORM_SETTINGS = [
@@ -401,6 +407,25 @@ export const PLATFORM_SETTINGS = [
     unit: 'days',
   },
   {
+    key: 'DEFAULT_LANGUAGE',
+    group: 'experience',
+    label: 'Default app language',
+    help: 'The language people get until they choose their own. Only languages the apps are translated into can be chosen.',
+    kind: 'text',
+    min: 2,
+    max: 5,
+    options: AVAILABLE_LANGUAGE_CODES,
+  },
+  {
+    key: 'RECENT_PLACES_LIMIT',
+    group: 'experience',
+    label: 'Recent destinations shown',
+    help: 'How many recent destinations are offered when a rider plans a ride.',
+    kind: 'int',
+    min: 1,
+    max: 30,
+  },
+  {
     key: 'ORG_MAX_PER_USER',
     group: 'business',
     label: 'Most organizations one person can create',
@@ -475,6 +500,9 @@ export function checkSettingValue(def: SettingDef, raw: unknown): SettingCheck {
     case 'text': {
       if (typeof raw !== 'string') return { ok: false, message: `${def.label} must be text.` };
       const t = raw.trim();
+      if (def.options && !def.options.includes(t)) {
+        return { ok: false, message: `${def.label} must be one of: ${def.options.join(', ')}.` };
+      }
       if (t.length < (def.min ?? 0) || t.length > (def.max ?? Infinity)) {
         return {
           ok: false,
@@ -534,6 +562,8 @@ export interface UpdateSettingBody {
 export interface PublicPlatformConfig {
   requestsEnabled: boolean;
   pausedMessage: string | null;
+  /** The language people get until they choose (the apps show it before anyone signs in). */
+  defaultLanguage: string;
   fare: { baseNpr: number; perKmNpr: number; perMinuteNpr: number; minimumNpr: number };
   cancellation: { freeSeconds: number; feeNpr: number };
   waiting: { freeSeconds: number; perMinuteNpr: number; noShowAfterSeconds: number };

@@ -1,8 +1,8 @@
 {
-  "name": "@yatri/mobile-ride",
+  "name": "@yatri/mobile-preferences",
   "version": "0.1.0",
   "private": true,
-  "description": "Shared ride client for the passenger and driver Expo apps: the trips REST client, chat and call controllers (framework-free, tested), driver offer handling, call quality evaluation, and the accessible ride UI pieces.",
+  "description": "The settings client for the passenger and driver Expo apps: loads the person's preferences from the server (the one source), keeps every screen and shared component consistent with them, and shows the accessible settings screen built from the one definition table in @yatri/types. The server validates and stores; this only shows and sends.",
   "main": "src/index.ts",
   "types": "src/index.ts",
   "scripts": {
@@ -11,7 +11,8 @@
   },
   "dependencies": {
     "@yatri/mobile-auth": "workspace:*",
-    "@yatri/mobile-location": "workspace:*",
+    "@yatri/mobile-ride": "workspace:*",
+    "@yatri/mobile-support": "workspace:*",
     "@yatri/mobile-ui": "workspace:*",
     "@yatri/types": "workspace:*"
   },

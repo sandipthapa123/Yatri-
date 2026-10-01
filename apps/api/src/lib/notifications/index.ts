@@ -3,6 +3,7 @@ import { query } from '../db';
 import { ConsoleNotificationProvider } from './console-provider';
 import type { NotificationPayload, NotificationProvider } from './provider';
 import { log } from '../logger';
+import { shouldDeliver } from '../../modules/preferences/preferences.service';
 
 let provider: NotificationProvider | undefined;
 
@@ -18,16 +19,21 @@ function getProvider(): NotificationProvider {
  * driver must succeed even if the push provider is down).
  */
 export async function notify(payload: NotificationPayload): Promise<void> {
+  // The person's notification preferences decide whether it is PUSHED (mandatory categories always are).
+  // Either way it is recorded: the history says what happened, and `suppressed` says it was not pushed.
+  const deliver = await shouldDeliver(payload.userId, payload.type).catch(() => true);
   await query(
-    `INSERT INTO notifications (user_id, type, title, body, metadata) VALUES ($1, $2, $3, $4, $5)`,
+    `INSERT INTO notifications (user_id, type, title, body, metadata, suppressed) VALUES ($1, $2, $3, $4, $5, $6)`,
     [
       payload.userId,
       payload.type,
       payload.title,
       payload.body,
       JSON.stringify(payload.metadata ?? {}),
+      !deliver,
     ],
   );
+  if (!deliver) return;
   try {
     await getProvider().send(payload);
   } catch (err) {

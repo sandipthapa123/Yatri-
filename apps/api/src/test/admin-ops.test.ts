@@ -1114,6 +1114,7 @@ describe('platform settings', () => {
     expect(res.status).toBe(200);
     expect(Object.keys(res.body.data).sort()).toEqual([
       'cancellation',
+      'defaultLanguage',
       'fare',
       'pausedMessage',
       'requestsEnabled',

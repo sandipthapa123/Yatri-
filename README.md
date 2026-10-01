@@ -151,6 +151,10 @@ Run from the repository root; each fans out to every workspace package via pnpm.
   roles), members, a booking policy, rides booked for employees, approvals, spending limits, cost-centre tags, monthly
   statements on the existing payment records, and usage reports. A business ride is an ordinary ride; the booker and the
   rider stay different people.
+- **Passenger experience and settings** (`docs/PHASE_19.md`): one authoritative preferences model (appearance, language,
+  accessibility, notifications, privacy, safety, ride defaults) consumed by both apps, the notification service and the API;
+  recent destinations, device management, and administrator-managed platform defaults. A preference never overrides a
+  server rule.
 - Running it for real: [`docs/OPERATIONS.md`](docs/OPERATIONS.md) (architecture, deployment, backups,
   monitoring, incident recovery, release and rollback) and [`docs/SECURITY.md`](docs/SECURITY.md) (the controls,
   what was audited, what is still open). Container images and a full local stack are in [`deploy/`](deploy/).

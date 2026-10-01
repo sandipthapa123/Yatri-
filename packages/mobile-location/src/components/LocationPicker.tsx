@@ -28,7 +28,7 @@ export interface SelectedPlace {
   city: string | null;
   province: string | null;
   country: string | null;
-  source: 'current' | 'search' | 'saved' | 'map';
+  source: 'current' | 'search' | 'saved' | 'recent' | 'map';
   accuracyMeters?: number | null;
 }
 
@@ -39,6 +39,13 @@ export interface LocationPickerProps {
   onConfirm: (place: SelectedPlace) => void;
   onCancel?: () => void;
   savedPlaces?: SavedPlace[];
+  /** Places the person recently went to (from the server; only offered when they have not hidden them). */
+  recentPlaces?: Array<{
+    name: string | null;
+    address: string;
+    latitude: number;
+    longitude: number;
+  }>;
   initial?: SelectedPlace | null;
   /** Default: true for pickup. */
   allowCurrentLocation?: boolean;
@@ -75,6 +82,7 @@ export function LocationPicker({
   onConfirm,
   onCancel,
   savedPlaces = [],
+  recentPlaces = [],
   initial = null,
   allowCurrentLocation = purpose === 'pickup',
   showMap = true,
@@ -368,6 +376,47 @@ export function LocationPicker({
           </View>
         ) : null}
       </View>
+
+      {recentPlaces.length > 0 ? (
+        <View style={styles.section}>
+          <Text accessibilityRole="header" style={[styles.label, { color: colors.textPrimary }]}>
+            Recent destinations
+          </Text>
+          {recentPlaces.map((p) => (
+            <Pressable
+              key={`${p.latitude},${p.longitude}`}
+              onPress={() =>
+                choose({
+                  name: p.name ?? p.address,
+                  address: p.address,
+                  latitude: p.latitude,
+                  longitude: p.longitude,
+                  city: null,
+                  province: null,
+                  country: null,
+                  source: 'recent',
+                })
+              }
+              accessibilityRole="button"
+              accessibilityLabel={`Recent: ${p.name ?? p.address}. ${p.address}`}
+              accessibilityHint={`Selects this recent place as your ${noun.toLowerCase()}`}
+              style={[
+                styles.result,
+                {
+                  minHeight: minTouchTarget,
+                  borderColor: colors.border,
+                  backgroundColor: colors.surface,
+                },
+              ]}
+            >
+              <Text style={[styles.resultName, { color: colors.textPrimary }]}>
+                {p.name ?? p.address}
+              </Text>
+              <Text style={{ color: colors.textSecondary }}>{p.address}</Text>
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
 
       {savedPlaces.length > 0 ? (
         <View style={styles.section}>

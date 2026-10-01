@@ -281,6 +281,10 @@ const envSchema = z
     // How often waiting approvals are expired and monthly statements are issued (it only acts in the first days of a month).
     ORG_SWEEP_MINUTES: z.coerce.number().int().positive().default(10),
 
+    // --- Passenger experience (defaults; an administrator can override them in Settings) ---
+    DEFAULT_LANGUAGE: z.string().trim().min(2).max(5).default('en'),
+    RECENT_PLACES_LIMIT: z.coerce.number().int().min(1).max(30).default(8),
+
     MAX_UPLOAD_FILE_SIZE_BYTES: z.coerce
       .number()
       .int()

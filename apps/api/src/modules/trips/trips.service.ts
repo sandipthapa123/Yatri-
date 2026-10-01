@@ -18,6 +18,7 @@ import { env } from '../../config/env';
 import { query } from '../../lib/db';
 import { sqlIn } from '../../lib/sql';
 import { HttpError } from '../../middleware/errorHandler';
+import { nameForDriver } from '../preferences/preferences.service';
 import { assertNotRestricted } from '../risk/restriction.service';
 import { endLiveCallForTrip } from '../calls/calls.service';
 import { setDriverTrip } from '../availability/presence.state';
@@ -93,10 +94,14 @@ async function counterpartOf(
     'SELECT full_name, profile_picture_url FROM users WHERE id = $1',
     [otherId],
   );
+  // A driver sees the passenger's name as the passenger chose to share it (full, or first name only).
+  const name = viewerIsPassenger
+    ? (u.rows[0]?.full_name ?? null)
+    : await nameForDriver(otherId, u.rows[0]?.full_name ?? null);
   const vehicle = viewerIsPassenger ? await approvedVehicleOf(otherId) : null;
   const rating = await ratingSummary(otherId);
   return {
-    name: u.rows[0]?.full_name ?? null,
+    name,
     vehicle,
     rating: rating.average,
     ratingCount: rating.count,

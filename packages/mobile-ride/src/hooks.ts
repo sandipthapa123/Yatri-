@@ -1,6 +1,7 @@
 import { quickFix } from '@yatri/mobile-location';
 import type { TripRole } from '@yatri/types';
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { useUiPreferences } from '@yatri/mobile-ui';
 import { AccessibilityInfo, AppState, findNodeHandle, Platform, type Text } from 'react-native';
 
 import { CallController, type CallSocket, type CallUiState } from './callController';
@@ -35,9 +36,12 @@ export function useNow(intervalMs = 1000, enabled = true): number {
 
 /** iOS VoiceOver ignores live regions, so speak explicitly there; elsewhere the live region speaks. */
 export function useSpeakOnIos(message: { id: number; text: string } | null) {
+  const { speakUpdates } = useUiPreferences(); // the person can turn the app's own speaking off
   useEffect(() => {
-    if (message && Platform.OS === 'ios') AccessibilityInfo.announceForAccessibility(message.text);
-  }, [message]);
+    if (message && speakUpdates && Platform.OS === 'ios') {
+      AccessibilityInfo.announceForAccessibility(message.text);
+    }
+  }, [message, speakUpdates]);
 }
 
 /**

@@ -4,6 +4,7 @@ import { authenticate } from '../../middleware/authenticate';
 import { userMutationRateLimit, userRateLimit } from '../../middleware/rateLimit';
 import { requireRole } from '../../middleware/requireRole';
 import { validateUuidParam } from '../../middleware/validateUuidParam';
+import { preferencesRouter } from '../preferences/preferences.routes';
 import { savedPlacesRouter } from '../saved-places/saved-places.routes';
 import { uploadSingleFile } from '../../middleware/upload';
 import { validateBody } from '../../middleware/validate';
@@ -73,3 +74,5 @@ usersRouter.post(
   deactivateMeHandler,
 );
 usersRouter.use('/me/saved-places', savedPlacesRouter);
+// Preferences, recent destinations and devices (after the routes above, so they cannot shadow them).
+usersRouter.use('/me', preferencesRouter);

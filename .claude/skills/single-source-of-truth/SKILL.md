@@ -65,6 +65,9 @@ Yatri-specific reminders:
   is checked only by `evaluateBooking`; a business ride is an ordinary `trips` row (`booked_by` is the booker, `passenger_id`
   the rider) created only through `requestAndOffer`; what it costs an organization is `ORG_TRIP_COST_SQL`; how it is paid is
   `ORG_PAYMENT_MODE_METHOD`; a statement only groups `trip_payments` (`statement_id`) and never stores an amount.
+- A personal setting is a row of `PREFERENCE_DEFS` (types) stored by `preferences.service.ts`; the apps read it through
+  `useUiPreferences` and never keep their own copy; whether a notification is pushed is `shouldDeliver` over
+  `notificationCategoryOf`; a preference is never a business rule and a platform-controlled default is a platform setting.
 - Do not put a backslash inside a SQL string written from a shell command: use `ESCAPE '!'` with
   `likeContains` for searches.
 - If you discover a duplicate, consolidate it or add it to "Known duplication" in the doc.

@@ -296,3 +296,25 @@ TalkBack or VoiceOver in the passenger app, and NVDA in the console:
 7. **Console:** organizations and statements are tables with captions and row headers; recording payment asks for the amount
    and reference, then an in-page confirmation, and announces the result.
 8. Zoom to 200% and 400%: tables scroll sideways, nothing is cut off.
+
+## R. Settings and preferences (Phase 19)
+
+Automated: `packages/mobile-preferences` has static checks (choices are radio groups and switches with the selected one
+exposed, changes and problems are announced, every group has a heading, no raw unlabelled inputs, no motion). Check by hand
+with TalkBack or VoiceOver in both apps:
+
+1. **Settings** opens from the home screen; each group is a heading and each setting reads its label, what it does and what
+   is chosen now ("Now: Dark (standard)").
+2. **Choices** are a radio group: the selected one is announced as selected; a language that is not translated yet is
+   read as not available and cannot be chosen.
+3. **Switches** read as "<name>: On" or "Off"; turning one announces "<name>: On. Saved."
+4. **Larger buttons and text size** take effect at once in the shared buttons, cards and announcements; check that nothing is
+   cut off at the largest size and at the phone's own largest text size.
+5. **Notifications:** switch off ride updates, start a ride, and confirm no ride notification is pushed but safety alerts
+   still are.
+6. **Conflict:** change a setting on two phones; the second one reads that the settings were changed elsewhere and shows the
+   new values.
+7. **Devices:** each device reads as a sentence (name, this phone, when signed in and last used); signing one out is announced.
+8. **Emergency alert:** with "ask before sending" off, the button's hint says it alerts straight away.
+9. **Recent destinations:** the location picker lists them under a heading; "Clear my recent destinations" announces that the
+   history is unchanged.

@@ -1,4 +1,5 @@
 import { describeSosStatus, OPEN_SOS_STATES } from '@yatri/types';
+import { useUiPreferences } from '@yatri/mobile-ui';
 import { useState } from 'react';
 import { Linking, StyleSheet, Text, View } from 'react-native';
 
@@ -19,6 +20,7 @@ const FALLBACK_NUMBER = '100';
 export function SosPanel(props: UiProps & { state: SosState; controller: SosController | null }) {
   const { state, controller, colors, minTouchTarget } = props;
   const ui = { colors, minTouchTarget };
+  const { confirmBeforeSos } = useUiPreferences(); // the person's choice; on unless they turned it off
   const [confirming, setConfirming] = useState(false);
   // When the confirmation replaces the SOS button, the screen reader goes to its question.
   const questionRef = useFocusWhen(confirming);
@@ -92,10 +94,14 @@ export function SosPanel(props: UiProps & { state: SosState; controller: SosCont
           <ActionButton
             {...ui}
             label="Emergency SOS"
-            hint="Asks you to confirm, then alerts the Yatri safety team"
+            hint={
+              confirmBeforeSos
+                ? 'Asks you to confirm, then alerts the Yatri safety team'
+                : 'Alerts the Yatri safety team straight away'
+            }
             tone="danger"
             disabled={!controller}
-            onPress={() => setConfirming(true)}
+            onPress={() => (confirmBeforeSos ? setConfirming(true) : void controller?.raise())}
           />
         </>
       )}

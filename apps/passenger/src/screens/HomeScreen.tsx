@@ -212,6 +212,15 @@ export function HomeScreen({ navigation }: Props) {
             </Text>
           </Pressable>
           <Pressable
+            onPress={() => navigation.navigate('Settings')}
+            accessibilityRole="button"
+            accessibilityLabel="Settings"
+            accessibilityHint="Appearance, accessibility, notifications, privacy, safety and devices"
+            style={[styles.profileLink, { minHeight: theme.minTouchTarget }]}
+          >
+            <Text style={[styles.profileLinkText, { color: theme.colors.primary }]}>Settings</Text>
+          </Pressable>
+          <Pressable
             onPress={() => navigation.navigate('Business')}
             accessibilityRole="button"
             accessibilityLabel="Business rides"

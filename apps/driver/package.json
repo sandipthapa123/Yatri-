@@ -17,6 +17,7 @@
     "@react-navigation/native-stack": "^7.19.2",
     "@yatri/mobile-auth": "workspace:*",
     "@yatri/mobile-location": "workspace:*",
+    "@yatri/mobile-preferences": "workspace:*",
     "@yatri/mobile-ride": "workspace:*",
     "@yatri/mobile-support": "workspace:*",
     "@yatri/mobile-ui": "workspace:*",

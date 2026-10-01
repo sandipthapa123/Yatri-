@@ -337,3 +337,21 @@ The controls and their evidence are in `docs/SECURITY.md`. What operators must d
   the refusal names it. Yatri-wide required documents stay in driver verification.
 - **Two administrators at once.** The second save is refused with "changed by someone else": reload and make the change again.
 - **Existing deployments** have no cities until one is added: the platform-wide rules and service areas apply as before.
+
+## 16. Background jobs and recovery
+
+- **Where to look.** Background jobs lists every timed job with its state in words: OK, Late (it has not run for three
+  intervals), Failed (the last run failed), or Has not run yet. "Run now" runs it immediately (needs the settings
+  permission) and is audited. A run that finds the job already running says so and does nothing.
+- **More than one API server** is fine: each job takes a lock for its run, so it runs once. A server that dies mid-job frees
+  the job when the lock expires (the job's timeout plus ten seconds).
+- **Restarting the API** loses nothing: jobs find their work in the database, rides live in the database (the Redis cache
+  is rebuilt from it), and apps reconnect and fetch a full snapshot.
+- **Notifications that failed** are retried by the `notification-retry` job at 30 s, 2 min, 10 min and 1 h, then marked
+  dead. A growing number of dead notifications means the push provider is down or misconfigured.
+- **Payment reconciliation** creates a missing payment for a finished ride. When it reports anomalies (audit action
+  `PAYMENT_ANOMALIES_FOUND`: statement paid with an unpaid payment, cancelled statement holding payments, empty issued
+  statement, refund stuck processing) a person must look; it never changes those itself.
+- **History** (`job_runs`) is kept 14 days and idempotency keys 2 days, set in Privacy and compliance > Retention.
+- A person telling you "I tapped twice" or "my connection dropped while requesting" should not end up with two rides: the
+  app sends the same idempotency key again. If they did, look at the trip events and the audit log.

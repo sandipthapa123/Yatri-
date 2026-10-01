@@ -34,25 +34,31 @@ type Token = string;
 const get = <T>(path: string, accessToken: Token) => authApi.request<T>(path, { accessToken });
 const post = <T>(path: string, accessToken: Token, body?: object) =>
   authApi.request<T>(path, { method: 'POST', accessToken, body });
+/**
+ * An action that must not happen twice (see the API's idempotency middleware): sent with an Idempotency-Key, and sent
+ * again with the same key if the connection drops before an answer, so it neither duplicates nor gets lost.
+ */
+const once = <T>(path: string, accessToken: Token, body?: object) =>
+  authApi.request<T>(path, { method: 'POST', accessToken, body, idempotent: true });
 
 export const rideApi = {
   // ---- passenger
   estimate: (t: Token, body: TripEstimateBody) =>
     post<FareEstimateResponse>('/trips/estimate', t, body),
-  request: (t: Token, body: TripRequestBody) => post<TripSummary>('/trips/request', t, body),
+  request: (t: Token, body: TripRequestBody) => once<TripSummary>('/trips/request', t, body),
 
   // ---- driver: offers and trip actions
   currentOffer: (t: Token) => get<TripOfferInfo | null>('/trips/offers/current', t),
   respondToOffer: (t: Token, offerId: string, accept: boolean) =>
-    post<{ accepted: boolean; trip: TripSummary | null }>(
+    once<{ accepted: boolean; trip: TripSummary | null }>(
       `/trips/offers/${offerId}/${accept ? 'accept' : 'decline'}`,
       t,
     ),
-  arrived: (t: Token, id: string) => post<TripSummary>(`/trips/${id}/arrived`, t),
-  start: (t: Token, id: string) => post<TripSummary>(`/trips/${id}/start`, t),
-  complete: (t: Token, id: string) => post<TripSummary>(`/trips/${id}/complete`, t),
-  noShow: (t: Token, id: string) => post<TripSummary>(`/trips/${id}/no-show`, t),
-  confirmPayment: (t: Token, id: string) => post<PaymentInfo>(`/trips/${id}/payment/confirm`, t),
+  arrived: (t: Token, id: string) => once<TripSummary>(`/trips/${id}/arrived`, t),
+  start: (t: Token, id: string) => once<TripSummary>(`/trips/${id}/start`, t),
+  complete: (t: Token, id: string) => once<TripSummary>(`/trips/${id}/complete`, t),
+  noShow: (t: Token, id: string) => once<TripSummary>(`/trips/${id}/no-show`, t),
+  confirmPayment: (t: Token, id: string) => once<PaymentInfo>(`/trips/${id}/payment/confirm`, t),
 
   // ---- both
   active: (t: Token) => get<TripSummary | null>('/trips/active', t),
@@ -62,7 +68,7 @@ export const rideApi = {
   history: (t: Token, page = 1, pageSize = 20) =>
     get<TripHistoryPage>(`/trips/history?page=${page}&pageSize=${pageSize}`, t),
   cancel: (t: Token, id: string, reason?: string) =>
-    post<TripSummary>(`/trips/${id}/cancel`, t, reason ? { reason } : {}),
+    once<TripSummary>(`/trips/${id}/cancel`, t, reason ? { reason } : {}),
   payment: (t: Token, id: string) => get<PaymentInfo>(`/trips/${id}/payment`, t),
   rate: (t: Token, id: string, rating: RatingInput) =>
     post<{ id: string; tripId: string; stars: number }>(`/trips/${id}/rating`, t, rating),

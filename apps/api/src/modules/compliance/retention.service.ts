@@ -128,6 +128,19 @@ const JOBS: Record<string, (days: number) => Promise<number>> = {
       )
     ).rowCount ?? 0,
   RISK_EVENTS: purgeOldRiskEvents,
+  JOB_RUNS: async (days) =>
+    (
+      await query(`DELETE FROM job_runs WHERE started_at < now() - ($1::int * interval '1 day')`, [
+        days,
+      ])
+    ).rowCount ?? 0,
+  IDEMPOTENCY_KEYS: async (days) =>
+    (
+      await query(
+        `DELETE FROM idempotency_keys WHERE created_at < now() - ($1::int * interval '1 day')`,
+        [days],
+      )
+    ).rowCount ?? 0,
   AUTH_EVENTS: async (days) =>
     (
       await query(

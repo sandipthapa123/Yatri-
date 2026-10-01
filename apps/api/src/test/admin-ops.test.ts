@@ -150,6 +150,7 @@ describe('RBAC: every admin route names a permission', () => {
     ['ORGANIZATIONS_VIEW', '/organizations'],
     ['ORGANIZATIONS_VIEW', '/organizations/statements'],
     ['OPERATIONS_VIEW', '/cities'],
+    ['OPERATIONS_VIEW', '/jobs'],
     ['RISK_VIEW', '/risk/overview'],
     ['RISK_VIEW', '/risk/events'],
     ['RISK_VIEW', '/risk/users'],

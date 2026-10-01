@@ -4,6 +4,11 @@ export interface NotificationPayload {
   title: string;
   body: string;
   metadata?: Record<string, unknown>;
+  /**
+   * Recording and delivering the same thing twice is wrong (a sweep that runs again, a retried request): give it a key
+   * that names the thing and it is recorded and delivered at most once for that person.
+   */
+  dedupeKey?: string;
 }
 
 /**

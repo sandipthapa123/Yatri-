@@ -1,3 +1,4 @@
+import { connectivity } from '@yatri/mobile-auth';
 import { quickFix } from '@yatri/mobile-location';
 import type { TripRole } from '@yatri/types';
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
@@ -225,4 +226,29 @@ export function useSos(opts: {
     return () => controller?.stop();
   }, [controller]);
   return { state: useStore(controller, IDLE_SOS), controller };
+}
+
+/**
+ * Asks the server again, and only then trusts what it says, in the two moments a screen is most likely to be wrong:
+ * the app coming back to the foreground, and the connection coming back after being lost. `refresh` must fetch the
+ * authoritative state (never reuse what was on screen). The newest `refresh` is always the one called.
+ */
+export function useResyncOnReturn(refresh: () => void): void {
+  const latest = useRef(refresh);
+  latest.current = refresh;
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (s) => {
+      if (s === 'active') latest.current();
+    });
+    let wasOffline = connectivity.getState().status === 'offline';
+    const off = connectivity.subscribe(() => {
+      const offline = connectivity.getState().status === 'offline';
+      if (wasOffline && !offline) latest.current();
+      wasOffline = offline;
+    });
+    return () => {
+      sub.remove();
+      off();
+    };
+  }, []);
 }

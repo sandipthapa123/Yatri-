@@ -51,3 +51,5 @@ export {
 } from './driverPresenceText';
 export { driverAvailabilityApi } from './locationApi';
 export { RealtimeClient } from './realtimeClient';
+export { RECOVERED_NOTICE_MS, connectivityNotice } from './connectivityText';
+export type { ConnectivityNotice, ConnectivityNoticeKind } from './connectivityText';

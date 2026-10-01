@@ -1,6 +1,16 @@
 export { AuthProvider, useAuth } from './AuthContext';
 export type { AuthContextValue, AuthStatus } from './AuthContext';
-export { ApiError } from './apiClient';
+export { ApiError, NETWORK_ERROR_MESSAGE } from './apiClient';
+export { ConnectivityMonitor, OFFLINE_AFTER_FAILURES, connectivity } from './connectivity';
+export type { ConnectivityState, ConnectivityStatus } from './connectivity';
+export { ServerClock, serverClock } from './serverClock';
+export {
+  IDEMPOTENCY_HEADER_NAME,
+  IDEMPOTENCY_RETRY_DELAYS_MS,
+  newIdempotencyKey,
+  shouldRetryIdempotent,
+  withIdempotentRetry,
+} from './idempotency';
 export type { PickedFile } from './apiClient';
 export * as authApi from './apiClient';
 export { API_BASE_URL, resolveMediaUrl } from './config';

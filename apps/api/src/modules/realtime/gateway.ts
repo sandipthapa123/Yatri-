@@ -13,7 +13,6 @@ import {
   goOffline,
   goOnline,
   ingestLocation,
-  sweepDrivers,
 } from '../availability/availability.service';
 import {
   driverLocationSampleSchema,
@@ -27,10 +26,9 @@ import {
   endCall,
   relaySignal,
   startCall,
-  sweepCalls,
 } from '../calls/calls.service';
 import { markDelivered, markRead, sendMessage } from '../chat/chat.service';
-import { currentOfferFor, sweepDispatch } from '../dispatch/dispatch.service';
+import { currentOfferFor } from '../dispatch/dispatch.service';
 import { latitudeSchema, longitudeSchema } from '../location/coordinates';
 import {
   announceStaleness,
@@ -42,14 +40,8 @@ import {
   passengerStopsSharing,
   type TripMeta,
 } from '../tracking/tracking.service';
-import { env } from '../../config/env';
-import { runRetention } from '../compliance/retention.service';
-import { runFleetMonitor } from '../fleet/monitor';
-import { runRiskSweep } from '../risk/sweep';
-import { runOrganizationSweep } from '../organizations/sweep';
-import { sweepSupport } from '../support/tickets.service';
-import { expireDueShares } from '../sharing/sharing.service';
-import { sweepTrips } from '../trips/trip-maintenance';
+import { JOBS } from '../jobs/registry';
+import { startJobScheduler } from '../jobs/jobs';
 import { onTripChange, onUserMessage, startBus, stopBus, type TripChange } from './bus';
 import { log } from '../../lib/logger';
 
@@ -60,9 +52,6 @@ const TOKEN_GRACE_MS = 30_000;
 const SESSION_RECHECK_MS = 60_000;
 const HEARTBEAT_MS = 25_000;
 const SWEEP_MS = 5_000;
-const DRIVER_SWEEP_MS = 15_000;
-const DISPATCH_SWEEP_MS = 5_000;
-const TRIP_SWEEP_MS = 10_000;
 const MAX_MESSAGES_PER_SECOND = 8;
 const MAX_VIOLATIONS = 25;
 const MAX_BUFFERED_BYTES = 256 * 1024;
@@ -502,39 +491,8 @@ export async function attachRealtimeGateway(server: HttpServer): Promise<Realtim
     }
   }, SWEEP_MS);
 
-  const timers = [
-    setInterval(() => {
-      sweepDrivers().catch((err) => log.error('Driver sweep error', err));
-    }, DRIVER_SWEEP_MS),
-    setInterval(() => {
-      sweepDispatch().catch((err) => log.error('Dispatch sweep error', err));
-    }, DISPATCH_SWEEP_MS),
-    setInterval(() => {
-      sweepTrips().catch((err) => log.error('Trip sweep error', err));
-      sweepCalls().catch((err) => log.error('Call sweep error', err));
-      expireDueShares().catch((err) => log.error('Share expiry error', err));
-    }, TRIP_SWEEP_MS),
-    // Support escalation and auto-close: every few minutes.
-    setInterval(() => {
-      sweepSupport().catch((err) => log.error('Support sweep error', err));
-    }, env.SUPPORT_SWEEP_SECONDS * 1000),
-    // Fleet check: reminders for documents, licences and service dates, offline for the ineligible.
-    setInterval(() => {
-      runFleetMonitor().catch((err) => log.error('Fleet monitor error', err));
-    }, env.FLEET_MONITOR_MINUTES * 60_000),
-    // Fraud and risk: run the detectors; the engine only raises signals (and, if switched on, short restrictions).
-    setInterval(() => {
-      runRiskSweep().catch((err) => log.error('Risk sweep error', err));
-    }, env.RISK_SWEEP_MINUTES * 60_000),
-    // Business accounts: expire approvals nobody decided, and issue last month's statements.
-    setInterval(() => {
-      runOrganizationSweep().catch((err) => log.error('Organization sweep error', err));
-    }, env.ORG_SWEEP_MINUTES * 60_000),
-    // Retention is slow housekeeping (each kind of record follows its retention policy): hourly.
-    setInterval(() => {
-      runRetention().catch((err) => log.error('Retention error', err));
-    }, 60 * 60_000),
-  ];
+  // Every time-based job runs from the one registry, under the one runner (lock, history, timeout).
+  const stopJobs = startJobScheduler(JOBS);
 
   await startBus();
 
@@ -544,7 +502,7 @@ export async function attachRealtimeGateway(server: HttpServer): Promise<Realtim
       clearInterval(heartbeat);
       clearInterval(sessionCheck);
       clearInterval(sweeper);
-      timers.forEach(clearInterval);
+      stopJobs();
       offTrip();
       offUser();
       for (const conn of conns) conn.ws.terminate();

@@ -4,6 +4,7 @@ import type {
   AdminCityRow,
   CityAnalytics,
   CityDetail,
+  JobInfo,
   AdminFleetBody,
   AdminMarkStatementPaidBody,
   AdminOrganizationDetail,
@@ -804,3 +805,9 @@ export const putCityApi = (t: string, id: string, part: string, body: object) =>
   adminRequest<CityDetail>(`/cities/${id}${part}`, t, { method: 'PUT', body });
 export const getCityAnalyticsApi = (t: string, id: string, range: string) =>
   adminRequest<CityAnalytics>(`/cities/${id}/analytics?range=${range}`, t);
+
+// ---- background jobs (OPERATIONS_VIEW to read, SETTINGS_MANAGE to run one)
+
+export const listJobsApi = (t: string) => adminRequest<JobInfo[]>('/jobs', t);
+export const runJobApi = (t: string, name: string) =>
+  post<{ status: string; message: string }>(`/jobs/${encodeURIComponent(name)}/run`, t, {});

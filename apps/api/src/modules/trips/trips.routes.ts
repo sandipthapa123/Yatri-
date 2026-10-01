@@ -16,6 +16,7 @@ import {
 } from '../sharing/sharing.controller';
 import { chatRouter } from '../chat/chat.routes';
 import { authenticate } from '../../middleware/authenticate';
+import { idempotent } from '../../middleware/idempotency';
 import { userRateLimit, userMutationRateLimit } from '../../middleware/rateLimit';
 import { requireRole } from '../../middleware/requireRole';
 import { validateBody } from '../../middleware/validate';
@@ -51,6 +52,8 @@ export const tripsRouter: RouterType = Router();
 
 tripsRouter.use(authenticate, requireRole('PASSENGER', 'DRIVER'));
 tripsRouter.use(userMutationRateLimit());
+// Every mutating trip action honours an optional Idempotency-Key (see middleware/idempotency.ts).
+tripsRouter.use(idempotent());
 
 // Passenger: price a ride, request it.
 tripsRouter.post(

@@ -12,7 +12,15 @@ import {
 
 import * as api from './apiClient';
 import { ApiError, type PickedFile } from './apiClient';
-import { clearTokens, loadTokens, saveTokens, type StoredTokens } from './tokenStorage';
+import { shouldEndSession } from './sessionPolicy';
+import {
+  clearTokens,
+  loadProfile,
+  loadTokens,
+  saveProfile,
+  saveTokens,
+  type StoredTokens,
+} from './tokenStorage';
 import type { RequestOtpResponse, UserRole, VerifyOtpResponse } from './types';
 
 export type AuthStatus = 'loading' | 'unauthenticated' | 'authenticated';
@@ -90,7 +98,8 @@ export function AuthProvider({ role, children }: { role: UserRole; children: Rea
       await applySession(refreshed);
       return refreshed.accessToken;
     } catch (err) {
-      await signOut();
+      // Only the server rejecting the refresh token ends the session; being offline must not sign anyone out.
+      if (shouldEndSession(err)) await signOut();
       throw err;
     }
   }, [applySession, signOut]);
@@ -112,10 +121,27 @@ export function AuthProvider({ role, children }: { role: UserRole; children: Rea
         const token = await getAccessToken();
         const profile = await api.getMe(token);
         if (cancelled) return;
+        if (cancelled) return;
+        const before = await loadProfile<{ driverStatus?: string }>();
+        void saveProfile({ user: profile, driverStatus: before?.driverStatus });
         setUser(profile);
         setStatus('authenticated');
-      } catch {
-        if (!cancelled) await signOut();
+      } catch (err) {
+        if (cancelled) return;
+        if (shouldEndSession(err)) {
+          await signOut();
+          return;
+        }
+        // No connection (or the server is down) at start-up: open with the last known profile, so a ride in
+        // progress can still be shown and recovered; the connectivity banner says the data may be out of date.
+        const cached = await loadProfile<{ user: AppUser; driverStatus?: string }>();
+        if (cached?.user) {
+          setUser(cached.user);
+          setDriverStatus(cached.driverStatus);
+          setStatus('authenticated');
+        } else {
+          setStatus('unauthenticated'); // tokens are kept: signing in again is the only way forward until we are online
+        }
       }
     })();
     return () => {
@@ -136,6 +162,7 @@ export function AuthProvider({ role, children }: { role: UserRole; children: Rea
       setUser(session.user);
       setIsNewUser(session.isNewUser);
       setDriverStatus(session.driverStatus);
+      void saveProfile({ user: session.user, driverStatus: session.driverStatus });
       setStatus('authenticated');
       return session;
     },

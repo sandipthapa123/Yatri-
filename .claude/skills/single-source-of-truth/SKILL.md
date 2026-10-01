@@ -71,6 +71,9 @@ Yatri-specific reminders:
 - Where Yatri operates is `service_zones` (one geofence); a place's city is `cityAtPoint` (zone `city_id`); whether service
   is on is `cityServiceState` via `assertRideService`; a city's fare, waiting and cancellation values are the platform setting
   overlaid by `city_settings` in `city-rules.ts` (`pricingConfigFor`, `cancellationRulesFor`). No code or app names a city.
+- Time-based work is a line in `modules/jobs/registry.ts` run by `modules/jobs/jobs.ts`; never add a `setInterval` for platform
+  work. An action that must not happen twice goes through `middleware/idempotency.ts` (client: `withIdempotentRetry`). A
+  network failure is `ApiError` code `NETWORK_ERROR` from the one `request()`; only a 401/403 ends a session (`shouldEndSession`).
 - Do not put a backslash inside a SQL string written from a shell command: use `ESCAPE '!'` with
   `likeContains` for searches.
 - If you discover a duplicate, consolidate it or add it to "Known duplication" in the doc.

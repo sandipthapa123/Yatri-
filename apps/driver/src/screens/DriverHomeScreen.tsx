@@ -7,8 +7,8 @@ import {
   locationStatusKey,
   useDriverPresence,
 } from '@yatri/mobile-location';
-import { OfferCard, rideApi, useDriverOffers } from '@yatri/mobile-ride';
-import { useEffect, useState } from 'react';
+import { OfferCard, rideApi, useDriverOffers, useResyncOnReturn } from '@yatri/mobile-ride';
+import { useCallback, useEffect, useState } from 'react';
 import {
   AccessibilityInfo,
   Linking,
@@ -50,20 +50,22 @@ export function DriverHomeScreen({ navigation }: Props) {
     return () => clearInterval(t);
   }, []);
 
+  const check = useCallback(() => {
+    void (async () => {
+      try {
+        const t = await rideApi.active(await getAccessToken());
+        setActiveTripId(t ? t.id : null);
+      } catch {
+        /* optional entry point */
+      }
+    })();
+  }, [getAccessToken]);
   useEffect(() => {
-    const check = () => {
-      void (async () => {
-        try {
-          const t = await rideApi.active(await getAccessToken());
-          setActiveTripId(t ? t.id : null);
-        } catch {
-          /* optional entry point */
-        }
-      })();
-    };
     check();
     return navigation.addListener('focus', check);
-  }, [navigation, getAccessToken]);
+  }, [navigation, check]);
+  // Back from the background, or the connection returned: ask the server again rather than trust the screen.
+  useResyncOnReturn(check);
 
   const announcement = state.announcement;
   useEffect(() => {

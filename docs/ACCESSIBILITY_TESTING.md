@@ -336,3 +336,26 @@ in-page confirmations), and a test keeps city names out of the apps' code. Check
    offered) the message is read as an alert in words; a driver refused at go-online hears each reason, including a missing
    city document by name.
 7. **Maps:** the picker starts on the city's centre, but selecting a place never needs the map; search and saved places do the same.
+
+## T. Reliability and offline recovery (Phase 21)
+
+Automated: the structural accessibility test scans the connectivity banner; unit tests keep its words (offline says the
+screen may be out of date and how old; back online is brief; nothing is said about the ride). Check by hand with TalkBack,
+VoiceOver and NVDA, with airplane mode and a weak network:
+
+1. **Going offline** (airplane mode on during a screen): one polite announcement "You are offline. What you see may be out
+   of date...", once, not repeated every few seconds as "last updated" changes.
+2. **Reading the banner** by swiping: the title and the detail are plain sentences; the meaning does not depend on the
+   colour of the border.
+3. **Coming back:** one announcement "Back online. Your screen is up to date again", and the banner goes away by itself after
+   a few seconds. The active ride on screen matches the server (check against the other person's phone).
+4. **Acting while offline** (tap Request ride, Start ride, Cancel): the message is read as an alert and says in words that
+   Yatri could not be reached and to try again; the control is usable again.
+5. **Killing the app during a ride and reopening it**, with and without a connection: the active ride is shown (offline,
+   from the last profile, the ride itself as soon as the server answers), and the person is not signed out.
+6. **Foreground:** switching away and back refreshes the home screen's active-ride check; no stale "you have no ride".
+7. **Driver, GPS lost:** the existing location status line (permission, unavailable, weak, delayed, connection lost) is
+   still spoken in words; combined with the banner, the driver hears both that Yatri cannot be reached and that location is
+   not being shared.
+8. **Admin Background jobs:** the table has a caption and row headers; state is words ("OK: Ran 20 seconds ago", "Needs
+   attention: Failed 3 minutes ago"); "Run <job> now" names the job; the result is announced as a status.

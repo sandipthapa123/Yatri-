@@ -158,6 +158,10 @@ Run from the repository root; each fans out to every workspace package via pnpm.
 - **Multi-city service** (`docs/PHASE_20.md`): cities as data (status, hours, vehicle types, fares, cancellation and waiting
   values, payment options, driver requirements), bounded by the existing service zones. A driver and a passenger operate
   under the city their location is in; rides cannot be made where service is off, outside hours or across a city line.
+- **Reliability and offline recovery** (`docs/PHASE_21.md`): one background job runner and registry (locked, timed out,
+  recorded, shown in admin), idempotent actions with an `Idempotency-Key` the apps resend after a dropped connection,
+  notification retry with back-off and deduplication, payment reconciliation, a connectivity banner that says in words when
+  the screen may be out of date, and sessions that survive being offline.
 - Running it for real: [`docs/OPERATIONS.md`](docs/OPERATIONS.md) (architecture, deployment, backups,
   monitoring, incident recovery, release and rollback) and [`docs/SECURITY.md`](docs/SECURITY.md) (the controls,
   what was audited, what is still open). Container images and a full local stack are in [`deploy/`](deploy/).

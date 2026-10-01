@@ -1,8 +1,8 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useAuth } from '@yatri/mobile-auth';
 import { formatDistance, locationApi } from '@yatri/mobile-location';
-import { ActionButton, rideApi } from '@yatri/mobile-ride';
-import { useEffect, useState } from 'react';
+import { ActionButton, rideApi, useResyncOnReturn } from '@yatri/mobile-ride';
+import { useCallback, useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { APP_TAGLINE } from '@yatri/shared';
@@ -27,20 +27,22 @@ export function HomeScreen({ navigation }: Props) {
   const [activeTripId, setActiveTripId] = useState<string | null>(null);
 
   // Is there a trip in progress? Checked whenever this screen regains focus.
+  const check = useCallback(() => {
+    void (async () => {
+      try {
+        const t = await rideApi.active(await getAccessToken());
+        setActiveTripId(t ? t.id : null);
+      } catch {
+        /* optional entry point */
+      }
+    })();
+  }, [getAccessToken]);
   useEffect(() => {
-    const check = () => {
-      void (async () => {
-        try {
-          const t = await rideApi.active(await getAccessToken());
-          setActiveTripId(t ? t.id : null);
-        } catch {
-          /* optional entry point */
-        }
-      })();
-    };
     check();
     return navigation.addListener('focus', check);
-  }, [navigation, getAccessToken]);
+  }, [navigation, check]);
+  // Back from the background, or the connection returned: ask the server again rather than trust the screen.
+  useResyncOnReturn(check);
 
   const [result, setResult] = useState<{ key: string; text: string } | null>(null);
   const key =

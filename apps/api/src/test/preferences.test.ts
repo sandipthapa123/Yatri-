@@ -63,10 +63,10 @@ const clearSetting = async (key: string) => {
 };
 const noteRows = async (userId: string, type: string) =>
   (
-    await pool.query('SELECT suppressed FROM notifications WHERE user_id = $1 AND type = $2', [
-      userId,
-      type,
-    ])
+    await pool.query(
+      "SELECT (delivery_status = 'SUPPRESSED') AS suppressed FROM notifications WHERE user_id = $1 AND type = $2",
+      [userId, type],
+    )
   ).rows as Array<{ suppressed: boolean }>;
 
 // ---------------------------------------------------------------- the one table

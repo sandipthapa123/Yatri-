@@ -2,6 +2,7 @@ import { Router, type RequestHandler, type Router as RouterType } from 'express'
 import type { z } from 'zod';
 
 import { authenticate } from '../../middleware/authenticate';
+import { idempotent } from '../../middleware/idempotency';
 import { userMutationRateLimit } from '../../middleware/rateLimit';
 import { requireRole } from '../../middleware/requireRole';
 import { validateBody } from '../../middleware/validate';
@@ -252,6 +253,12 @@ import {
   updateCityHandler,
 } from './admin-cities';
 import {
+  jobHistoryHandler,
+  jobHistoryQuerySchema,
+  listJobsHandler,
+  runJobHandler,
+} from './admin-jobs';
+import {
   cityBodySchema,
   cityCategoriesSchema,
   cityDocumentsSchema,
@@ -272,6 +279,7 @@ export const adminRouter: RouterType = Router();
 
 adminRouter.use(authenticate, requireRole('ADMIN'));
 adminRouter.use(userMutationRateLimit());
+adminRouter.use(idempotent()); // an admin retry of a refund, decision or edit replays instead of repeating
 
 adminRouter.get('/me', adminMeHandler);
 
@@ -901,6 +909,16 @@ adminRouter.get(
   riskHistoryHandler,
 );
 adminRouter.post('/risk/sweep/run', requirePermission('RISK_MANAGE'), riskSweepHandler);
+
+// Background jobs: reading needs OPERATIONS_VIEW, running one by hand SETTINGS_MANAGE.
+adminRouter.get('/jobs', requirePermission('OPERATIONS_VIEW'), listJobsHandler);
+adminRouter.get(
+  '/jobs/:name/runs',
+  requirePermission('OPERATIONS_VIEW'),
+  validateQuery(jobHistoryQuerySchema),
+  jobHistoryHandler,
+);
+adminRouter.post('/jobs/:name/run', requirePermission('SETTINGS_MANAGE'), runJobHandler);
 
 // Cities: reading needs OPERATIONS_VIEW, every change DISPATCH_MANAGE (the same permission as zones and pricing).
 adminRouter.get('/cities', requirePermission('OPERATIONS_VIEW'), listCitiesHandler);

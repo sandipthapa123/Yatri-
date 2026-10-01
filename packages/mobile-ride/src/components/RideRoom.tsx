@@ -11,16 +11,20 @@ import {
   OPEN_SOS_STATES,
   TERMINAL_TRIP_STATUSES,
   counterpartLabel,
+  hasAccessibilityContent,
   type TripRole,
   type TripSummary,
 } from '@yatri/types';
+import { useUiPreferences } from '@yatri/mobile-ui';
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { useCall, useChat, useSos } from '../hooks';
 import { businessText, rideActions, type RideActionId } from '../rideActions';
 import { rideApi } from '../rideApi';
+import { AccessibilityRideCard } from './AccessibilityRideCard';
 import { CallPanel } from './CallPanel';
+import { PickupGuideCard } from './PickupGuideCard';
 import { CounterpartCard } from './CounterpartCard';
 import { NavigateButton } from './NavigateButton';
 import { ChatPanel } from './ChatPanel';
@@ -87,6 +91,10 @@ export function RideRoom(props: RideRoomProps) {
   const [form, setForm] = useState<'rate' | 'incident' | null>(null);
   const [reportNews, setReportNews] = useState<{ id: number; text: string } | null>(null);
   const [share, setShare] = useState(false);
+  // Simpler screens: during a ride only the essentials show; trip sharing and accessibility details sit behind a button.
+  const { simplifiedNavigation: simplified } = useUiPreferences();
+  const [more, setMore] = useState(false);
+  const showMore = !simplified || more;
 
   // An incoming call is urgent: bring it to the front (it was also announced assertively).
   const incoming = call.state.phase === 'incoming';
@@ -271,6 +279,25 @@ export function RideRoom(props: RideRoomProps) {
               {trip?.counterpart && !ended ? (
                 <CounterpartCard {...ui} counterpart={trip.counterpart} viewer={role} />
               ) : null}
+              {role === 'PASSENGER' &&
+              live.snapshot &&
+              trip &&
+              hasAccessibilityContent(trip.accessibility) ? (
+                <PickupGuideCard
+                  {...ui}
+                  snapshot={live.snapshot}
+                  vehicle={trip.counterpart?.vehicle ?? null}
+                />
+              ) : null}
+              {trip && !ended && (showMore || role === 'DRIVER') ? (
+                <AccessibilityRideCard
+                  {...ui}
+                  trip={trip}
+                  role={role}
+                  getAccessToken={getAccessToken}
+                  onChanged={reload}
+                />
+              ) : null}
               <LiveTripView
                 live={live}
                 viewer={role}
@@ -284,7 +311,7 @@ export function RideRoom(props: RideRoomProps) {
                   </Text>
                 ) : null}
 
-                {canShare ? (
+                {canShare && showMore ? (
                   <ActionButton
                     {...ui}
                     role="switch"
@@ -318,7 +345,15 @@ export function RideRoom(props: RideRoomProps) {
                     />
                   </>
                 ) : null}
-                {role === 'PASSENGER' && assigned ? (
+                {role === 'PASSENGER' && assigned && simplified && !more ? (
+                  <ActionButton
+                    {...ui}
+                    label="More options"
+                    hint="Shows trip sharing, location sharing and your accessibility details"
+                    onPress={() => setMore(true)}
+                  />
+                ) : null}
+                {role === 'PASSENGER' && assigned && showMore ? (
                   <TripSharePanel {...ui} tripId={tripId} getAccessToken={getAccessToken} />
                 ) : null}
                 {role === 'DRIVER' && live.snapshot && status === 'DRIVER_EN_ROUTE' ? (

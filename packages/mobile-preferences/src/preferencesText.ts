@@ -23,6 +23,8 @@ export interface UiPreferencesInput {
   reducedMotion: boolean;
   speakUpdates: boolean;
   confirmBeforeSos: boolean;
+  hapticFeedback: boolean;
+  simplifiedNavigation: boolean;
 }
 
 /**
@@ -44,6 +46,8 @@ export function toUiPreferences(
     reducedMotion: motion === 'ON' ? true : motion === 'OFF' ? false : systemReducedMotion,
     speakUpdates: v.speakUpdates !== false,
     confirmBeforeSos: v.confirmBeforeSos !== false,
+    hapticFeedback: v.hapticFeedback !== false,
+    simplifiedNavigation: v.simplifiedNavigation === true,
   };
 }
 

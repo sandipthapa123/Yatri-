@@ -1,4 +1,6 @@
 import {
+  type AccessibilityProfile,
+  type AccessibilityProfileBody,
   type ApiResponse,
   type DeviceSession,
   type PreferencesResponse,
@@ -23,6 +25,8 @@ import {
   signOutOtherDevices,
 } from './account.service';
 import { getPreferences, updatePreferences } from './preferences.service';
+import { getProfile, saveProfile } from '../accessibility/accessibility.service';
+import { profileBodySchema } from '../accessibility/accessibility.validators';
 
 /**
  * Mounted at /users/me. Everything is the caller's own: the person is the session's, never taken from the
@@ -60,6 +64,27 @@ preferencesRouter.patch(
     res.json({
       success: true,
       data: await updatePreferences(a.userId, a.role, req.body as UpdatePreferencesBody),
+    });
+  },
+);
+
+// What the passenger chose to say about their accessibility needs: only their own, only what they stated.
+preferencesRouter.get(
+  '/accessibility',
+  requireRole('PASSENGER'),
+  async (req, res: Res<AccessibilityProfile>) => {
+    res.json({ success: true, data: await getProfile(me(req).userId) });
+  },
+);
+preferencesRouter.put(
+  '/accessibility',
+  requireRole('PASSENGER'),
+  userRateLimit('accessibility-profile', 30, 3600),
+  validateBody(profileBodySchema),
+  async (req, res: Res<AccessibilityProfile>) => {
+    res.json({
+      success: true,
+      data: await saveProfile(me(req).userId, req.body as AccessibilityProfileBody),
     });
   },
 );

@@ -28,6 +28,7 @@ export const TRIP_EVENT_TYPES = [
   'CALL_MISSED',
   'TRIP_SHARE_STARTED',
   'TRIP_SHARE_STOPPED',
+  'ACCESSIBILITY_UPDATED',
 ] as const;
 export type TripEventType = (typeof TRIP_EVENT_TYPES)[number];
 
@@ -71,6 +72,9 @@ export const TRIP_EVENT_META: Record<TripEventType, TripEventMeta> = {
   // Sharing the trip is announced politely and notified: it is about the person's own safety.
   TRIP_SHARE_STARTED: meta(false, false, true),
   TRIP_SHARE_STOPPED: meta(false, false, true),
+  // The passenger changed their pickup instructions: told politely, not by notification, and without the words
+  // (the details are protected, so the event carries none; the driver reads them in the ride).
+  ACCESSIBILITY_UPDATED: meta(false, false, false),
 };
 
 export type TripEventPayload = Record<string, unknown>;
@@ -213,6 +217,12 @@ export function describeTripEvent(
           ? 'Trip sharing ended: the sharing period is over.'
           : 'You stopped sharing this trip.';
     }
+    case 'ACCESSIBILITY_UPDATED':
+      return isDriver
+        ? 'The passenger updated their pickup instructions. Please read them again in the ride details.'
+        : viewer === 'ADMIN'
+          ? 'Pickup instructions were updated.'
+          : 'Your pickup instructions were updated and your driver has been told.';
   }
 }
 

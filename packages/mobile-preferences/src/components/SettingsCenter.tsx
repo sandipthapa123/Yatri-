@@ -1,5 +1,11 @@
 import { ApiError, useAuth } from '@yatri/mobile-auth';
-import { ActionButton, Announcer, Card, type UiProps } from '@yatri/mobile-ride';
+import {
+  AccessibilityProfilePanel,
+  ActionButton,
+  Announcer,
+  Card,
+  type UiProps,
+} from '@yatri/mobile-ride';
 import { useNews, usePolled } from '@yatri/mobile-support';
 import type { DeviceSession, PreferenceDef, PreferenceRole, PreferenceValue } from '@yatri/types';
 import { useState } from 'react';
@@ -15,6 +21,8 @@ export interface SettingsLinks {
   onTrustedContacts?: () => void;
   onPrivacyAndData?: () => void;
   onHelp?: () => void;
+  /** Drivers: the screen where they declare the accessibility features of their vehicles. */
+  onVehicleFeatures?: () => void;
 }
 
 /**
@@ -29,6 +37,7 @@ export function SettingsCenter(
   const { colors, minTouchTarget } = props;
   const ui = { colors, minTouchTarget };
   const prefs = usePreferences();
+  const { getAccessToken } = useAuth();
   const [news, say] = useNews();
   const [problem, setProblem] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -84,6 +93,19 @@ export function SettingsCenter(
                   onChange={(v) => void change(def, v)}
                 />
               ))}
+              {section.group === 'accessibility' && props.role === 'PASSENGER' ? (
+                <AccessibilityProfilePanel {...ui} getAccessToken={getAccessToken} />
+              ) : null}
+              {section.group === 'accessibility' &&
+              props.role === 'DRIVER' &&
+              props.links.onVehicleFeatures ? (
+                <ActionButton
+                  {...ui}
+                  label="Vehicle accessibility features"
+                  hint="Say which accessibility features your vehicles have"
+                  onPress={props.links.onVehicleFeatures}
+                />
+              ) : null}
               {section.group === 'safety' && props.links.onTrustedContacts ? (
                 <ActionButton
                   {...ui}

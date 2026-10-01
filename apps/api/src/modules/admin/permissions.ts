@@ -47,7 +47,11 @@ export function requirePermission(permission: AdminPermission): RequestHandler {
 /** Record that an admin read sensitive data about one or more subjects (the one audit log). */
 export async function recordAdminAccess(
   adminId: string,
-  action: 'VIEW_DRIVER_LOCATION' | 'VIEW_TRIP_CHAT' | 'VIEW_TRIP_DRIVER_LOCATION',
+  action:
+    | 'VIEW_DRIVER_LOCATION'
+    | 'VIEW_TRIP_CHAT'
+    | 'VIEW_TRIP_DRIVER_LOCATION'
+    | 'VIEW_TRIP_ACCESSIBILITY',
   subjectType: 'driver' | 'trip',
   subjectIds: string[],
 ): Promise<void> {

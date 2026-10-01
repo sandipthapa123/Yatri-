@@ -4,7 +4,12 @@ import type {
   AdminCityRow,
   CityAnalytics,
   CityDetail,
+  AccessibilityStats,
+  AdminAttributeBody,
+  AdminCapabilityDecisionBody,
+  AdminCapabilityReview,
   JobInfo,
+  VehicleAttributeInfo,
   AdminFleetBody,
   AdminMarkStatementPaidBody,
   AdminOrganizationDetail,
@@ -811,3 +816,31 @@ export const getCityAnalyticsApi = (t: string, id: string, range: string) =>
 export const listJobsApi = (t: string) => adminRequest<JobInfo[]>('/jobs', t);
 export const runJobApi = (t: string, name: string) =>
   post<{ status: string; message: string }>(`/jobs/${encodeURIComponent(name)}/run`, t, {});
+
+// ---- accessible rides (ACCESSIBILITY_VIEW to read, ACCESSIBILITY_MANAGE to change)
+
+export const getAccessibilityStatsApi = (t: string) =>
+  adminRequest<AccessibilityStats>('/accessibility/stats?range=30d', t);
+export const listAttributesApi = (t: string) =>
+  adminRequest<VehicleAttributeInfo[]>('/accessibility/attributes', t);
+export const listAccessibilityReviewsApi = (t: string) =>
+  adminRequest<AdminCapabilityReview[]>('/accessibility/reviews', t);
+export const saveAttributeApi = (t: string, body: AdminAttributeBody) =>
+  body.code
+    ? adminRequest<VehicleAttributeInfo>(
+        `/accessibility/attributes/${encodeURIComponent(body.code)}`,
+        t,
+        { method: 'PUT', body },
+      )
+    : post<VehicleAttributeInfo>('/accessibility/attributes', t, body);
+export const decideCapabilityApi = (
+  t: string,
+  vehicleId: string,
+  code: string,
+  body: AdminCapabilityDecisionBody,
+) =>
+  post<{ decided: true }>(
+    `/accessibility/reviews/${vehicleId}/${encodeURIComponent(code)}`,
+    t,
+    body,
+  );

@@ -12,6 +12,7 @@ import {
 
 import { env } from '../../config/env';
 import { query } from '../../lib/db';
+import { driverMayCall } from '../accessibility/accessibility.service';
 import { HttpError } from '../../middleware/errorHandler';
 import { notify } from '../../lib/notifications';
 import { publishToUser } from '../realtime/bus';
@@ -121,6 +122,15 @@ export async function startCall(
     );
   }
   const calleeId = trip.passenger_id === callerId ? trip.driver_id : trip.passenger_id;
+  // A passenger who chose messages only (a hearing or communication need) is not called by the driver; they can still
+  // write, and they can still call the driver themselves.
+  if (callerId === trip.driver_id && !(await driverMayCall(tripId))) {
+    throw new HttpError(
+      409,
+      'CALL_NOT_PREFERRED',
+      'This passenger prefers messages on this ride. Please write to them in the chat instead.',
+    );
+  }
   try {
     const r = await query<Row>(
       `INSERT INTO trip_calls (trip_id, caller_id, callee_id, kind) VALUES ($1, $2, $3, $4) RETURNING ${COLS}`,

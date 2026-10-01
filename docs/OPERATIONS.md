@@ -355,3 +355,19 @@ The controls and their evidence are in `docs/SECURITY.md`. What operators must d
 - **History** (`job_runs`) is kept 14 days and idempotency keys 2 days, set in Privacy and compliance > Retention.
 - A person telling you "I tapped twice" or "my connection dropped while requesting" should not end up with two rides: the
   app sends the same idempotency key again. If they did, look at the trip events and the audit log.
+
+## 17. Accessible rides
+
+- **Where.** Accessible rides in the console: counts for the last 30 days (rides that needed an accessible vehicle, matched or
+  not, vehicles approved and online now), the approval queue, and the list of vehicle features.
+- **Approving a driver's claim.** Features such as wheelchair accessible need a check. Look at the vehicle (as your process
+  requires), then approve or reject with a reason; the driver is told. Until approved, the vehicle is not offered rides that
+  need the feature. Rejecting an already approved claim takes it away at once.
+- **Adding a feature.** Give it a name and a plain description; choose whether claims need approval. Switching approval on
+  puts approved claims back in the queue. Core features cannot be switched off.
+- **If accessible rides are not being matched.** Look at "approved vehicles" and "with a driver online now". Zero online
+  means rides that need that feature will end with no driver found; the request screen already tells the person. Recruiting and
+  approving more accessible vehicles is the fix, not a setting.
+- **A support case about an accessible ride.** Open the ride's accessibility details (needs the support permission; the read
+  is recorded). Do not copy them into tickets or messages.
+- **Retention.** A ride's accessibility details are deleted 30 days after it ends (Privacy and compliance > Retention).

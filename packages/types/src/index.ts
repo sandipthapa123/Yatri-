@@ -25,6 +25,7 @@ export * from './organization';
 export * from './preferences';
 export * from './cities';
 export * from './jobs';
+export * from './accessibility';
 export * from './compliance';
 export * from './realtime';
 export * from './format';

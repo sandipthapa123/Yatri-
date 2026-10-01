@@ -3,7 +3,14 @@ import { quickFix } from '@yatri/mobile-location';
 import type { TripRole } from '@yatri/types';
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { useUiPreferences } from '@yatri/mobile-ui';
-import { AccessibilityInfo, AppState, findNodeHandle, Platform, type Text } from 'react-native';
+import {
+  AccessibilityInfo,
+  AppState,
+  findNodeHandle,
+  Platform,
+  Vibration,
+  type Text,
+} from 'react-native';
 
 import { CallController, type CallSocket, type CallUiState } from './callController';
 import { ChatController, type ChatSocket, type ChatState } from './chatController';
@@ -43,6 +50,18 @@ export function useSpeakOnIos(message: { id: number; text: string } | null) {
       AccessibilityInfo.announceForAccessibility(message.text);
     }
   }, [message, speakUpdates]);
+}
+
+/**
+ * A short vibration with an important (assertive) update, when the person has not turned vibration feedback off, so
+ * the news does not depend on sound or on looking at the screen. Once per message; never for routine ones.
+ */
+export function useVibrateOnUrgent(message: { id: number; text: string } | null) {
+  const { hapticFeedback } = useUiPreferences();
+  const id = message?.id ?? null;
+  useEffect(() => {
+    if (id !== null && hapticFeedback) Vibration.vibrate(200);
+  }, [id, hapticFeedback]);
 }
 
 /**

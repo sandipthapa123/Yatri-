@@ -162,6 +162,10 @@ Run from the repository root; each fans out to every workspace package via pnpm.
   recorded, shown in admin), idempotent actions with an `Idempotency-Key` the apps resend after a dropped connection,
   notification retry with back-off and deduplication, payment reconciliation, a connectivity banner that says in words when
   the screen may be out of date, and sessions that survive being offline.
+- **Inclusive and accessible rides** (`docs/PHASE_22.md`): passengers state what they need (wheelchair accessible vehicle,
+  help, blind or low vision, deaf or hard of hearing, service animal, pickup instructions, how to be reached); drivers declare
+  vehicle features, approved by an administrator where checking is needed; the matching engine offers a ride only to vehicles
+  with what it needs; a text version of the pickup; vibration and simpler-screen preferences; private by design.
 - Running it for real: [`docs/OPERATIONS.md`](docs/OPERATIONS.md) (architecture, deployment, backups,
   monitoring, incident recovery, release and rollback) and [`docs/SECURITY.md`](docs/SECURITY.md) (the controls,
   what was audited, what is still open). Container images and a full local stack are in [`deploy/`](deploy/).

@@ -34,3 +34,16 @@ export { IncidentForm } from './components/IncidentForm';
 export { EmergencyContactsPanel } from './components/EmergencyContactsPanel';
 export { IncentivesPanel } from './components/IncentivesPanel';
 export { ConnectivityBanner } from './components/ConnectivityBanner';
+export { AccessibilityProfilePanel } from './components/AccessibilityProfilePanel';
+export { AccessibilityRideCard } from './components/AccessibilityRideCard';
+export { PickupGuideCard } from './components/PickupGuideCard';
+export { VehicleCapabilitiesPanel } from './components/VehicleCapabilitiesPanel';
+export { ChoiceRadios, ChoiceSwitches } from './components/AccessibilityChoices';
+export {
+  NO_ACCESSIBLE_VEHICLE_TEXT,
+  capabilitySavedNews,
+  capabilityWords,
+  pickupGuide,
+  profileSummary,
+  requestAccessibilityLine,
+} from './accessibilityText';

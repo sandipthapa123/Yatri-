@@ -1,6 +1,8 @@
 import { RATING_COMMENT_MAX, RATING_MAX, RATING_MIN } from '@yatri/types';
 import { z } from 'zod';
 
+import { accessibilityRequestSchema } from '../accessibility/accessibility.validators';
+
 import {
   latitudeSchema,
   longitudeSchema,
@@ -32,12 +34,18 @@ export const tripRequestSchema = z
     destination: place,
     vehicleCategory: categoryCode,
     confirmedTotalNpr: z.number().int().positive().max(1_000_000).optional(),
+    accessibility: accessibilityRequestSchema.optional(),
   })
   .strict();
 
 /** The estimate may leave the category out; the response then lists every category. */
 export const tripEstimateSchema = z
-  .object({ pickup: place, destination: place, vehicleCategory: categoryCode.optional() })
+  .object({
+    pickup: place,
+    destination: place,
+    vehicleCategory: categoryCode.optional(),
+    accessibility: accessibilityRequestSchema.optional(),
+  })
   .strict();
 
 export const cancelSchema = z

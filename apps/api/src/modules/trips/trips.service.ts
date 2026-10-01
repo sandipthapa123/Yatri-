@@ -40,6 +40,11 @@ import {
 import { metaFromRow } from './trip-meta';
 import { settingBool, settingText } from '../settings/settings.service';
 import { isCategoryAvailable } from '../dispatch/matching';
+import {
+  resolveForRequest,
+  saveForTrip,
+  visibleToViewer,
+} from '../accessibility/accessibility.service';
 import { assertZoneAccess, primaryZone } from '../operations/zones.service';
 import { surgeFor } from '../operations/surge';
 import { recordAudit } from '../../lib/audit';
@@ -191,6 +196,7 @@ export async function buildTripSummary(t: TripRow, viewerId: string): Promise<Tr
         : null,
     rated: !!rated.rowCount,
     business,
+    accessibility: await visibleToViewer(t, viewerId),
   };
 }
 
@@ -221,7 +227,9 @@ const unknownCategory = () =>
  * The estimate for a request: the selected category's fare, plus every active category priced and
  * marked available-or-not near the pickup (a yes/no; no driver is ever identified or counted).
  */
-export async function estimateForRequest(body: TripEstimateBody) {
+export async function estimateForRequest(passengerId: string, body: TripEstimateBody) {
+  // Accessibility needs narrow who could take the ride, so "available" is answered for THIS rider's needs.
+  const accessibility = await resolveForRequest(passengerId, body.accessibility);
   // A ride that cannot start or end here is refused before anything is priced (service zones).
   const pickupZones = await assertZoneAccess(body.pickup, 'PICKUP');
   const dropoffZones = await assertZoneAccess(body.destination, 'DROPOFF');
@@ -246,7 +254,11 @@ export async function estimateForRequest(body: TripEstimateBody) {
     categories.map(async (c) => ({
       code: c.code,
       label: c.label,
-      available: await isCategoryAvailable(body.pickup, c.id),
+      available: await isCategoryAvailable(
+        body.pickup,
+        c.id,
+        accessibility.requiredVehicleAttributes,
+      ),
       // The price the rider is shown includes demand pricing: the same engine a request will use.
       fare: estimateFare(
         trip,
@@ -301,6 +313,8 @@ export async function requestTrip(
   business?: BusinessRequest,
 ): Promise<TripRow> {
   await assertNotRestricted(passengerId);
+  // The rider's stated needs for this ride (their saved profile unless the request says otherwise), checked first.
+  const accessibility = await resolveForRequest(passengerId, body.accessibility);
   const { category, pickupZones, trip, surge, fare, city } = await quoteTrip(body);
   // Demand pricing may have moved since the rider saw the estimate: they must confirm the new total.
   if (body.confirmedTotalNpr !== undefined && body.confirmedTotalNpr !== fare.totalNpr) {
@@ -345,6 +359,7 @@ export async function requestTrip(
     }
     throw err;
   }
+  await saveForTrip(row.id, accessibility);
   await saveMeta(metaFromRow(row));
   await bumpTripVersion(row.id);
   await recordTripEvent({ tripId: row.id, type: 'TRIP_REQUESTED', actorId: passengerId });

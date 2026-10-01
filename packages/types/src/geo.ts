@@ -17,6 +17,17 @@ export function haversineMeters(a: LatLng, b: LatLng): number {
 }
 
 /** True for the (0, 0) "no GPS fix" placeholder many stacks report. */
+/** The compass direction (degrees, 0 = north, clockwise) you would travel in to go from `from` to `to`. */
+export function bearingDegrees(from: LatLng, to: LatLng): number {
+  const rad = Math.PI / 180;
+  const dLon = (to.longitude - from.longitude) * rad;
+  const y = Math.sin(dLon) * Math.cos(to.latitude * rad);
+  const x =
+    Math.cos(from.latitude * rad) * Math.sin(to.latitude * rad) -
+    Math.sin(from.latitude * rad) * Math.cos(to.latitude * rad) * Math.cos(dLon);
+  return (Math.atan2(y, x) / rad + 360) % 360;
+}
+
 export function isNullIsland(c: { latitude?: number; longitude?: number }): boolean {
   return c.latitude === 0 && c.longitude === 0;
 }

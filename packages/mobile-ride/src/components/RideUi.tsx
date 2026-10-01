@@ -2,7 +2,7 @@ import { useUiPreferences } from '@yatri/mobile-ui';
 import { type ReactNode } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { useFocusWhen, useSpeakOnIos } from '../hooks';
+import { useFocusWhen, useSpeakOnIos, useVibrateOnUrgent } from '../hooks';
 
 /** The theme tokens the ride UI needs (both apps' theme objects satisfy this). */
 export interface RideColors {
@@ -87,6 +87,7 @@ export function Announcer(
   const { fontScale } = useUiPreferences();
   useSpeakOnIos(polite ?? null);
   useSpeakOnIos(assertive ?? null);
+  useVibrateOnUrgent(assertive ?? null);
   return (
     <>
       <View accessibilityLiveRegion="assertive" accessibilityRole="alert">

@@ -11,6 +11,7 @@ import { log } from '../../lib/logger';
 import { sqlIn } from '../../lib/sql';
 import { cityAtPoint } from '../cities/cities.service';
 import { driversOverLimit } from '../availability/driver-limits';
+import { attributesSatisfiedSql } from '../accessibility/accessibility.service';
 import { availabilityConfig } from '../availability/availability.service';
 import { isMatchable, locationFreshness } from '../availability/availability.machine';
 import { getLiveFix } from '../availability/presence.state';
@@ -49,6 +50,11 @@ export interface MatchRequest {
   tripId?: string;
   /** How far to look; defaults to the normal radius. Dispatch widens it on retries. */
   radiusMeters?: number;
+  /**
+   * Vehicle features the ride requires (accessibility needs). A vehicle is considered only if it holds every one as
+   * APPROVED. Empty or omitted: any vehicle of the category.
+   */
+  requiredAttributes?: readonly string[];
 }
 
 export interface MatchCandidate {
@@ -125,6 +131,7 @@ export async function findEligibleDrivers(req: MatchRequest): Promise<MatchCandi
        AND EXISTS (
              SELECT 1 FROM vehicles v
              WHERE v.driver_user_id = l.driver_id AND ($8::uuid IS NULL OR v.category_id = $8)
+               AND ${attributesSatisfiedSql('$9')}
                AND ${VEHICLE_RIDEABLE_SQL})
        AND NOT EXISTS (SELECT 1 FROM trips t
                        WHERE t.driver_id = l.driver_id AND t.status IN ${sqlIn(ASSIGNED_TRIP_STATUSES)})
@@ -141,6 +148,7 @@ export async function findEligibleDrivers(req: MatchRequest): Promise<MatchCandi
       cfg.persistSeconds,
       req.tripId ?? null,
       req.vehicleCategoryId,
+      [...(req.requiredAttributes ?? [])],
     ],
   );
 
@@ -200,8 +208,9 @@ export async function matchDrivers(req: MatchRequest): Promise<MatchCandidate[]>
 export async function isCategoryAvailable(
   pickup: MatchRequest['pickup'],
   vehicleCategoryId: string,
+  requiredAttributes: readonly string[] = [],
 ): Promise<boolean> {
-  return (await findEligibleDrivers({ pickup, vehicleCategoryId })).length > 0;
+  return (await findEligibleDrivers({ pickup, vehicleCategoryId, requiredAttributes })).length > 0;
 }
 
 /**

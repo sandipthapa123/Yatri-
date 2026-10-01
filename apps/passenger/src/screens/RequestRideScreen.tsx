@@ -7,13 +7,23 @@ import {
   type BusinessChoice,
 } from '@yatri/mobile-business';
 import { usePreferences } from '@yatri/mobile-preferences';
-import { ActionButton, CategoryPicker, Card, Fact, rideApi } from '@yatri/mobile-ride';
+import {
+  ActionButton,
+  CategoryPicker,
+  Card,
+  Fact,
+  NO_ACCESSIBLE_VEHICLE_TEXT,
+  requestAccessibilityLine,
+  rideApi,
+} from '@yatri/mobile-ride';
 import {
   describeSurge,
   formatDistance,
   formatDuration,
   formatElapsed,
   formatNpr,
+  type AccessibilityProfile,
+  PASSENGER_NEED_BY_CODE,
   type FareEstimateResponse,
   type TripRequestBody,
 } from '@yatri/types';
@@ -95,6 +105,24 @@ export function RequestRideScreen({ navigation }: Props) {
       cancelled = true;
     };
   }, [places, key, getAccessToken]);
+
+  // The person's saved accessibility needs: the server uses them for this ride (so the estimate already reflects them);
+  // here they are only SHOWN, in words, so nothing about the ride is a surprise.
+  const [accessibility, setAccessibility] = useState<AccessibilityProfile | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const p = await rideApi.accessibilityProfile(await getAccessToken());
+        if (!cancelled) setAccessibility(p);
+      } catch {
+        /* the line is optional; the server applies the saved needs either way */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [getAccessToken]);
 
   const current = result && result.key === key ? result : null;
   const estimate = current?.estimate ?? null;
@@ -200,6 +228,20 @@ export function RequestRideScreen({ navigation }: Props) {
                     onSelect={setChosen}
                   />
                 </Card>
+
+                {requestAccessibilityLine(accessibility) ? (
+                  <Card {...ui} title="Accessibility for this ride">
+                    <Text accessibilityRole="text" style={{ color: theme.colors.textPrimary }}>
+                      {requestAccessibilityLine(accessibility)}
+                    </Text>
+                    {!selected.available &&
+                    accessibility?.needs.some((n) => PASSENGER_NEED_BY_CODE[n].vehicleAttribute) ? (
+                      <Text accessibilityRole="alert" style={{ color: theme.colors.textPrimary }}>
+                        {NO_ACCESSIBLE_VEHICLE_TEXT}
+                      </Text>
+                    ) : null}
+                  </Card>
+                ) : null}
 
                 <Card {...ui} title="Estimate">
                   <Fact {...ui} label="Estimated fare" value={formatNpr(selected.fare.totalNpr)} />

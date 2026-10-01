@@ -213,6 +213,11 @@ async function anonymise(client: PoolClient, userId: string): Promise<string[]> 
   );
   await client.query('DELETE FROM saved_places WHERE user_id = $1', [userId]);
   await client.query('DELETE FROM user_preferences WHERE user_id = $1', [userId]);
+  await client.query('DELETE FROM passenger_accessibility WHERE user_id = $1', [userId]);
+  await client.query(
+    'DELETE FROM trip_accessibility WHERE trip_id IN (SELECT id FROM trips WHERE passenger_id = $1)',
+    [userId],
+  );
   await client.query('DELETE FROM emergency_contacts WHERE user_id = $1', [userId]);
   await client.query('DELETE FROM driver_details WHERE user_id = $1', [userId]);
   await client.query('DELETE FROM notifications WHERE user_id = $1', [userId]);
@@ -345,6 +350,7 @@ export async function buildPersonalDataExport(userId: string, role: TripRole, re
     requests,
     notes,
     prefs,
+    accessibility,
   ] = await Promise.all([
     query(
       `SELECT id, role, status, phone_number, email, full_name, created_at FROM users WHERE id = $1`,
@@ -396,6 +402,11 @@ export async function buildPersonalDataExport(userId: string, role: TripRole, re
       [userId],
     ),
     query(`SELECT choices, updated_at FROM user_preferences WHERE user_id = $1`, [userId]),
+    query(
+      `SELECT needs, communication, pickup_instructions, pickup_note, other_note, updated_at
+         FROM passenger_accessibility WHERE user_id = $1`,
+      [userId],
+    ),
   ]);
   await recordAudit({
     actorId: userId,
@@ -418,5 +429,6 @@ export async function buildPersonalDataExport(userId: string, role: TripRole, re
     privacyRequests: requests.rows,
     recentNotifications: notes.rows,
     settings: prefs.rows[0] ?? null,
+    accessibility: accessibility.rows[0] ?? null,
   };
 }

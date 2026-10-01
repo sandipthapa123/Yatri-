@@ -14,7 +14,14 @@ describe('turning the server preferences into what the shared components read', 
       reducedMotion: false,
       speakUpdates: true,
       confirmBeforeSos: true,
+      hapticFeedback: true,
+      simplifiedNavigation: false,
     });
+  });
+  it('maps vibration feedback and simpler screens, which the person can switch', () => {
+    const ui = toUiPreferences(prefs({ hapticFeedback: false, simplifiedNavigation: true }), false);
+    expect(ui.hapticFeedback).toBe(false);
+    expect(ui.simplifiedNavigation).toBe(true);
   });
   it('maps theme, text size, larger buttons and speaking from the one table', () => {
     const ui = toUiPreferences(

@@ -74,6 +74,10 @@ Yatri-specific reminders:
 - Time-based work is a line in `modules/jobs/registry.ts` run by `modules/jobs/jobs.ts`; never add a `setInterval` for platform
   work. An action that must not happen twice goes through `middleware/idempotency.ts` (client: `withIdempotentRetry`). A
   network failure is `ApiError` code `NETWORK_ERROR` from the one `request()`; only a 401/403 ends a session (`shouldEndSession`).
+- Accessibility needs, communication choices and pickup instructions are defined in `@yatri/types` `accessibility.ts` and stored
+  only by `modules/accessibility/accessibility.service.ts`; vehicle features hang off `vehicles` (`vehicle_accessibility`) and
+  are matched by `attributesSatisfiedSql` in the one matching engine. Never infer a need, never copy the details into a
+  notification, chat, event or shared link, and never let a driver mark a feature approved.
 - Do not put a backslash inside a SQL string written from a shell command: use `ESCAPE '!'` with
   `likeContains` for searches.
 - If you discover a duplicate, consolidate it or add it to "Known duplication" in the doc.

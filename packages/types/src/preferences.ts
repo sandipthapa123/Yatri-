@@ -1,3 +1,4 @@
+import { ACCESSIBILITY_NOTIFICATION_TYPES } from './accessibility';
 import { FLEET_NOTIFICATION_TYPES } from './fleet';
 import { ORG_NOTIFICATION_TYPES } from './organization';
 import { RISK_NOTIFICATION_TYPES } from './risk';
@@ -155,6 +156,7 @@ const ACCOUNT_TYPES = new Set([
   'VEHICLE_REJECTED',
   ...values(FLEET_NOTIFICATION_TYPES),
   ...values(RISK_NOTIFICATION_TYPES),
+  ...values(ACCESSIBILITY_NOTIFICATION_TYPES),
 ]);
 const SUPPORT_TYPES = new Set(values(SUPPORT_NOTIFICATION_TYPES));
 const BUSINESS_TYPES = new Set(values(ORG_NOTIFICATION_TYPES));
@@ -285,6 +287,26 @@ export const PREFERENCE_DEFS: readonly PreferenceDef[] = [
     help: 'On iPhone the app speaks changes (a driver found, arriving) itself; with TalkBack they are announced as usual. Turn off if your screen reader already says too much.',
     kind: 'boolean',
     default: true,
+    roles: BOTH,
+    server: false,
+  },
+  {
+    key: 'hapticFeedback',
+    group: 'accessibility',
+    label: 'Vibration feedback',
+    help: 'Vibrate when something important happens (a driver arrives, an offer comes in) so you do not have to rely on sound or on looking.',
+    kind: 'boolean',
+    default: true,
+    roles: BOTH,
+    server: false,
+  },
+  {
+    key: 'simplifiedNavigation',
+    group: 'accessibility',
+    label: 'Simpler screens',
+    help: 'During a ride, show only the essentials and keep extra options (trip sharing, accessibility details) behind a More options button.',
+    kind: 'boolean',
+    default: false,
     roles: BOTH,
     server: false,
   },

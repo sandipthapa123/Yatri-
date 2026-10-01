@@ -10,6 +10,7 @@ import { query } from '../../lib/db';
 import { log } from '../../lib/logger';
 import { getStorageProvider } from '../../lib/storage/local-disk-provider';
 import { HttpError } from '../../middleware/errorHandler';
+import { purgeOldRideAccessibility } from '../accessibility/accessibility.service';
 import { purgeOldRiskEvents } from '../risk/sweep';
 
 /**
@@ -128,6 +129,7 @@ const JOBS: Record<string, (days: number) => Promise<number>> = {
       )
     ).rowCount ?? 0,
   RISK_EVENTS: purgeOldRiskEvents,
+  ACCESSIBILITY_RIDE_DETAILS: purgeOldRideAccessibility,
   JOB_RUNS: async (days) =>
     (
       await query(`DELETE FROM job_runs WHERE started_at < now() - ($1::int * interval '1 day')`, [

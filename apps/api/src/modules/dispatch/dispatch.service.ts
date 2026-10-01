@@ -14,6 +14,7 @@ import {
   type TripRow,
 } from '../trips/trips.repository';
 import { assignDriver, markNoDrivers, requestTrip } from '../trips/trips.service';
+import { attributeLabels, requiredAttributesOfTrip } from '../accessibility/accessibility.service';
 import { matchDrivers, searchRadius } from './matching';
 import {
   closeOffer,
@@ -34,7 +35,7 @@ import {
  * The accept race is decided by two guarded UPDATEs (offer, then trip), never by the client.
  */
 
-function toOfferInfo(o: OfferRow, trip: TripRow): TripOfferInfo {
+function toOfferInfo(o: OfferRow, trip: TripRow, vehicleNeeds: string[]): TripOfferInfo {
   return {
     offerId: o.id,
     tripId: trip.id,
@@ -49,7 +50,16 @@ function toOfferInfo(o: OfferRow, trip: TripRow): TripOfferInfo {
     fareEstimateNpr: trip.fare_estimate_npr ?? 0,
     expiresAt: o.expires_at.toISOString(),
     serverTime: new Date().toISOString(),
+    vehicleNeeds,
   };
+}
+
+/** "Wheelchair accessible vehicle" for each feature a ride requires: all a driver learns before accepting. */
+async function vehicleNeedsOf(tripId: string): Promise<string[]> {
+  const required = await requiredAttributesOfTrip(tripId);
+  if (required.length === 0) return [];
+  const labels = await attributeLabels();
+  return required.map((code) => labels[code] ?? code);
 }
 
 export type OfferOutcome = 'offered' | 'waiting' | 'no_drivers' | 'not_searching';
@@ -86,8 +96,10 @@ export async function offerNext(tripId: string): Promise<OfferOutcome> {
 
   // Retry and fallback: every offer that was not taken widens the next search (up to a configured limit),
   // so a ride nobody nearby wants is offered farther out instead of waiting for the deadline.
+  const requiredAttributes = await requiredAttributesOfTrip(tripId);
   const ranked = await matchDrivers({
     tripId,
+    requiredAttributes,
     pickup: pickupOf(trip),
     vehicleCategoryId: trip.vehicle_category_id,
     radiusMeters: searchRadius(offersSoFar),
@@ -100,7 +112,10 @@ export async function offerNext(tripId: string): Promise<OfferOutcome> {
       ttlSeconds: env.DISPATCH_OFFER_TTL_SECONDS,
     });
     if (!offer) continue; // another dispatcher run took this driver: try the next one
-    await publishToUser(c.driverId, { type: 'trip_offer', offer: toOfferInfo(offer, trip) });
+    await publishToUser(c.driverId, {
+      type: 'trip_offer',
+      offer: toOfferInfo(offer, trip, await vehicleNeedsOf(tripId)),
+    });
     // The passenger hears that a driver was found (a distance only, never who).
     await recordTripEvent({
       tripId,
@@ -135,7 +150,7 @@ export async function currentOfferFor(driverId: string): Promise<TripOfferInfo |
   if (!id) return null;
   const offer = await getOffer(id);
   const trip = offer ? await getTrip(offer.trip_id) : null;
-  return offer && trip ? toOfferInfo(offer, trip) : null;
+  return offer && trip ? toOfferInfo(offer, trip, await vehicleNeedsOf(trip.id)) : null;
 }
 
 export async function respondOffer(

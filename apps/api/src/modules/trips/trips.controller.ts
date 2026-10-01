@@ -9,10 +9,12 @@ import type {
   TripOfferInfo,
   TripEstimateBody,
   TripRequestBody,
+  TripAccessibilityUpdateBody,
   TripSummary,
 } from '@yatri/types';
 
 import { HttpError } from '../../middleware/errorHandler';
+import { updatePickup } from '../accessibility/accessibility.service';
 import {
   currentOfferFor,
   offerNext,
@@ -61,7 +63,13 @@ export async function estimateHandler(
   res: Response<ApiResponse<FareEstimateResponse>>,
 ) {
   const body = req.body as TripEstimateBody;
-  const { fare, category, options, notices, pricing: cfg } = await estimateForRequest(body);
+  const {
+    fare,
+    category,
+    options,
+    notices,
+    pricing: cfg,
+  } = await estimateForRequest(uid(req), body);
   res.json({
     success: true,
     data: {
@@ -204,4 +212,13 @@ export async function rateHandler(
   res
     .status(201)
     .json({ success: true, data: await rateTrip(idParam(req), uid(req), req.body as never) });
+}
+
+/** The passenger changes how to be reached and where to meet, until the ride has started. */
+export async function updateAccessibilityHandler(
+  req: Request,
+  res: Response<ApiResponse<TripSummary>>,
+) {
+  await updatePickup(idParam(req), uid(req), req.body as TripAccessibilityUpdateBody);
+  res.json({ success: true, data: await summaryFor(req, idParam(req)) });
 }

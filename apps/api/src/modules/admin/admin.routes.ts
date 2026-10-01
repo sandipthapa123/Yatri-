@@ -259,6 +259,16 @@ import {
   runJobHandler,
 } from './admin-jobs';
 import {
+  accessibilityStatsHandler,
+  accessibilityStatsQuerySchema,
+  decideCapabilityHandler,
+  listAttributesHandler,
+  pendingReviewsHandler,
+  saveAttributeHandler,
+  tripAccessibilityHandler,
+} from './admin-accessibility';
+import { attributeBodySchema, decisionSchema } from '../accessibility/accessibility.validators';
+import {
   cityBodySchema,
   cityCategoriesSchema,
   cityDocumentsSchema,
@@ -909,6 +919,50 @@ adminRouter.get(
   riskHistoryHandler,
 );
 adminRouter.post('/risk/sweep/run', requirePermission('RISK_MANAGE'), riskSweepHandler);
+
+// Accessibility: reading features, the review queue and counts needs ACCESSIBILITY_VIEW (no rider details); changing
+// features and deciding a driver's claim needs ACCESSIBILITY_MANAGE; a ride's protected details need SUPPORT_MANAGE and are audited.
+adminRouter.get(
+  '/accessibility/stats',
+  requirePermission('ACCESSIBILITY_VIEW'),
+  validateQuery(accessibilityStatsQuerySchema),
+  accessibilityStatsHandler,
+);
+adminRouter.get(
+  '/accessibility/attributes',
+  requirePermission('ACCESSIBILITY_VIEW'),
+  listAttributesHandler,
+);
+adminRouter.post(
+  '/accessibility/attributes',
+  requirePermission('ACCESSIBILITY_MANAGE'),
+  validateBody(attributeBodySchema),
+  saveAttributeHandler,
+);
+adminRouter.put(
+  '/accessibility/attributes/:code',
+  requirePermission('ACCESSIBILITY_MANAGE'),
+  validateBody(attributeBodySchema),
+  saveAttributeHandler,
+);
+adminRouter.get(
+  '/accessibility/reviews',
+  requirePermission('ACCESSIBILITY_VIEW'),
+  pendingReviewsHandler,
+);
+adminRouter.post(
+  '/accessibility/reviews/:vehicleId/:code',
+  requirePermission('ACCESSIBILITY_MANAGE'),
+  validateUuidParam('vehicleId'),
+  validateBody(decisionSchema),
+  decideCapabilityHandler,
+);
+adminRouter.get(
+  '/trips/:id/accessibility',
+  requirePermission('SUPPORT_MANAGE'),
+  validateUuidParam('id'),
+  tripAccessibilityHandler,
+);
 
 // Background jobs: reading needs OPERATIONS_VIEW, running one by hand SETTINGS_MANAGE.
 adminRouter.get('/jobs', requirePermission('OPERATIONS_VIEW'), listJobsHandler);

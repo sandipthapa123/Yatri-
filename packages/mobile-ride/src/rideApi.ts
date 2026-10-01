@@ -6,6 +6,8 @@ import type {
   ChatMessage,
   EmergencyContact,
   EmergencyContactsResponse,
+  AccessibilityProfile,
+  AccessibilityProfileBody,
   FareEstimateResponse,
   IceServersResponse,
   IncidentBody,
@@ -18,10 +20,13 @@ import type {
   SosInfo,
   SosRequestBody,
   TripHistoryPage,
+  TripAccessibilityUpdateBody,
   TripEstimateBody,
   TripOfferInfo,
   TripRequestBody,
   TripSummary,
+  VehicleCapabilitiesBody,
+  VehicleCapabilitiesResponse,
 } from '@yatri/types';
 
 /**
@@ -59,6 +64,29 @@ export const rideApi = {
   complete: (t: Token, id: string) => once<TripSummary>(`/trips/${id}/complete`, t),
   noShow: (t: Token, id: string) => once<TripSummary>(`/trips/${id}/no-show`, t),
   confirmPayment: (t: Token, id: string) => once<PaymentInfo>(`/trips/${id}/payment/confirm`, t),
+
+  // ---- accessibility (the passenger's own saved needs; a ride's pickup instructions; a vehicle's features)
+  accessibilityProfile: (t: Token) => get<AccessibilityProfile>('/users/me/accessibility', t),
+  saveAccessibilityProfile: (t: Token, body: AccessibilityProfileBody) =>
+    authApi.request<AccessibilityProfile>('/users/me/accessibility', {
+      method: 'PUT',
+      accessToken: t,
+      body,
+    }),
+  updatePickupAccessibility: (t: Token, id: string, body: TripAccessibilityUpdateBody) =>
+    authApi.request<TripSummary>(`/trips/${id}/accessibility`, {
+      method: 'PUT',
+      accessToken: t,
+      body,
+    }),
+  vehicleCapabilities: (t: Token, vehicleId: string) =>
+    get<VehicleCapabilitiesResponse>(`/vehicles/${vehicleId}/accessibility`, t),
+  declareVehicleCapabilities: (t: Token, vehicleId: string, body: VehicleCapabilitiesBody) =>
+    authApi.request<VehicleCapabilitiesResponse>(`/vehicles/${vehicleId}/accessibility`, {
+      method: 'PUT',
+      accessToken: t,
+      body,
+    }),
 
   // ---- both
   active: (t: Token) => get<TripSummary | null>('/trips/active', t),

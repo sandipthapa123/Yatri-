@@ -17,6 +17,10 @@ export interface UiPreferences {
   /** Whether the app speaks ride updates itself on iPhone. */
   speakUpdates: boolean;
   confirmBeforeSos: boolean;
+  /** Vibrate with important updates (so they do not depend on sound or on looking). */
+  hapticFeedback: boolean;
+  /** Show only the essentials during a ride; extra options sit behind a button. */
+  simplifiedNavigation: boolean;
 }
 
 export const DEFAULT_UI_PREFERENCES: UiPreferences = {
@@ -26,6 +30,8 @@ export const DEFAULT_UI_PREFERENCES: UiPreferences = {
   reducedMotion: false,
   speakUpdates: true,
   confirmBeforeSos: true,
+  hapticFeedback: true,
+  simplifiedNavigation: false,
 };
 
 export const UiPreferencesContext = createContext<UiPreferences>(DEFAULT_UI_PREFERENCES);

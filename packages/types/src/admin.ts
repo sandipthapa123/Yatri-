@@ -27,6 +27,8 @@ export const ADMIN_PERMISSIONS = [
   'RISK_MANAGE',
   'ORGANIZATIONS_VIEW',
   'ORGANIZATIONS_MANAGE',
+  'ACCESSIBILITY_VIEW',
+  'ACCESSIBILITY_MANAGE',
   'USERS_VIEW',
   'USERS_MANAGE',
   'FINANCE_VIEW',
@@ -93,6 +95,14 @@ export const ADMIN_PERMISSION_LABELS: Record<AdminPermission, { label: string; h
     label: 'Manage organizations and statements',
     help: 'Suspend and reactivate organizations, issue statements, and record that a statement was paid or cancel it. Every change is audited with its reason.',
   },
+  ACCESSIBILITY_VIEW: {
+    label: 'Accessibility overview',
+    help: 'Vehicle accessibility features, who is waiting for approval and counts of accessible rides. No rider details.',
+  },
+  ACCESSIBILITY_MANAGE: {
+    label: 'Accessibility features',
+    help: 'Approve or reject the accessibility claims drivers make for a vehicle, and edit the list of vehicle features.',
+  },
   USERS_VIEW: { label: 'View users', help: 'Search and read user accounts.' },
   USERS_MANAGE: { label: 'Manage users', help: 'Suspend and reactivate accounts.' },
   FINANCE_VIEW: {
@@ -139,6 +149,8 @@ export const PERMISSION_IMPLIES: Partial<Record<AdminPermission, readonly AdminP
   FLEET_MANAGE: ['FLEET_VIEW'],
   RISK_MANAGE: ['RISK_VIEW'],
   ORGANIZATIONS_MANAGE: ['ORGANIZATIONS_VIEW'],
+  ACCESSIBILITY_MANAGE: ['ACCESSIBILITY_VIEW', 'OPERATIONS_VIEW'],
+  ACCESSIBILITY_VIEW: ['OPERATIONS_VIEW'],
 };
 
 /** Whether a set of held permissions grants the one needed. The one rule; the API and the app use it. */

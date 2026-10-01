@@ -29,6 +29,7 @@ export function SettingsScreen({ navigation }: Props) {
             onTrustedContacts: () => navigation.navigate('DriverEmergencyContacts'),
             onPrivacyAndData: () => navigation.navigate('Support'),
             onHelp: () => navigation.navigate('Support'),
+            onVehicleFeatures: () => navigation.navigate('VehicleAccessibility'),
           }}
           onExit={() => navigation.goBack()}
         />

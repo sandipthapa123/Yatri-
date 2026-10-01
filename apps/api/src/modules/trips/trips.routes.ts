@@ -15,6 +15,7 @@ import {
   stopShareHandler,
 } from '../sharing/sharing.controller';
 import { chatRouter } from '../chat/chat.routes';
+import { pickupUpdateSchema } from '../accessibility/accessibility.validators';
 import { authenticate } from '../../middleware/authenticate';
 import { idempotent } from '../../middleware/idempotency';
 import { userRateLimit, userMutationRateLimit } from '../../middleware/rateLimit';
@@ -37,6 +38,7 @@ import {
   offerResponseHandler,
   rateHandler,
   requestHandler,
+  updateAccessibilityHandler,
 } from './trips.controller';
 import {
   cancelSchema,
@@ -138,6 +140,14 @@ tripsRouter.get(
   validateUuidParam('id'),
   validateQuery(eventsQuerySchema),
   eventsHandler,
+);
+tripsRouter.put(
+  '/:id/accessibility',
+  requireRole('PASSENGER'),
+  userRateLimit('trip-accessibility', 30, 3600),
+  validateUuidParam('id'),
+  validateBody(pickupUpdateSchema),
+  updateAccessibilityHandler,
 );
 tripsRouter.post(
   '/:id/cancel',

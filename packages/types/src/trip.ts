@@ -111,6 +111,8 @@ export interface TripBusinessInfo {
   bookedByOther: boolean;
 }
 
+import type { TripAccessibility } from './accessibility';
+
 export interface TripSummary {
   id: string;
   status: TripStatus;
@@ -141,6 +143,11 @@ export interface TripSummary {
   rated: boolean;
   /** Null for an ordinary ride. */
   business: TripBusinessInfo | null;
+  /**
+   * The passenger's stated needs and pickup instructions for this ride: set only for the passenger themselves and the
+   * assigned driver, null for everyone else and for a ride with none.
+   */
+  accessibility: TripAccessibility | null;
 }
 
 /** live: fresh fix. stale: fix is old but recent enough to show with a warning. lost: treat as GPS lost. */

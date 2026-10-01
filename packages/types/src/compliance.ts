@@ -156,6 +156,7 @@ export const RETENTION_RECORD_TYPES = [
   'ORGANIZATION_RECORDS',
   'JOB_RUNS',
   'IDEMPOTENCY_KEYS',
+  'ACCESSIBILITY_RIDE_DETAILS',
 ] as const;
 export type RetentionRecordType = (typeof RETENTION_RECORD_TYPES)[number];
 

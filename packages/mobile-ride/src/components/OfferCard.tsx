@@ -47,6 +47,13 @@ export function OfferCard(
             label="Destination"
             value={`${offer.destination.name}, ${formatDistance(offer.tripDistanceMeters)} trip`}
           />
+          {offer.vehicleNeeds.length > 0 ? (
+            <Fact
+              {...ui}
+              label="This ride needs"
+              value={`${offer.vehicleNeeds.join(', ')} (your vehicle is approved for it)`}
+            />
+          ) : null}
           <Fact {...ui} label="Fare" value={formatNpr(offer.fareEstimateNpr)} />
           <Fact
             {...ui}

@@ -1,3 +1,4 @@
+import type { TripAccessibilityRequest } from './accessibility';
 import type { TripPlace, TripSummary } from './trip';
 
 /** Payment and rating definitions (ride problems and disputes are support tickets: see support.ts) — separate axes from trip status. */
@@ -81,6 +82,11 @@ export interface TripRequestBody {
    * the new fare so the rider confirms again.
    */
   confirmedTotalNpr?: number;
+  /**
+   * This ride's accessibility needs and pickup instructions. Left out, the passenger's saved profile is used (nothing
+   * is ever inferred); given, it replaces the profile for this ride only.
+   */
+  accessibility?: TripAccessibilityRequest;
 }
 
 /** A vehicle category a passenger can ride in. Categories are reference data owned by the server. */
@@ -133,6 +139,8 @@ export interface TripOfferInfo {
   fareEstimateNpr: number;
   expiresAt: string;
   serverTime: string;
+  /** What the vehicle must have for this ride ("Wheelchair accessible vehicle"); never anything about the person. */
+  vehicleNeeds: string[];
 }
 
 /** Admin views (same authoritative data, wider audience). */

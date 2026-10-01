@@ -359,3 +359,29 @@ VoiceOver and NVDA, with airplane mode and a weak network:
    not being shared.
 8. **Admin Background jobs:** the table has a caption and row headers; state is words ("OK: Ran 20 seconds ago", "Needs
    attention: Failed 3 minutes ago"); "Run <job> now" names the job; the result is announced as a status.
+
+## U. Inclusive and accessible rides (Phase 22)
+
+Automated: the structural accessibility test scans the new panels; unit tests keep the wording (profile summary, the "no
+accessible vehicle" sentence, the text pickup guide, feature states); API tests cover privacy, matching and approval. These
+checks need a person, a device and a screen reader, and ideally someone who relies on them:
+
+1. **Settings > Accessibility needs for rides** (passenger): each need is a switch whose label ends "On" or "Off"; the heading
+   of each group is announced; the notes have labels; Save says what happened as a status, and a conflict from another device
+   is read as a problem.
+2. **Request screen:** the "Accessibility for this ride" card states, in words, what will be used and, for a vehicle need,
+   that only approved vehicles are offered. With nobody nearby, the "No accessible vehicle..." sentence is read as an alert.
+3. **Finding the driver without the map:** "Finding your driver, in words" gives address, landmark, direction, distance, time
+   and vehicle with number plate. Walk to a pickup using only this and the chat.
+4. **Messages only:** the driver cannot start a call and is told why in words; chat still works; the passenger can call.
+5. **Changing pickup instructions during a ride** (passenger): the form is reachable by keyboard and switch; after saving, the
+   driver hears one polite announcement and finds the new instructions in "Passenger's accessibility needs".
+6. **Driver offer:** "This ride needs: Wheelchair accessible vehicle" is read with the other offer details; nothing else about
+   the passenger is read before accepting.
+7. **Vehicle features** (driver): each feature's state is words ("Waiting for approval", "Approved", "Not approved: reason");
+   a save that leaves features waiting says so.
+8. **Vibration and simpler screens:** with Vibration feedback on, an arrival or an offer vibrates once; off, it does not. With
+   Simpler screens on, the ride shows the essentials and a "More options" button that reveals trip sharing and details.
+9. **Admin Accessible rides:** the stats list and the table have captions and row headers; each decision form names the
+   feature and vehicle; results are announced as a status.
+10. **Text size, high contrast, reduced motion:** all of the above stay usable at the largest text size.

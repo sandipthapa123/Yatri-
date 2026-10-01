@@ -20,6 +20,7 @@ const offer = (id = 'o1', over: Partial<TripOfferInfo> = {}): TripOfferInfo => (
   vehicleCategory: null,
   serverTime: '2026-01-01T10:00:00.000Z',
   expiresAt: '2026-01-01T10:00:20.000Z',
+  vehicleNeeds: [],
   ...over,
 });
 

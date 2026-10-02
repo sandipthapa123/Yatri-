@@ -139,7 +139,8 @@ describe('the preference definitions', () => {
     );
     expect(driver).not.toContain('defaultVehicle');
     expect(driver).not.toContain('nameShownToDrivers');
-    expect(passenger).not.toContain('notify.REWARDS');
+    // Reward points and offers are for riders too (Phase 24); offers are opt-in.
+    expect(passenger).toEqual(expect.arrayContaining(['notify.REWARDS', 'notify.PROMOTIONS']));
   });
 });
 

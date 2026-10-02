@@ -131,8 +131,9 @@ export async function financeSummaryHandler(
        WHERE t.requested_at >= $1 AND t.requested_at < $2 GROUP BY p.status`,
       p,
     ),
-    query<{ gross: number; collected: number; fees: number }>(
+    query<{ gross: number; collected: number; fees: number; discounts: number }>(
       `SELECT COALESCE(sum(t.fare_final_npr) FILTER (WHERE t.status = 'COMPLETED'), 0)::int AS gross,
+              COALESCE(sum(t.discount_npr) FILTER (WHERE t.status = 'COMPLETED'), 0)::int AS discounts,
               COALESCE(sum(pay.amount_npr) FILTER (WHERE t.status = 'COMPLETED'), 0)::int AS collected,
               COALESCE(sum(t.cancellation_fee_npr) FILTER (WHERE t.status = 'CANCELLED'), 0)::int AS fees
        FROM trips t LEFT JOIN trip_payments pay ON pay.trip_id = t.id AND pay.status = 'PAID'
@@ -146,7 +147,7 @@ export async function financeSummaryHandler(
       return [s, { count: r?.n ?? 0, amountNpr: r?.amount ?? 0 }];
     }),
   ) as FinanceSummary['byStatus'];
-  const t = totals.rows[0] ?? { gross: 0, collected: 0, fees: 0 };
+  const t = totals.rows[0] ?? { gross: 0, collected: 0, fees: 0, discounts: 0 };
   await audited(req, 'VIEW_FINANCE_SUMMARY', { range: range.label });
   res.json({
     success: true,
@@ -155,7 +156,8 @@ export async function financeSummaryHandler(
       byStatus: status,
       grossFaresNpr: t.gross,
       collectedNpr: t.collected,
-      outstandingNpr: Math.max(0, t.gross - t.collected),
+      outstandingNpr: Math.max(0, t.gross - t.discounts - t.collected),
+      discountsFundedNpr: t.discounts,
       cancellationFeesNpr: t.fees,
       wallets: { supported: false, reason: FINANCE_NOT_SUPPORTED },
       payouts: { supported: false, reason: FINANCE_NOT_SUPPORTED },
@@ -183,9 +185,17 @@ export async function earningsHandler(
     name: 'lower(d.full_name) ASC NULLS LAST',
   }[q.sort];
   const [rows, count] = await Promise.all([
-    query<{ id: string; name: string | null; rides: number; earned: number; collected: number }>(
+    query<{
+      id: string;
+      name: string | null;
+      rides: number;
+      earned: number;
+      collected: number;
+      discounts: number;
+    }>(
       `SELECT d.id, d.full_name AS name, count(*)::int AS rides,
               COALESCE(sum(t.fare_final_npr), 0)::int AS earned,
+              COALESCE(sum(t.discount_npr), 0)::int AS discounts,
               COALESCE(sum(pay.amount_npr), 0)::int AS collected
        ${from} ORDER BY ${order}, d.id LIMIT $4 OFFSET $5`,
       [...params, q.pageSize, (q.page - 1) * q.pageSize],
@@ -202,7 +212,8 @@ export async function earningsHandler(
         rides: r.rides,
         earnedNpr: r.earned,
         collectedNpr: r.collected,
-        outstandingNpr: Math.max(0, r.earned - r.collected),
+        outstandingNpr: Math.max(0, r.earned - r.discounts - r.collected),
+        discountsNpr: r.discounts,
       })),
       total: count.rows[0]?.n ?? 0,
       page: q.page,

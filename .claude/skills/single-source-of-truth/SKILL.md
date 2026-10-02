@@ -82,6 +82,11 @@ Yatri-specific reminders:
   `navigation/navigation.service.ts` fed by the one accepted-fix path in `tracking.service.ts`; distance to a line, progress
   along it and simplifying it are in `@yatri/types` `geo.ts`; the phase of an approach is `approachPhase`. Navigation never touches
   the fare, never stores a track, and a deviation is a count, not a penalty.
+- Offers, discounts, eligibility and limits are `@yatri/types` `growth.ts` rules applied only by `modules/growth/engine.ts` (quote at
+  the estimate, reserve in the request transaction, settle on the final fare); reward points are `reward_ledger`, written only by
+  `growth/loyalty.ts`. A promotion never alters a fare: record the platform-paid amount on the ride and charge what is owed. Apps never
+  hold a campaign rule or compute an amount.
 - Do not put a backslash inside a SQL string written from a shell command: use `ESCAPE '!'` with
   `likeContains` for searches.
 - If you discover a duplicate, consolidate it or add it to "Known duplication" in the doc.
+

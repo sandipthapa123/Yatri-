@@ -11,10 +11,23 @@ const source = (f: string) => readFileSync(path.join(dir, f), 'utf8');
 describe('the settings screens', () => {
   it('uses only shared buttons that carry a role and a state, and no unlabelled raw inputs', () => {
     for (const f of files) {
-      expect(source(f), f).not.toMatch(/<TextInput/);
+      // A text field must carry its own accessible name (a placeholder disappears once typing starts).
+      for (const m of source(f).matchAll(/<TextInput[\s\S]*?\/>/g))
+        expect(m[0], f).toMatch(/accessibilityLabel=/);
       for (const m of source(f).matchAll(/<Pressable[\s\S]*?>/g))
         expect(m[0], f).toMatch(/accessibilityRole=/);
     }
+  });
+  it('shows offers, points and invites as sentences, announces results and says problems in words', () => {
+    const s = source('RewardsCenter.tsx');
+    expect(s).toMatch(/<Announcer/);
+    expect(s).toMatch(/accessibilityRole="alert"/);
+    expect(s).toMatch(/Problem: /);
+    expect(s).toMatch(/<Card[^>]*title="Your reward points"/);
+    expect(s).toMatch(/<Card[^>]*title="Offers for you"/);
+    expect(s).toMatch(/<Card[^>]*title="Invite friends"/);
+    // Nothing here works out an amount: no arithmetic on money in the screen.
+    expect(s).not.toMatch(/\* *\d+ *\/ *100|Math\.(floor|round)/);
   });
   it('shows choices as radio groups and switches, with the selected one exposed', () => {
     const s = source('SettingsCenter.tsx');

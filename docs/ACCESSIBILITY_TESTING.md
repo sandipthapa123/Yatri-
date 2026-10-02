@@ -407,3 +407,21 @@ privacy. These need a person, a device, a screen reader and ideally a moving veh
 7. **Estimate wording:** with the default engine the driver is told the estimate does not include live traffic; with no engine
    they are told it is a straight-line estimate.
 8. **Text size and reduced motion:** all of it stays readable at the largest size; the map line is the only thing that depends on sight.
+
+## W. Offers, rewards and referrals (Phase 24)
+
+Automated: unit tests keep every sentence (points, offers, invites, the fare breakdown) and the structural accessibility test checks
+the screens (labelled fields, headings, announcements, problems in words, no arithmetic on money). These need a person, a device
+and a screen reader:
+
+1. **Offers and rewards screen:** each part is a heading ("Your reward points", "Offers for you", "Invite friends", "Points
+   history"); the balance is one sentence with what it is worth; each offer is one sentence saying how it is used and until when.
+2. **Promo code:** the field has the name "Promo code"; "Check the code" reads the result politely ("Code accepted: ..." or why not).
+3. **Invite code:** read as spaced letters ("A B C D 2 3 4 5") so it can be heard clearly; "Share my invite code" opens the share sheet.
+4. **Request screen:** the "Offers and reward points" card is reachable before "Estimate"; the breakdown is one announced group
+   ("Fare: NPR 237. Offer: ... You pay: NPR 164."), and changing the code or the points switch announces the new total.
+5. **A refused code** on request is read as a problem in words and the rider can request without it.
+6. **Points switch:** its label ends "On" or "Off"; the points used and what they take off are in the breakdown.
+7. **Admin campaigns:** the tables have captions and row headers; the filters are links; each start/pause/end form names the campaign;
+   confirmations appear in the page and results are announced.
+

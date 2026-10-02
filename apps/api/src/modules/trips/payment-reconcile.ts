@@ -1,5 +1,6 @@
 import { recordAudit } from '../../lib/audit';
 import { query } from '../../lib/db';
+import { settleRide } from '../growth/engine';
 import { createPendingPayment } from './payments.service';
 
 /**
@@ -29,7 +30,11 @@ export async function reconcilePayments(): Promise<ReconcileResult> {
        AND NOT EXISTS (SELECT 1 FROM trip_payments p WHERE p.trip_id = t.id)
      ORDER BY t.ended_at LIMIT 200`,
   );
-  for (const t of missing.rows) await createPendingPayment(t.id, t.fare);
+  for (const t of missing.rows) {
+    // The ride's offers and points are settled (idempotently) first, so the payment is for what the rider owes.
+    const settled = await settleRide(t.id).catch(() => null);
+    await createPendingPayment(t.id, t.fare - (settled?.discountNpr ?? 0));
+  }
   if (missing.rows.length > 0) {
     await recordAudit({
       actorId: null,

@@ -270,6 +270,21 @@ import {
 import { navigationMetricsHandler, navigationMetricsQuerySchema } from './admin-navigation';
 import { attributeBodySchema, decisionSchema } from '../accessibility/accessibility.validators';
 import {
+  adjustRewardsHandler,
+  adjustSchema,
+  campaignListQuerySchema,
+  campaignRedemptionsHandler,
+  campaignStatusHandler,
+  createCampaignHandler,
+  getCampaignHandler,
+  growthAnalyticsHandler,
+  growthAnalyticsQuerySchema,
+  listCampaignsHandler,
+  updateCampaignHandler,
+  userRewardsHandler,
+} from './admin-growth';
+import { campaignBodySchema, statusBodySchema } from '../growth/campaigns.service';
+import {
   cityBodySchema,
   cityCategoriesSchema,
   cityDocumentsSchema,
@@ -922,6 +937,65 @@ adminRouter.get(
 adminRouter.post('/risk/sweep/run', requirePermission('RISK_MANAGE'), riskSweepHandler);
 
 // Navigation: route and arrival-time figures (counts and percentages, never a place or a track).
+// Growth: campaigns, redemptions, reward points and campaign figures. Reading needs GROWTH_VIEW, changing GROWTH_MANAGE.
+adminRouter.get(
+  '/growth/campaigns',
+  requirePermission('GROWTH_VIEW'),
+  validateQuery(campaignListQuerySchema),
+  listCampaignsHandler,
+);
+adminRouter.post(
+  '/growth/campaigns',
+  requirePermission('GROWTH_MANAGE'),
+  validateBody(campaignBodySchema),
+  createCampaignHandler,
+);
+adminRouter.get(
+  '/growth/campaigns/:id',
+  requirePermission('GROWTH_VIEW'),
+  validateUuidParam('id'),
+  getCampaignHandler,
+);
+adminRouter.put(
+  '/growth/campaigns/:id',
+  requirePermission('GROWTH_MANAGE'),
+  validateUuidParam('id'),
+  validateBody(campaignBodySchema),
+  updateCampaignHandler,
+);
+adminRouter.post(
+  '/growth/campaigns/:id/status',
+  requirePermission('GROWTH_MANAGE'),
+  validateUuidParam('id'),
+  validateBody(statusBodySchema),
+  campaignStatusHandler,
+);
+adminRouter.get(
+  '/growth/campaigns/:id/redemptions',
+  requirePermission('GROWTH_VIEW'),
+  validateUuidParam('id'),
+  campaignRedemptionsHandler,
+);
+adminRouter.get(
+  '/growth/analytics',
+  requirePermission('GROWTH_VIEW'),
+  validateQuery(growthAnalyticsQuerySchema),
+  growthAnalyticsHandler,
+);
+adminRouter.get(
+  '/growth/users/:id/rewards',
+  requirePermission('GROWTH_VIEW'),
+  validateUuidParam('id'),
+  userRewardsHandler,
+);
+adminRouter.post(
+  '/growth/users/:id/points',
+  requirePermission('GROWTH_MANAGE'),
+  validateUuidParam('id'),
+  validateBody(adjustSchema),
+  adjustRewardsHandler,
+);
+
 adminRouter.get(
   '/navigation/metrics',
   requirePermission('OPERATIONS_VIEW'),

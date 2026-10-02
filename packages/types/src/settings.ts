@@ -23,6 +23,7 @@ export const SETTING_GROUPS = [
   'business',
   'experience',
   'navigation',
+  'growth',
 ] as const;
 export type SettingGroup = (typeof SETTING_GROUPS)[number];
 
@@ -38,6 +39,7 @@ export const SETTING_GROUP_LABELS: Record<SettingGroup, string> = {
   business: 'Business accounts',
   experience: 'Passenger experience',
   navigation: 'Navigation and route guidance',
+  growth: 'Rewards and referrals',
 };
 
 export type SettingKind = 'boolean' | 'int' | 'number' | 'intList' | 'text';
@@ -302,6 +304,66 @@ export const PLATFORM_SETTINGS = [
     min: 5,
     max: 600,
     unit: 'seconds',
+  },
+  {
+    key: 'LOYALTY_POINTS_PER_100_NPR',
+    group: 'growth',
+    label: 'Points earned per NPR 100 of fare',
+    help: 'Reward points a rider earns on a completed ride for each NPR 100 of the fare.',
+    kind: 'int',
+    min: 0,
+    max: 100,
+    unit: 'points',
+  },
+  {
+    key: 'LOYALTY_POINT_VALUE_NPR',
+    group: 'growth',
+    label: 'What one point is worth',
+    help: 'Rupees one reward point takes off a fare when used.',
+    kind: 'int',
+    min: 1,
+    max: 1000,
+    unit: 'NPR',
+  },
+  {
+    key: 'LOYALTY_POINTS_EXPIRE_DAYS',
+    group: 'growth',
+    label: 'Points expire after',
+    help: 'Reward points earned today expire after this many days. 0 means they never expire.',
+    kind: 'int',
+    min: 0,
+    max: 3650,
+    unit: 'days',
+  },
+  {
+    key: 'LOYALTY_MIN_REDEEM_POINTS',
+    group: 'growth',
+    label: 'Fewest points to use on a ride',
+    help: 'A rider needs at least this many points to use them on a ride.',
+    kind: 'int',
+    min: 1,
+    max: 100000,
+    unit: 'points',
+  },
+  {
+    key: 'LOYALTY_MAX_REDEEM_PERCENT',
+    group: 'growth',
+    label: 'Most of a fare points can pay',
+    help: 'The largest share of a fare reward points may take off.',
+    kind: 'int',
+    min: 1,
+    max: 100,
+    unit: 'percent',
+  },
+  {
+    key: 'REFERRAL_MAX_INVITES_30D',
+    group: 'growth',
+    label: 'Invites one rider can bring in',
+    help: 'The most new riders who may use one person’s invite code in 30 days.',
+    kind: 'int',
+    min: 1,
+    max: 1000,
+    unit: 'riders',
   },
   {
     key: 'DISPATCH_MAX_RADIUS_METERS',

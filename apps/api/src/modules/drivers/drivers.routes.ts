@@ -27,7 +27,7 @@ import {
 import { driverLocationSampleSchema } from '../availability/availability.validators';
 import { updateOnboardingSchema } from './drivers.validators';
 
-import { driverIncentives } from '../operations/incentives.service';
+import { driverCampaignView } from '../growth/driver';
 
 export const driversRouter: RouterType = Router();
 
@@ -56,7 +56,10 @@ driversRouter.get('/me/location', getLocationHandler);
 
 // The driver's own bonus rules, progress and earnings (from the award records).
 driversRouter.get('/me/incentives', async (req, res) => {
-  res.json({ success: true, data: await driverIncentives(req.auth?.userId as string) });
+  res.json({
+    success: true,
+    data: (await driverCampaignView(req.auth?.userId as string)).incentives,
+  });
 });
 driversRouter.delete('/me/location', deleteLocationHandler);
 

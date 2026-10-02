@@ -75,6 +75,34 @@ export const DETECTORS: Record<RiskRuleCode, Detector> = {
           FROM driver_location_flags f WHERE ${WINDOW('f.created_at')}
           GROUP BY f.driver_id HAVING count(*) >= $1`,
   },
+  PROMO_REDEMPTION_BURST: {
+    sql: `SELECT r.user_id, count(*)::int AS count, ${IDS('r.trip_id', 'r.created_at DESC')} AS trips
+          FROM campaign_redemptions r
+          WHERE r.status <> 'VOID' AND r.trip_id IS NOT NULL AND ${WINDOW('r.created_at')}
+          GROUP BY r.user_id HAVING count(*) >= $1`,
+  },
+  REFERRAL_BURST: {
+    sql: `SELECT r.referrer_id AS user_id, count(*)::int AS count, (array_agg(r.referee_id ORDER BY r.created_at DESC))[1:10] AS related
+          FROM referrals r WHERE ${WINDOW('r.created_at')}
+          GROUP BY r.referrer_id HAVING count(*) >= $1`,
+  },
+  REFERRAL_SHARED_NETWORK: {
+    sql: `WITH ips AS (
+            SELECT DISTINCT ae.user_id, ae.ip_address FROM auth_events ae
+            WHERE ae.event_type IN ('OTP_VERIFIED', 'LOGIN_SUCCESS') AND ae.user_id IS NOT NULL AND ae.ip_address IS NOT NULL)
+          SELECT r.referrer_id AS user_id, count(DISTINCT r.referee_id)::int AS count, (array_agg(DISTINCT r.referee_id))[1:10] AS related
+          FROM referrals r
+          JOIN ips a ON a.user_id = r.referrer_id
+          JOIN ips b ON b.user_id = r.referee_id AND b.ip_address = a.ip_address
+          WHERE ${WINDOW('r.created_at')}
+          GROUP BY r.referrer_id HAVING count(DISTINCT r.referee_id) >= $1`,
+  },
+  SELF_REFERRAL_ATTEMPTS: {
+    sql: `SELECT l.actor_id AS user_id, count(*)::int AS count
+          FROM audit_log l
+          WHERE l.action = 'REFERRAL_BLOCKED' AND l.actor_id IS NOT NULL AND ${WINDOW('l.created_at')}
+          GROUP BY l.actor_id HAVING count(*) >= $1`,
+  },
   ROUTE_DEVIATION_PATTERN: {
     sql: `SELECT t.driver_id AS user_id, count(*)::int AS count, ${IDS('t.id', 't.ended_at DESC')} AS trips
           FROM trips t

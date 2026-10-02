@@ -1,6 +1,14 @@
-import type { PoolClient, QueryResultRow } from 'pg';
+import type { PoolClient, QueryResult, QueryResultRow } from 'pg';
 
 import { pool } from '../config/database';
+
+/** Anything that can run a query: the pool, or a client inside a transaction. */
+export interface Queryable {
+  query<T extends QueryResultRow = QueryResultRow>(
+    text: string,
+    params?: unknown[],
+  ): Promise<QueryResult<T>>;
+}
 
 export function query<T extends QueryResultRow = QueryResultRow>(text: string, params?: unknown[]) {
   return pool.query<T>(text, params);

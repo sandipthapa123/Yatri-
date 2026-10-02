@@ -6,6 +6,14 @@ import type {
   CityDetail,
   AccessibilityStats,
   NavigationMetrics,
+  AdminCampaignBody,
+  CampaignAnalytics,
+  CampaignInfo,
+  CampaignKind,
+  CampaignRedemptionRow,
+  CampaignStatus,
+  GrowthAdjustBody,
+  LedgerEntryInfo,
   AdminAttributeBody,
   AdminCapabilityDecisionBody,
   AdminCapabilityReview,
@@ -850,3 +858,38 @@ export const decideCapabilityApi = (
 
 export const getNavigationMetricsApi = (t: string) =>
   adminRequest<NavigationMetrics>('/navigation/metrics?range=7d', t);
+
+// ---- campaigns, redemptions and reward points (GROWTH_VIEW to read, GROWTH_MANAGE to change)
+
+export const listCampaignsApi = (
+  t: string,
+  f: { kind?: CampaignKind | undefined; status?: CampaignStatus | undefined },
+) => {
+  const qs = new URLSearchParams();
+  if (f.kind) qs.set('kind', f.kind);
+  if (f.status) qs.set('status', f.status);
+  return adminRequest<CampaignInfo[]>(`/growth/campaigns${qs.size ? `?${qs}` : ''}`, t);
+};
+export const getCampaignApi = (t: string, id: string) =>
+  adminRequest<CampaignInfo>(`/growth/campaigns/${id}`, t);
+export const createCampaignApi = (t: string, body: AdminCampaignBody) =>
+  post<CampaignInfo>('/growth/campaigns', t, body);
+export const updateCampaignApi = (t: string, id: string, body: AdminCampaignBody) =>
+  adminRequest<CampaignInfo>(`/growth/campaigns/${id}`, t, { method: 'PUT', body });
+export const campaignStatusApi = (
+  t: string,
+  id: string,
+  body: { to: CampaignStatus; version: number; reason: string },
+) => post<CampaignInfo>(`/growth/campaigns/${id}/status`, t, body);
+export const listCampaignRedemptionsApi = (t: string, id: string) =>
+  adminRequest<CampaignRedemptionRow[]>(`/growth/campaigns/${id}/redemptions`, t);
+export const getGrowthAnalyticsApi = (t: string) =>
+  adminRequest<CampaignAnalytics>('/growth/analytics?range=30d', t);
+export const getUserRewardsApi = (t: string, userId: string) =>
+  adminRequest<{ userId: string; name: string | null; balance: number; items: LedgerEntryInfo[] }>(
+    `/growth/users/${userId}/rewards`,
+    t,
+  );
+export const adjustRewardsApi = (t: string, userId: string, body: GrowthAdjustBody) =>
+  post<{ balance: number }>(`/growth/users/${userId}/points`, t, body);
+

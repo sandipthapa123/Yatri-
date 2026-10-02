@@ -2,6 +2,7 @@ import { RATING_COMMENT_MAX, RATING_MAX, RATING_MIN } from '@yatri/types';
 import { z } from 'zod';
 
 import { accessibilityRequestSchema } from '../accessibility/accessibility.validators';
+import { promotionRequestSchema } from '../growth/growth.validators';
 
 import {
   latitudeSchema,
@@ -35,6 +36,7 @@ export const tripRequestSchema = z
     vehicleCategory: categoryCode,
     confirmedTotalNpr: z.number().int().positive().max(1_000_000).optional(),
     accessibility: accessibilityRequestSchema.optional(),
+    promotion: promotionRequestSchema.optional(),
   })
   .strict();
 
@@ -45,6 +47,7 @@ export const tripEstimateSchema = z
     destination: place,
     vehicleCategory: categoryCode.optional(),
     accessibility: accessibilityRequestSchema.optional(),
+    promotion: promotionRequestSchema.optional(),
   })
   .strict();
 

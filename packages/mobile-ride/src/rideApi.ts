@@ -1,7 +1,7 @@
 import { authApi } from '@yatri/mobile-auth';
 import type {
   CallInfo,
-  DriverIncentivesView,
+  GrowthDriverView,
   ChatHistory,
   ChatMessage,
   EmergencyContact,
@@ -91,7 +91,7 @@ export const rideApi = {
   // ---- both
   active: (t: Token) => get<TripSummary | null>('/trips/active', t),
   /** The driver's own bonus rules, progress and earnings. */
-  incentives: (t: Token) => get<DriverIncentivesView>('/drivers/me/incentives', t),
+  incentives: async (t: Token) => (await get<GrowthDriverView>('/growth/driver', t)).incentives,
   trip: (t: Token, id: string) => get<TripSummary>(`/trips/${id}`, t),
   history: (t: Token, page = 1, pageSize = 20) =>
     get<TripHistoryPage>(`/trips/history?page=${page}&pageSize=${pageSize}`, t),

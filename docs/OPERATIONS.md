@@ -388,3 +388,20 @@ The controls and their evidence are in `docs/SECURITY.md`. What operators must d
   a deviation is only a count on that ride, and the pattern rule needs three deviations on each of three rides in a week.
 - **The routing engine** is configured only through the existing settings (`LOCATION_ROUTING_PROVIDER`, base URL, key); changing
   vendor needs no code in the apps.
+
+## 19. Campaigns, offers and reward points
+
+- **Where.** Campaigns and rewards in the console: figures, the list (filter by kind and state), create, start/pause/end, who used
+  each, and a rider's points.
+- **Running a campaign.** Create it (it starts as a draft), check its offer, who it is for, its dates and limits, then Start it.
+  To change a running campaign, Pause it first. Ending is final. Every move asks for a reason and is audited.
+- **Who pays.** A discount is money Yatri pays: the rider pays less in cash, the driver earns the full fare. Finance shows
+  "Yatri paid towards fares" so the difference does not look unpaid. Set limits (per rider, in total) to cap the cost: there is no
+  rupee budget cap.
+- **Reward points.** Earning, what a point is worth, the minimum to use, the largest share of a fare and expiry are in Settings >
+  Rewards and referrals. A rider's history is under Campaigns > a rider's reward points; correct a mistake there with a reason.
+  Points that expire are written off hourly and riders are warned two weeks ahead.
+- **Invites.** Open by having an active referral campaign. One code brings in at most the 30-day limit of new riders. If invites
+  look abused, check the risk signals (many invites, same network address, repeated own-code attempts); they are reasons to look.
+- **If a ride's payment is refunded**, an applied discount is not reversed automatically: use the refund flow and correct points if needed.
+

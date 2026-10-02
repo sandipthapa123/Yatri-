@@ -3,6 +3,8 @@ import { retryFailedNotifications } from '../../lib/notifications';
 import { sweepDrivers } from '../availability/availability.service';
 import { sweepCalls } from '../calls/calls.service';
 import { runRetention } from '../compliance/retention.service';
+import { expirePoints } from '../growth/loyalty';
+import { sweepCampaignMessages } from '../growth/messaging';
 import { sweepDispatch } from '../dispatch/dispatch.service';
 import { runFleetMonitor } from '../fleet/monitor';
 import { runOrganizationSweep } from '../organizations/sweep';

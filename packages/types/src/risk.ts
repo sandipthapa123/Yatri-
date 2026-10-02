@@ -47,6 +47,7 @@ export const RISK_CATEGORIES = [
   'COLLUSION',
   'DISPUTE',
   'PAYOUT',
+  'PROMOTION',
 ] as const;
 export type RiskCategory = (typeof RISK_CATEGORIES)[number];
 
@@ -61,6 +62,7 @@ export const RISK_CATEGORY_LABELS: Record<RiskCategory, string> = {
   COLLUSION: 'Driver and passenger collusion',
   DISPUTE: 'Repeated disputes',
   PAYOUT: 'Unusual payouts',
+  PROMOTION: 'Promotion and referral abuse',
 };
 
 export type RiskSubjectRole = 'PASSENGER' | 'DRIVER' | 'ANY';
@@ -147,6 +149,50 @@ export const RISK_RULES = [
     threshold: 5,
     windowHours: 24,
     unit: 'flags',
+  },
+  {
+    code: 'PROMO_REDEMPTION_BURST',
+    category: 'PROMOTION',
+    label: 'Many offers used in a short time',
+    help: 'A rider used many offers in a day. Several rides in a day with offers is possible, so only a high count adds points.',
+    subject: 'PASSENGER',
+    points: 10,
+    threshold: 6,
+    windowHours: 24,
+    unit: 'redemptions',
+  },
+  {
+    code: 'REFERRAL_BURST',
+    category: 'PROMOTION',
+    label: 'Many invites accepted in a short time',
+    help: 'Many new accounts used one person\u2019s invite code within a week. A popular person (or a family) can do this innocently.',
+    subject: 'PASSENGER',
+    points: 15,
+    threshold: 8,
+    windowHours: 168,
+    unit: 'invites',
+  },
+  {
+    code: 'REFERRAL_SHARED_NETWORK',
+    category: 'PROMOTION',
+    label: 'Invited accounts signing in from the inviter\u2019s network address',
+    help: 'Accounts that used someone\u2019s invite verified from the same network address as that person. A household or an office shares an address innocently, so this adds few points.',
+    subject: 'PASSENGER',
+    points: 5,
+    threshold: 2,
+    windowHours: 720,
+    unit: 'accounts',
+  },
+  {
+    code: 'SELF_REFERRAL_ATTEMPTS',
+    category: 'PROMOTION',
+    label: 'Repeated attempts to use one\u2019s own invite',
+    help: 'A rider tried several times to use their own invite code. Someone who misunderstood how invites work does this too.',
+    subject: 'PASSENGER',
+    points: 10,
+    threshold: 3,
+    windowHours: 24,
+    unit: 'attempts',
   },
   {
     code: 'ROUTE_DEVIATION_PATTERN',

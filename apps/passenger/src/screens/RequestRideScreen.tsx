@@ -6,7 +6,7 @@ import {
   submitBusinessBooking,
   type BusinessChoice,
 } from '@yatri/mobile-business';
-import { usePreferences } from '@yatri/mobile-preferences';
+import { quoteLines, quoteSentence, usePreferences } from '@yatri/mobile-preferences';
 import {
   ActionButton,
   CategoryPicker,
@@ -28,7 +28,7 @@ import {
   type TripRequestBody,
 } from '@yatri/types';
 import { useEffect, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { RootStackParamList } from '../navigation/RootNavigator';
@@ -60,6 +60,20 @@ export function RequestRideScreen({ navigation }: Props) {
   const [requesting, setRequesting] = useState(false);
   const [business, setBusiness] = useState<BusinessChoice | null>(null);
   const [businessNews, setBusinessNews] = useState<string | null>(null);
+  // Offers: a typed code and whether to use reward points. The server answers what, if anything, they take off.
+  const [codeInput, setCodeInput] = useState('');
+  const [appliedCode, setAppliedCode] = useState('');
+  const [usePoints, setUsePoints] = useState(false);
+  const promotion = useMemo(
+    () =>
+      appliedCode || usePoints
+        ? {
+            ...(appliedCode ? { promoCode: appliedCode } : {}),
+            ...(usePoints ? { usePoints: true } : {}),
+          }
+        : undefined,
+    [appliedCode, usePoints],
+  );
 
   const places = useMemo(
     () =>
@@ -81,7 +95,9 @@ export function RequestRideScreen({ navigation }: Props) {
         : null,
     [pickup, destination],
   );
-  const key = places ? `${JSON.stringify(places)}#${attempt}` : '';
+  const key = places
+    ? `${JSON.stringify(places)}|${JSON.stringify(promotion ?? null)}#${attempt}`
+    : '';
 
   // One estimate for the two places: it prices EVERY category, so choosing a type needs no request.
   useEffect(() => {
@@ -89,7 +105,10 @@ export function RequestRideScreen({ navigation }: Props) {
     let cancelled = false;
     void (async () => {
       try {
-        const estimate = await rideApi.estimate(await getAccessToken(), places);
+        const estimate = await rideApi.estimate(await getAccessToken(), {
+          ...places,
+          ...(promotion ? { promotion } : {}),
+        });
         if (!cancelled) setResult({ key, estimate, error: null });
       } catch (e) {
         if (!cancelled) {
@@ -104,7 +123,7 @@ export function RequestRideScreen({ navigation }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [places, key, getAccessToken]);
+  }, [places, promotion, key, getAccessToken]);
 
   // The person's saved accessibility needs: the server uses them for this ride (so the estimate already reflects them);
   // here they are only SHOWN, in words, so nothing about the ride is a surprise.
@@ -148,6 +167,8 @@ export function RequestRideScreen({ navigation }: Props) {
       ...places,
       vehicleCategory: selectedCode,
       confirmedTotalNpr: selected?.fare.totalNpr,
+      // A business ride takes no offers (the organization pays by its own policy).
+      ...(promotion && !business ? { promotion } : {}),
     };
     try {
       if (business) {
@@ -243,6 +264,65 @@ export function RequestRideScreen({ navigation }: Props) {
                   </Card>
                 ) : null}
 
+                {!business ? (
+                  <Card {...ui} title="Offers and reward points">
+                    <Text style={{ color: theme.colors.textPrimary }}>
+                      Have a promo code? Enter it here. Offers that apply to you are used
+                      automatically.
+                    </Text>
+                    <TextInput
+                      accessibilityLabel="Promo code"
+                      value={codeInput}
+                      onChangeText={(v) => setCodeInput(v.toUpperCase())}
+                      autoCapitalize="characters"
+                      autoCorrect={false}
+                      maxLength={20}
+                      style={{
+                        borderWidth: 1,
+                        borderRadius: 8,
+                        padding: 10,
+                        minHeight: 48,
+                        fontSize: 18,
+                        color: theme.colors.textPrimary,
+                        borderColor: theme.colors.border,
+                      }}
+                    />
+                    <ActionButton
+                      {...ui}
+                      label={appliedCode ? 'Change the code' : 'Apply the code'}
+                      disabled={codeInput.trim() === appliedCode}
+                      onPress={() => setAppliedCode(codeInput.trim())}
+                    />
+                    <ActionButton
+                      {...ui}
+                      role="switch"
+                      selected={usePoints}
+                      label={`Use my reward points: ${usePoints ? 'On' : 'Off'}`}
+                      hint="Uses as many points as allowed to take money off this ride"
+                      onPress={() => setUsePoints((v) => !v)}
+                    />
+                    {selected.promotion?.codeProblem ? (
+                      <Text
+                        accessibilityRole="alert"
+                        style={{ color: theme.colors.textPrimary, fontWeight: '700' }}
+                      >
+                        {selected.promotion.codeProblem}
+                      </Text>
+                    ) : null}
+                    {selected.promotion ? (
+                      <View
+                        accessible
+                        accessibilityLabel={quoteSentence(selected.promotion)}
+                        accessibilityLiveRegion="polite"
+                      >
+                        {quoteLines(selected.promotion).map((l) => (
+                          <Fact key={l.label} {...ui} label={l.label} value={l.value} />
+                        ))}
+                      </View>
+                    ) : null}
+                  </Card>
+                ) : null}
+
                 <Card {...ui} title="Estimate">
                   <Fact {...ui} label="Estimated fare" value={formatNpr(selected.fare.totalNpr)} />
                   {selected.fare.surgeMultiplier > 1 ? (
@@ -318,7 +398,7 @@ export function RequestRideScreen({ navigation }: Props) {
               {...ui}
               label={
                 selected
-                  ? `${business ? 'Book' : 'Request'} ${selected.label} for ${formatNpr(selected.fare.totalNpr)}`
+                  ? `${business ? 'Book' : 'Request'} ${selected.label} for ${formatNpr(!business && selected.promotion ? selected.promotion.payableNpr : selected.fare.totalNpr)}`
                   : 'Request ride'
               }
               tone="primary"

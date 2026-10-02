@@ -206,6 +206,14 @@ const envSchema = z
     // Where share links point (the API host serves the contact's page). No trailing slash.
     PUBLIC_BASE_URL: z.string().url().default('http://localhost:4000'),
     // Which call provider carries voice/video. Only "webrtc" (peer-to-peer media, server signalling) exists.
+    // --- Rewards and referrals (platform settings; see PHASE_24) ---
+    LOYALTY_POINTS_PER_100_NPR: z.coerce.number().int().min(0).max(100).default(1),
+    LOYALTY_POINT_VALUE_NPR: z.coerce.number().int().min(1).max(1000).default(1),
+    LOYALTY_POINTS_EXPIRE_DAYS: z.coerce.number().int().min(0).max(3650).default(365),
+    LOYALTY_MIN_REDEEM_POINTS: z.coerce.number().int().min(1).max(100000).default(50),
+    LOYALTY_MAX_REDEEM_PERCENT: z.coerce.number().int().min(1).max(100).default(50),
+    REFERRAL_MAX_INVITES_30D: z.coerce.number().int().min(1).max(1000).default(20),
+
     CALL_PROVIDER: z.enum(['webrtc']).default('webrtc'),
     // How candidate drivers are ranked. Only "proximity" exists today; add a strategy in
     // dispatch/matching.ts and its name here, never in a controller or an app.

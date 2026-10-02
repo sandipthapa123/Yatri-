@@ -40,6 +40,7 @@ import {
 import { metaFromRow } from './trip-meta';
 import { settingBool, settingText } from '../settings/settings.service';
 import { isCategoryAvailable } from '../dispatch/matching';
+import { quoteRide, releaseReservations, reserveForRide, settleRide } from '../growth/engine';
 import {
   resolveForRequest,
   saveForTrip,
@@ -251,21 +252,30 @@ export async function estimateForRequest(passengerId: string, body: TripEstimate
     : categories[0]; // no choice yet: price the first category; the picker lists them all
   if (!selected) throw unknownCategory();
   const options: RideCategoryOption[] = await Promise.all(
-    categories.map(async (c) => ({
-      code: c.code,
-      label: c.label,
-      available: await isCategoryAvailable(
-        body.pickup,
-        c.id,
-        accessibility.requiredVehicleAttributes,
-      ),
-      // The price the rider is shown includes demand pricing: the same engine a request will use.
-      fare: estimateFare(
+    categories.map(async (c) => {
+      const fare = estimateFare(
         trip,
         pricingFor(c, base),
         await surgeFor({ pickup: body.pickup, categoryId: c.id }),
-      ),
-    })),
+      );
+      return {
+        code: c.code,
+        label: c.label,
+        available: await isCategoryAvailable(
+          body.pickup,
+          c.id,
+          accessibility.requiredVehicleAttributes,
+        ),
+        // The price the rider is shown includes demand pricing: the same engine a request will use.
+        fare,
+        // What they would pay after offers and points: the growth engine's answer, never worked out here.
+        promotion: await quoteRide(
+          passengerId,
+          { fareNpr: fare.totalNpr, categoryCode: c.code, cityId: offeredHere?.info.id ?? null },
+          body.promotion,
+        ),
+      };
+    }),
   );
   const chosen = options.find((o) => o.code === selected.code) as RideCategoryOption;
   return {
@@ -352,6 +362,20 @@ export async function requestTrip(
       surgeLabel: surge.multiplier > 1 ? surge.label : null,
       pickupZoneId: primaryZone(pickupZones)?.id ?? null,
       searchTimeoutSeconds: env.DISPATCH_SEARCH_TIMEOUT_SECONDS,
+      // Offers and points are held for the ride in the same transaction that creates it. A business ride takes none.
+      onCreated: business
+        ? undefined
+        : (client, tripId) =>
+            reserveForRide(client, {
+              tripId,
+              userId: passengerId,
+              ride: {
+                fareNpr: fare.totalNpr,
+                categoryCode: category.code,
+                cityId: city?.info.id ?? null,
+              },
+              req: body.promotion,
+            }),
     });
   } catch (err) {
     if ((err as { code?: string }).code === '23505') {
@@ -397,6 +421,12 @@ async function transition(tripId: string, spec: TransitionSpec): Promise<TripRow
     throw new HttpError(409, 'INVALID_STATE_TRANSITION', 'The ride cannot move to that state now.');
   }
   await onTripStatusChanged(metaFromRow(updated));
+  // A ride that did not happen gives back what was held for it (offers, points).
+  if (spec.to === 'CANCELLED' || spec.to === 'NO_DRIVERS') {
+    await releaseReservations(tripId).catch((err) =>
+      log.error('Releasing a ride\u2019s offers failed', err),
+    );
+  }
   // The driver's presence connection feeds exactly the trip they are assigned to.
   const driverId = updated.driver_id ?? before?.driver_id ?? null;
   if (driverId) {
@@ -550,7 +580,13 @@ export async function completeTrip(tripId: string, driverId: string): Promise<Tr
       payload: { fareNpr: finalNpr, distanceMeters, durationSeconds },
     },
   });
-  await createPendingPayment(tripId, finalNpr);
+  // Offers and points are settled on the FINAL fare; the payment is for what the rider owes after them (the platform
+  // pays the difference, recorded on the ride). A failure leaves the full fare due and the reconcile job puts it right.
+  const settled = await settleRide(tripId).catch((err) => {
+    log.error('Reward settlement failed', err);
+    return null;
+  });
+  if (settled) await createPendingPayment(tripId, finalNpr - settled.discountNpr);
   // Bonuses are a record beside the ride; a failure here never undoes a completed ride.
   await evaluateIncentives(tripId).catch((err) => log.error('Incentive evaluation failed', err));
   return done;

@@ -87,7 +87,7 @@ describe('vehicle category and the fare estimate', () => {
     const text = JSON.stringify(data);
     expect(text).not.toContain(d.user.id);
     expect(text).not.toMatch(
-      /driverId|latitude":27\.7[0-9]{4},"longitude":85\.31[0-9]{3},"accuracy|count|nearby/i,
+      /driverId|latitude":27\.7[0-9]{4},"longitude":85\.31[0-9]{3},"accuracy|"[a-z]*count"|nearby/i,
     );
   });
 

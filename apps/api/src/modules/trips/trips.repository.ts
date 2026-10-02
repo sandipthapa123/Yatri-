@@ -122,6 +122,8 @@ export async function createTripRequest(input: {
   surgeLabel: string | null;
   pickupZoneId: string | null;
   searchTimeoutSeconds: number;
+  /** Runs inside the same transaction once the ride exists (the growth engine holds the ride's offers here). */
+  onCreated?: (client: PoolClient, tripId: string) => Promise<void>;
 }): Promise<TripRow> {
   const client = await pool.connect();
   try {
@@ -156,6 +158,7 @@ export async function createTripRequest(input: {
         input.cityId ?? null,
       ],
     );
+    if (input.onCreated) await input.onCreated(client, ins.rows[0]?.id as string);
     await client.query('COMMIT');
     return (await getTrip(ins.rows[0]?.id as string)) as TripRow;
   } catch (err) {

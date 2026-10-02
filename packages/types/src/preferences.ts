@@ -85,6 +85,7 @@ export const NOTIFICATION_CATEGORIES = [
   'SUPPORT',
   'BUSINESS',
   'REWARDS',
+  'PROMOTIONS',
 ] as const;
 export type NotificationCategory = (typeof NOTIFICATION_CATEGORIES)[number];
 
@@ -128,8 +129,13 @@ export const NOTIFICATION_CATEGORY_INFO: Record<
     mandatory: false,
   },
   REWARDS: {
-    label: 'Bonuses',
-    help: 'Bonuses you have earned.',
+    label: 'Bonuses and reward points',
+    help: 'Bonuses and reward points you have earned, and when points are about to expire.',
+    mandatory: false,
+  },
+  PROMOTIONS: {
+    label: 'Offers and news',
+    help: 'Offers and messages from Yatri. Off unless you turn it on.',
     mandatory: false,
   },
 };
@@ -169,7 +175,10 @@ export function notificationCategoryOf(type: string): NotificationCategory {
   if (BUSINESS_TYPES.has(type)) return 'BUSINESS';
   if (type.startsWith('CHAT_') || type.startsWith('CALL_')) return 'CHAT_AND_CALLS';
   if (type.startsWith('PAYMENT_')) return 'PAYMENTS';
-  if (type.startsWith('INCENTIVE_')) return 'REWARDS';
+  if (type.startsWith('INCENTIVE_') || type.startsWith('REWARD_') || type.startsWith('REFERRAL_')) {
+    return 'REWARDS';
+  }
+  if (type.startsWith('OFFER_') || type.startsWith('CAMPAIGN_')) return 'PROMOTIONS';
   if (type.startsWith('TRIP_') || type.startsWith('DRIVER_') || type === 'NO_DRIVERS_FOUND') {
     return 'RIDE_UPDATES';
   }
@@ -208,8 +217,9 @@ const notificationDefs = NOTIFICATION_CATEGORIES.filter(
   label: NOTIFICATION_CATEGORY_INFO[c].label,
   help: NOTIFICATION_CATEGORY_INFO[c].help,
   kind: 'boolean',
-  default: true,
-  roles: c === 'REWARDS' ? ['DRIVER'] : c === 'BUSINESS' ? PASSENGER : BOTH,
+  // Marketing is opt-in: nothing promotional is pushed until the person turns it on.
+  default: c !== 'PROMOTIONS',
+  roles: c === 'BUSINESS' ? PASSENGER : BOTH,
   server: true,
 }));
 

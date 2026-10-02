@@ -1,4 +1,5 @@
 import type { TripAccessibilityRequest } from './accessibility';
+import type { PromotionQuote, PromotionRequest } from './growth';
 import type { TripPlace, TripSummary } from './trip';
 
 /** Payment and rating definitions (ride problems and disputes are support tickets: see support.ts) — separate axes from trip status. */
@@ -91,6 +92,8 @@ export interface TripRequestBody {
 
 /** A vehicle category a passenger can ride in. Categories are reference data owned by the server. */
 export interface VehicleCategoryInfo {
+  /** A promo or coupon code and whether to use reward points: the server decides what, if anything, they take off. */
+  promotion?: PromotionRequest;
   code: string;
   label: string;
 }
@@ -106,6 +109,8 @@ export interface RideCategoryOption extends VehicleCategoryInfo {
 
 /** An estimate may omit the category: the server then prices the default one and returns them all. */
 export type TripEstimateBody = Omit<TripRequestBody, 'vehicleCategory'> & {
+  /** What the rider would pay after offers and points, worked out by the server. Null when nothing applies. */
+  promotion: PromotionQuote | null;
   vehicleCategory?: string;
 };
 

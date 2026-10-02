@@ -155,7 +155,10 @@ export async function shouldDeliver(userId: string, type: string): Promise<boole
   const category = notificationCategoryOf(type);
   if (NOTIFICATION_CATEGORY_INFO[category].mandatory) return true;
   const choices = await choicesOf(userId);
-  return choices[notificationPrefKey(category)] !== false;
+  const key = notificationPrefKey(category);
+  const chosen = choices[key];
+  // Not chosen: the definition's default decides (offers and news are off until the person turns them on).
+  return chosen === undefined ? preferenceDef(key)?.default !== false : chosen !== false;
 }
 
 /** How the person's name is shown to a driver: the full name, or only the first. */

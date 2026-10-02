@@ -170,6 +170,10 @@ Run from the repository root; each fans out to every workspace package via pnpm.
   geometry, traffic flag), turn-by-turn directions and deviation detection decided by the server, automatic rerouting, phases of
   the approach (approaching, near, at, leaving), arrival detection, text-only trip progress for passengers, route and ETA metrics
   for operations, and a low-weight risk signal only for a pattern across rides.
+- **Growth and loyalty** (`docs/PHASE_24.md`): one promotion and reward engine on the server: promotions, coupons, first-ride offers,
+  referrals, win-back offers, message campaigns, reward points (an append-only ledger with expiry), usage limits, fraud signals
+  through the risk system, an admin campaign dashboard, and offers, rewards and invites in the rider app. A promotion never
+  changes a fare; Yatri pays the discount.
 - Running it for real: [`docs/OPERATIONS.md`](docs/OPERATIONS.md) (architecture, deployment, backups,
   monitoring, incident recovery, release and rollback) and [`docs/SECURITY.md`](docs/SECURITY.md) (the controls,
   what was audited, what is still open). Container images and a full local stack are in [`deploy/`](deploy/).

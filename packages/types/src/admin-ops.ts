@@ -214,6 +214,8 @@ export interface FinanceSummary {
   grossFaresNpr: number;
   collectedNpr: number;
   outstandingNpr: number;
+  /** Offers and reward points the platform paid towards fares (the rider paid less in cash; the driver earns the full fare). */
+  discountsFundedNpr: number;
   cancellationFeesNpr: number;
   wallets: { supported: false; reason: string };
   payouts: { supported: false; reason: string };
@@ -226,6 +228,8 @@ export interface DriverEarningsRow {
   earnedNpr: number;
   collectedNpr: number;
   outstandingNpr: number;
+  /** Part of the earnings paid by Yatri as offers and points (not collected from riders). */
+  discountsNpr: number;
 }
 
 export const FINANCE_NOT_SUPPORTED =

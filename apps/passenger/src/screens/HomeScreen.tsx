@@ -214,6 +214,17 @@ export function HomeScreen({ navigation }: Props) {
             </Text>
           </Pressable>
           <Pressable
+            onPress={() => navigation.navigate('Rewards')}
+            accessibilityRole="button"
+            accessibilityLabel="Offers and rewards"
+            accessibilityHint="Your reward points, offers, promo code and invite code"
+            style={[styles.profileLink, { minHeight: theme.minTouchTarget }]}
+          >
+            <Text style={[styles.profileLinkText, { color: theme.colors.primary }]}>
+              Offers and rewards
+            </Text>
+          </Pressable>
+          <Pressable
             onPress={() => navigation.navigate('Settings')}
             accessibilityRole="button"
             accessibilityLabel="Settings"

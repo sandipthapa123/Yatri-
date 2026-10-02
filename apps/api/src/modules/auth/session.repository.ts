@@ -97,6 +97,7 @@ export async function rotateSession(
 }
 
 export async function revokeSession(sessionId: string): Promise<void> {
+  await query('DELETE FROM push_tokens WHERE session_id = $1', [sessionId]); // a signed-out phone stops getting notifications
   await query(`UPDATE auth_sessions SET revoked_at = now() WHERE id = $1 AND revoked_at IS NULL`, [
     sessionId,
   ]);

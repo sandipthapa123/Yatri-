@@ -111,6 +111,14 @@ export async function sendMessage(
   if (!/^[A-Za-z0-9_-]{8,64}$/.test(clientMessageId)) {
     throw new HttpError(400, 'VALIDATION_ERROR', 'Invalid message id.');
   }
+  // A retry of the same message returns the original: no duplicate, no new seq, and it is
+  // not counted against the rate limit (a flaky connection retries; that is not flooding).
+  const existing = await query<Row>(
+    `SELECT ${COLS} FROM trip_messages WHERE trip_id = $1 AND sender_id = $2 AND client_message_id = $3`,
+    [tripId, senderId, clientMessageId],
+  );
+  if (existing.rows[0]) return toMessage(trip, existing.rows[0]);
+
   const limit = await checkWindowLimit(`chat:${senderId}`, env.CHAT_RATE_LIMIT_PER_MINUTE, 60);
   if (limit.limited) {
     throw new HttpError(
@@ -119,13 +127,6 @@ export async function sendMessage(
       'You are sending messages too quickly. Please wait a moment.',
     );
   }
-
-  // A retry of the same message returns the original: no duplicate, no new seq.
-  const existing = await query<Row>(
-    `SELECT ${COLS} FROM trip_messages WHERE trip_id = $1 AND sender_id = $2 AND client_message_id = $3`,
-    [tripId, senderId, clientMessageId],
-  );
-  if (existing.rows[0]) return toMessage(trip, existing.rows[0]);
 
   const client = await pool.connect();
   let row: Row;
@@ -248,9 +249,10 @@ const seqOf = (i: ChatTimelineItem) => (i.kind === 'message' ? i.message.seq : i
 async function buildHistory(trip: TripRow, userId: string | null): Promise<ChatHistory> {
   const tripId = trip.id;
   const [msgs, events, unread] = await Promise.all([
-    query<Row>(`SELECT ${COLS} FROM trip_messages WHERE trip_id = $1 ORDER BY seq ASC LIMIT 500`, [
-      tripId,
-    ]),
+    query<Row>(
+      `SELECT * FROM (SELECT ${COLS} FROM trip_messages WHERE trip_id = $1 ORDER BY seq DESC LIMIT 500) m ORDER BY seq ASC`,
+      [tripId],
+    ),
     listTripEvents(tripId, { limit: 500 }),
     userId === null
       ? Promise.resolve({ rows: [{ n: '0' }] })

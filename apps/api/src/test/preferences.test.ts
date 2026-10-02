@@ -539,6 +539,39 @@ describe('device management', () => {
     expect((await api.get(`${base}/devices`)).status).toBe(401);
   });
 
+  it('a device signed out from another device stops receiving notifications', async () => {
+    const p = await onboardUser('PASSENGER');
+    const lost = await secondDevice(p);
+    const reg = (who: { accessToken: string }, token: string) =>
+      api
+        .post('/api/v1/users/me/push-token')
+        .set(auth(who.accessToken))
+        .send({ token, platform: 'android' });
+    const mine = 'ExponentPushToken[mineMineMine1]';
+    const gone = 'ExponentPushToken[lostLostLost1]';
+    const gone2 = 'ExponentPushToken[lostLostLost2]';
+    expect((await reg(p, mine)).status).toBe(200);
+    expect((await reg(lost, gone)).status).toBe(200);
+    const has = async (token: string) =>
+      (await pool.query('SELECT 1 FROM push_tokens WHERE token = $1', [token])).rowCount === 1;
+    const lostId = (
+      (await get(p.accessToken, '/devices')).body.data as Array<{ id: string; current: boolean }>
+    ).find((d) => !d.current)!.id;
+    expect((await api.delete(`${base}/devices/${lostId}`).set(auth(p.accessToken))).status).toBe(
+      200,
+    );
+    expect(await has(gone)).toBe(false); // the signed-out phone's address is gone
+    expect(await has(mine)).toBe(true); // this phone's is not
+    // and "sign out the others" does the same
+    const another = await secondDevice(p);
+    expect((await reg(another, gone2)).status).toBe(200);
+    expect(
+      (await api.post(`${base}/devices/sign-out-others`).set(auth(p.accessToken))).status,
+    ).toBe(200);
+    expect(await has(gone2)).toBe(false);
+    expect(await has(mine)).toBe(true);
+  });
+
   it('rate-limits signing devices out', async () => {
     const p = await onboardUser('PASSENGER');
     let last = 0;

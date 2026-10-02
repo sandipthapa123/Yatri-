@@ -97,6 +97,7 @@ export async function decideApproval(
     );
     throw notPending();
   }
+  let rideStarted = false;
   try {
     const rider = await loadContext(ctx.orgId, a.passenger_id);
     if (!rider) {
@@ -139,17 +140,29 @@ export async function decideApproval(
       prepared,
       prepared.request,
     );
-    await query('UPDATE organization_approvals SET trip_id = $2 WHERE id = $1', [id, tripId]);
-    await audit(ctx, id, 'APPROVED', note, { tripId });
+    // From here the ride exists. Nothing below may put the approval back to waiting (a second approval would book a
+    // second ride), so every step is best effort and only the link to the ride is worth saying loudly if it fails.
+    rideStarted = true;
+    await query('UPDATE organization_approvals SET trip_id = $2 WHERE id = $1', [id, tripId]).catch(
+      (err) => log.error('Could not link an approved ride to its approval', err),
+    );
+    await audit(ctx, id, 'APPROVED', note, { tripId }).catch((err) =>
+      log.error('Approval audit failed', err),
+    );
     await tellRequester(
       id,
       ctx.orgId,
       a.requested_by,
       'your ride request was approved and the ride was requested.',
-    );
-    if (a.passenger_id !== a.requested_by) await tellRider(ctx.orgId, a.passenger_id, tripId);
+    ).catch((err) => log.error('Approval notice failed', err));
+    if (a.passenger_id !== a.requested_by) {
+      await tellRider(ctx.orgId, a.passenger_id, tripId).catch((err) =>
+        log.error('Rider notice failed', err),
+      );
+    }
     return approvalInfo(id, ctx);
   } catch (err) {
+    if (rideStarted) throw err; // only reading the result back failed; the ride and the approval stand
     // Still waiting: the approver can try again, decline it, or it expires. (Not for a rider who left: that is final.)
     await query(
       `UPDATE organization_approvals SET status = 'PENDING', decided_by = NULL, decided_at = NULL, decision_note = NULL

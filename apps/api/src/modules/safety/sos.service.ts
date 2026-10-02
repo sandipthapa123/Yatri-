@@ -192,7 +192,7 @@ export async function triggerSos(
       detail: { role, locationSource: where.source },
     }),
   );
-  await step('contacts', () => tellEmergencyContacts(row, trip.id, userId));
+  // The safety team first, then the texts: a slow text vendor must never delay the people who can act.
   await step('safety team', () =>
     notifySafetyTeam({
       type: 'SOS_TRIGGERED',
@@ -200,6 +200,7 @@ export async function triggerSos(
       metadata: { sosId: row.id, tripId },
     }),
   );
+  await step('contacts', () => tellEmergencyContacts(row, trip.id, userId));
   const fresh = await query<SosRow>(`SELECT ${COLS} FROM sos_events WHERE id = $1`, [row.id]);
   const info = toSosInfo(fresh.rows[0] as SosRow);
   await step('devices', () => publishToUser(userId, { type: 'sos_state', sos: info }));
@@ -216,19 +217,23 @@ async function tellEmergencyContacts(row: SosRow, tripId: string, userId: string
     [userId],
   );
   const name = firstName(who.rows[0]?.full_name ?? null) ?? 'Someone';
-  let sent = 0;
-  for (const c of contacts) {
-    try {
-      await getSmsProvider().send({
-        toPhoneNumber: c.phoneNumber,
-        body: `${name} may need help during a Yatri ride. Follow the trip here: ${share.url} If you cannot reach ${name}, call ${env.EMERGENCY_SERVICES_NUMBER}.`,
-      });
-      sent++;
-    } catch (err) {
-      // The provider's message can hold the number; log only what failed.
-      log.error('SOS text failed', err instanceof Error ? err.name : 'error');
-    }
-  }
+  // All at once: one stalled text must not hold up the others.
+  const results = await Promise.all(
+    contacts.map((c) =>
+      getSmsProvider()
+        .send({
+          toPhoneNumber: c.phoneNumber,
+          body: `${name} may need help during a Yatri ride. Follow the trip here: ${share.url} If you cannot reach ${name}, call ${env.EMERGENCY_SERVICES_NUMBER}.`,
+        })
+        .then(() => true)
+        .catch((err) => {
+          // The provider's message can hold the number; log only what failed.
+          log.error('SOS text failed', err instanceof Error ? err.name : 'error');
+          return false;
+        }),
+    ),
+  );
+  const sent = results.filter(Boolean).length;
   await query('UPDATE sos_events SET contacts_notified = $2 WHERE id = $1', [row.id, sent]);
 }
 
@@ -287,11 +292,12 @@ export async function transitionSos(
       metadata: { sosId, tripId: row.trip_id },
     }).catch(() => undefined);
   } else {
+    // The alert has already changed state; telling the team is best effort and must not turn "I am safe" into an error.
     await notifySafetyTeam({
       type: 'SOS_CANCELLED',
       body: 'A person says they are safe and cancelled their SOS alert.',
       metadata: { sosId, tripId: row.trip_id },
-    });
+    }).catch((err) => log.error('SOS cancel notice failed', err));
   }
   return row;
 }

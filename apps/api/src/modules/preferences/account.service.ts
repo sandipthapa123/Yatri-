@@ -51,6 +51,7 @@ export async function signOutDevice(
     [sessionId, userId],
   );
   if (!r.rowCount) throw new HttpError(404, 'NOT_FOUND', 'That device is not signed in.');
+  await query('DELETE FROM push_tokens WHERE session_id = $1', [sessionId]);
   await recordAuthEvent({
     eventType: 'SESSION_REVOKED',
     userId,
@@ -67,6 +68,11 @@ export async function signOutOtherDevices(
     `UPDATE auth_sessions SET revoked_at = now() WHERE user_id = $1 AND id <> $2 AND revoked_at IS NULL`,
     [userId, currentSessionId],
   );
+  // Their phones stop getting notifications too (a token with no session is from before tokens were tied to one).
+  await query('DELETE FROM push_tokens WHERE user_id = $1 AND session_id IS DISTINCT FROM $2', [
+    userId,
+    currentSessionId,
+  ]);
   await recordAuthEvent({
     eventType: 'SESSION_REVOKED',
     userId,

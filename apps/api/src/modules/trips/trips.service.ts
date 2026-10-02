@@ -590,7 +590,8 @@ export async function completeTrip(tripId: string, driverId: string): Promise<Tr
     },
   });
   // Offers and points are settled on the FINAL fare; the payment is for what the rider owes after them (the platform
-  // pays the difference, recorded on the ride). A failure leaves the full fare due and the reconcile job puts it right.
+  // pays the difference, recorded on the ride). A failure creates no payment yet: the reconcile job settles the ride and
+  // then creates it, so a rider's offer or points are never lost to a passing failure.
   const settled = await settleRide(tripId).catch((err) => {
     log.error('Reward settlement failed', err);
     return null;

@@ -1,4 +1,5 @@
 import { recordAudit } from '../../lib/audit';
+import { log } from '../../lib/logger';
 import { query } from '../../lib/db';
 import { settleRide } from '../growth/engine';
 import { createPendingPayment } from './payments.service';
@@ -30,19 +31,29 @@ export async function reconcilePayments(): Promise<ReconcileResult> {
        AND NOT EXISTS (SELECT 1 FROM trip_payments p WHERE p.trip_id = t.id)
      ORDER BY t.ended_at LIMIT 200`,
   );
+  const created: string[] = [];
   for (const t of missing.rows) {
     // The ride's offers and points are settled (idempotently) first, so the payment is for what the rider owes.
-    const settled = await settleRide(t.id).catch(() => null);
-    await createPendingPayment(t.id, t.fare - (settled?.discountNpr ?? 0));
+    // If settling fails, leave the ride for the next run: a payment made now would be for the full fare, and settling
+    // never revisits a ride that already has a payment, so the rider's offer or points would be lost for good.
+    let settled: Awaited<ReturnType<typeof settleRide>>;
+    try {
+      settled = await settleRide(t.id);
+    } catch (err) {
+      log.error('Could not settle a ride before its payment; will retry', err);
+      continue;
+    }
+    await createPendingPayment(t.id, t.fare - settled.discountNpr);
+    created.push(t.id);
   }
-  if (missing.rows.length > 0) {
+  if (created.length > 0) {
     await recordAudit({
       actorId: null,
       actorRole: 'SYSTEM',
       action: 'PAYMENTS_RECONCILED',
       subjectType: 'trip',
-      subjectIds: missing.rows.map((t) => t.id),
-      detail: { created: missing.rows.length },
+      subjectIds: created,
+      detail: { created: created.length },
     });
   }
 
@@ -75,5 +86,5 @@ export async function reconcilePayments(): Promise<ReconcileResult> {
       detail: { ...anomalies },
     });
   }
-  return { created: missing.rows.length, anomalies };
+  return { created: created.length, anomalies };
 }

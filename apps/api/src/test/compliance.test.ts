@@ -45,7 +45,12 @@ describe('policy acceptance', () => {
       accepted: boolean;
       required: boolean;
     }>;
-    expect(pol.map((x) => x.key).sort()).toEqual(['DISABILITY_BENEFIT_CONSENT', 'LOCATION_CONSENT', 'PRIVACY', 'TERMS']); // no driver agreement
+    expect(pol.map((x) => x.key).sort()).toEqual([
+      'DISABILITY_BENEFIT_CONSENT',
+      'LOCATION_CONSENT',
+      'PRIVACY',
+      'TERMS',
+    ]); // no driver agreement
     expect(pol.every((x) => !x.accepted)).toBe(true);
     const driverPol = (await me(d.accessToken, '/policies')).body.data as Array<{ key: string }>;
     expect(driverPol.map((x) => x.key)).toContain('DRIVER_AGREEMENT');
@@ -593,5 +598,51 @@ describe('retention', () => {
     ).toBe(1);
     const { getStorageProvider } = await import('../lib/storage');
     await expect(getStorageProvider().download(key)).rejects.toBeDefined();
+  });
+
+  it('keeps the record of a support file the store would not delete, and removes it once the store allows', async () => {
+    const p = await onboardUser('PASSENGER');
+    const t = (
+      await api
+        .post('/api/v1/support/tickets')
+        .set(auth(p.accessToken))
+        .send({ categoryCode: 'APP_PROBLEM', subject: 'Map', body: 'The map will not load for me' })
+    ).body.data;
+    expect(
+      (
+        await api
+          .post(`/api/v1/support/tickets/${t.id}/attachments`)
+          .set(auth(p.accessToken))
+          .attach('file', FIXTURES.png, 's.png')
+      ).status,
+    ).toBe(201);
+    await pool.query(
+      `UPDATE support_tickets SET status = 'CLOSED', closed_at = now() - interval '800 days' WHERE id = $1`,
+      [t.id],
+    );
+    const { getStorageProvider, setStorageProviderForTests } = await import('../lib/storage');
+    const real = getStorageProvider();
+    let refuse = true;
+    setStorageProviderForTests(
+      Object.assign(Object.create(real), {
+        delete: async (key: string) => {
+          if (refuse) throw new Error('store unavailable');
+          return real.delete(key);
+        },
+      }),
+    );
+    try {
+      expect((await runRetention()).SUPPORT_EVIDENCE).toBe(0);
+      const left = () =>
+        pool
+          .query('SELECT count(*)::int AS n FROM support_attachments')
+          .then((r) => r.rows[0].n as number);
+      expect(await left()).toBe(1); // still known, so it will be tried again
+      refuse = false;
+      expect((await runRetention()).SUPPORT_EVIDENCE).toBe(1);
+      expect(await left()).toBe(0);
+    } finally {
+      setStorageProviderForTests(undefined);
+    }
   });
 });

@@ -117,33 +117,17 @@ export async function issueStatements(
   );
   let issued = 0;
   let skipped = 0;
+  let failed = 0;
   for (const { organization_id: orgId } of orgs.rows) {
-    const made = await withTransaction(async (c) => {
-      await c.query('SELECT 1 FROM organizations WHERE id = $1 FOR UPDATE', [orgId]);
-      const exists = await c.query(
-        `SELECT 1 FROM organization_statements WHERE organization_id = $1 AND period_key = $2 AND status <> 'VOID'`,
-        [orgId, key],
-      );
-      if (exists.rowCount) return null;
-      const s = await c.query<{ id: string; number: string }>(
-        `INSERT INTO organization_statements (organization_id, period_key, due_on)
-         VALUES ($1, $2, current_date + $3::int) RETURNING id, number::text`,
-        [orgId, key, settingNumber('ORG_PAYMENT_TERMS_DAYS')],
-      );
-      const id = s.rows[0]?.id as string;
-      const lines = await c.query(
-        `UPDATE trip_payments p SET statement_id = $1
-         FROM trips t
-         WHERE t.id = p.trip_id AND t.organization_id = $2 AND p.method = 'ORGANIZATION'
-           AND p.status = 'PENDING' AND p.statement_id IS NULL AND t.ended_at < $3`,
-        [id, orgId, periodEnd],
-      );
-      if (!lines.rowCount) throw new Error('empty statement');
-      return { id, number: Number(s.rows[0]?.number), rides: lines.rowCount };
-    }).catch((err) => {
-      if ((err as Error).message === 'empty statement') return null;
-      throw err;
-    });
+    // One organization's problem must not leave every later organization unbilled: each is its own transaction.
+    let made: IssuedStatement | null;
+    try {
+      made = await issueOne(orgId, key, periodEnd);
+    } catch (err) {
+      failed += 1;
+      log.error('Could not issue a statement', { organizationId: orgId, period: key }, err);
+      continue;
+    }
     if (!made) {
       skipped += 1;
       continue;
@@ -163,8 +147,56 @@ export async function issueStatements(
       `Statement ${made.number} for ${key} is ready: ${made.rides} ride${made.rides === 1 ? '' : 's'}. Open Business to see it.`,
     ).catch((err) => log.error('Statement notice failed', err));
   }
+  // The others are billed; the run still fails so the job record shows that some organization needs attention.
+  if (failed > 0)
+    throw new Error(
+      `${failed} organization statement(s) could not be issued for ${key}; ${issued} were`,
+    );
   return { periodKey: key, issued, skipped };
 }
+
+interface IssuedStatement {
+  id: string;
+  number: number;
+  rides: number;
+}
+
+/** One organization's statement for a period, in one transaction. Null when there is nothing to bill or it already exists. */
+async function issueOne(
+  orgId: string,
+  key: string,
+  periodEnd: Date,
+): Promise<IssuedStatement | null> {
+  return withTransaction(async (c) => {
+    await c.query('SELECT 1 FROM organizations WHERE id = $1 FOR UPDATE', [orgId]);
+    const exists = await c.query(
+      `SELECT 1 FROM organization_statements WHERE organization_id = $1 AND period_key = $2 AND status <> 'VOID'`,
+      [orgId, key],
+    );
+    if (exists.rowCount) return null;
+    const s = await c.query<{ id: string; number: string }>(
+      `INSERT INTO organization_statements (organization_id, period_key, due_on)
+       VALUES ($1, $2, current_date + $3::int) RETURNING id, number::text`,
+      [orgId, key, settingNumber('ORG_PAYMENT_TERMS_DAYS')],
+    );
+    const id = s.rows[0]?.id as string;
+    const lines = await c.query(
+      `UPDATE trip_payments p SET statement_id = $1
+       FROM trips t
+       WHERE t.id = p.trip_id AND t.organization_id = $2 AND p.method = 'ORGANIZATION'
+         AND p.status = 'PENDING' AND p.statement_id IS NULL AND t.ended_at < $3`,
+      [id, orgId, periodEnd],
+    );
+    // Nothing to bill after all (another run took the lines): undo the empty statement and its number.
+    if (!lines.rowCount) throw new NothingToBill();
+    return { id, number: Number(s.rows[0]?.number), rides: lines.rowCount };
+  }).catch((err) => {
+    if (err instanceof NothingToBill) return null;
+    throw err;
+  });
+}
+
+class NothingToBill extends Error {}
 
 export async function listStatements(orgId: string): Promise<OrgStatementInfo[]> {
   const r = await query<InfoRow>(

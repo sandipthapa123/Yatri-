@@ -186,6 +186,17 @@ export async function expiryItems(filter: ExpiryFilter = {}): Promise<ExpiryItem
         [vehicleIds],
       )
     : { rows: [] };
+  // The papers a category requires, asked once per category rather than once per vehicle.
+  const requiredByCategory = new Map<string, ReturnType<typeof listRequiredDocumentTypes>>();
+  const requiredFor = (categoryId: string) => {
+    let found = requiredByCategory.get(categoryId);
+    if (!found)
+      requiredByCategory.set(
+        categoryId,
+        (found = listRequiredDocumentTypes('VEHICLE', categoryId)),
+      );
+    return found;
+  };
   for (const v of vehicles.rows) {
     const who = {
       driverId: v.driver_user_id,
@@ -209,7 +220,7 @@ export async function expiryItems(filter: ExpiryFilter = {}): Promise<ExpiryItem
     }
     // Missing papers only matter for a vehicle that is in use and was approved.
     if (v.driver_user_id && v.verification_status === 'APPROVED') {
-      for (const t of await listRequiredDocumentTypes('VEHICLE', v.category_id)) {
+      for (const t of await requiredFor(v.category_id)) {
         if (!mine.some((x) => x.document_type_id === t.id && x.status !== 'REJECTED')) {
           add('VEHICLE_DOCUMENT', `missing:${t.id}`, t.label, null, who, true);
         }

@@ -160,6 +160,25 @@ describe('accessibility profile', () => {
     expect(stale.body.error.code).toBe('VERSION_CONFLICT');
   });
 
+  it('two devices saving for the very first time at once: one wins, the other is told', async () => {
+    const p = await onboardUser('PASSENGER');
+    const body = (needs: string[]) => ({
+      needs,
+      communication: 'ANY',
+      pickupInstructions: [],
+      pickupNote: null,
+      otherNote: null,
+      version: 0,
+    });
+    const results = await Promise.all([
+      putProfile(p.accessToken, body(['WHEELCHAIR'])),
+      putProfile(p.accessToken, body(['HEARING'])),
+      putProfile(p.accessToken, body(['VISUAL'])),
+    ]);
+    expect(results.map((r) => r.status).sort()).toEqual([200, 409, 409]);
+    expect((await profile(p.accessToken)).version).toBe(1); // exactly one save landed
+  });
+
   it('refuses unknown values and over-long notes instead of dropping them', async () => {
     const p = await onboardUser('PASSENGER');
     const base = {

@@ -975,17 +975,22 @@ export async function sweepSupport(): Promise<{ escalated: number; closed: numbe
        priority = COALESCE(due.escalates_to, t.priority)
      FROM due WHERE t.id = due.id RETURNING t.id, t.number::text, t.assigned_to`,
   );
+  // The tickets are already escalated; a failed note or notice for one must not stop the follow-up for the others.
   for (const t of escalated.rows) {
-    await query(
-      `INSERT INTO support_messages (ticket_id, author_id, author_kind, kind, body)
-       VALUES ($1, NULL, 'SYSTEM', 'NOTE', 'Escalated: no answer within the time allowed for its priority.')`,
-      [t.id],
-    );
-    await notifySupportTeam({
-      type: SUPPORT_NOTIFICATION_TYPES.ESCALATED,
-      body: `Support request ${t.number} has waited too long and was escalated.`,
-      ticketId: t.id,
-    }).catch((err) => log.error('Escalation notice failed', err));
+    try {
+      await query(
+        `INSERT INTO support_messages (ticket_id, author_id, author_kind, kind, body)
+         VALUES ($1, NULL, 'SYSTEM', 'NOTE', 'Escalated: no answer within the time allowed for its priority.')`,
+        [t.id],
+      );
+      await notifySupportTeam({
+        type: SUPPORT_NOTIFICATION_TYPES.ESCALATED,
+        body: `Support request ${t.number} has waited too long and was escalated.`,
+        ticketId: t.id,
+      });
+    } catch (err) {
+      log.error('Escalation follow-up failed', err);
+    }
   }
 
   let closed = 0;
@@ -1004,19 +1009,23 @@ export async function sweepSupport(): Promise<{ escalated: number; closed: numbe
     );
     closed = r.rowCount ?? 0;
     for (const t of r.rows) {
-      await query(
-        `INSERT INTO support_messages (ticket_id, author_id, author_kind, kind, body)
-         VALUES ($1, NULL, 'SYSTEM', 'STATUS', 'Closed automatically because it was resolved and nobody replied.')`,
-        [t.id],
-      );
-      await notifyRequester(
-        t.requester_id,
-        t.is_dispute
-          ? SUPPORT_NOTIFICATION_TYPES.DISPUTE_UPDATED
-          : SUPPORT_NOTIFICATION_TYPES.STATUS,
-        describeTicketStatus(Number(t.number), 'CLOSED'),
-        { ticketId: t.id },
-      );
+      try {
+        await query(
+          `INSERT INTO support_messages (ticket_id, author_id, author_kind, kind, body)
+           VALUES ($1, NULL, 'SYSTEM', 'STATUS', 'Closed automatically because it was resolved and nobody replied.')`,
+          [t.id],
+        );
+        await notifyRequester(
+          t.requester_id,
+          t.is_dispute
+            ? SUPPORT_NOTIFICATION_TYPES.DISPUTE_UPDATED
+            : SUPPORT_NOTIFICATION_TYPES.STATUS,
+          describeTicketStatus(Number(t.number), 'CLOSED'),
+          { ticketId: t.id },
+        );
+      } catch (err) {
+        log.error('Auto-close follow-up failed', err);
+      }
     }
   }
   return { escalated: escalated.rowCount ?? 0, closed };

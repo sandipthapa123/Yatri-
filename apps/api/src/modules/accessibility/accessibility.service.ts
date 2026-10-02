@@ -282,6 +282,9 @@ export async function saveProfile(
 ): Promise<AccessibilityProfile> {
   const v = checkAccessibility(body);
   await withTransaction(async (c) => {
+    // Lock the person, not the profile row: on a first save there is no profile row yet, and two devices saving for the
+    // first time would both see "no profile" and the later one would silently overwrite the earlier.
+    await c.query('SELECT 1 FROM users WHERE id = $1 FOR UPDATE', [userId]);
     const cur = await c.query<{ version: number }>(
       'SELECT version FROM passenger_accessibility WHERE user_id = $1 FOR UPDATE',
       [userId],
@@ -299,7 +302,15 @@ export async function saveProfile(
        VALUES ($1, $2, $3, $4, $5, $6, $7)
        ON CONFLICT (user_id) DO UPDATE SET needs = $2, communication = $3, pickup_instructions = $4,
          pickup_note = $5, other_note = $6, companion = $7, version = passenger_accessibility.version + 1, updated_at = now()`,
-      [userId, v.needs, v.communication, v.pickupInstructions, v.pickupNote, v.otherNote, v.companion],
+      [
+        userId,
+        v.needs,
+        v.communication,
+        v.pickupInstructions,
+        v.pickupNote,
+        v.otherNote,
+        v.companion,
+      ],
     );
   });
   return getProfile(userId);

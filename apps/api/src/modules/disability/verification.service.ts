@@ -272,9 +272,16 @@ async function eraseCard(client: PoolClient, row: VerificationRow): Promise<void
   );
 }
 
-async function deleteDocumentBytes(key: string | null): Promise<void> {
-  if (!key) return;
-  await getStorageProvider().delete(key).catch((err) => log.warn('Could not remove a card document', err));
+/** Removes a stored card document. True when it is gone (or there was none); false when the store refused. */
+async function deleteDocumentBytes(key: string | null): Promise<boolean> {
+  if (!key) return true;
+  try {
+    await getStorageProvider().delete(key);
+    return true;
+  } catch (err) {
+    log.warn('Could not remove a card document', err);
+    return false;
+  }
 }
 
 // ---------------------------------------------------------------- the rider's view
@@ -623,8 +630,12 @@ export async function purgeOldDisabilityCards(days: number): Promise<number> {
      LIMIT 500`,
     [days],
   );
+  let purged = 0;
   for (const row of old.rows) {
-    await deleteDocumentBytes(row.document_key);
+    // The record is the only pointer to the file: if the store refused, keep it so the next run tries again,
+    // rather than leaving an identity document behind with nothing left that knows about it.
+    if (!(await deleteDocumentBytes(row.document_key))) continue;
+    purged++;
     await query(
       `UPDATE disability_verifications SET card_hash = NULL, card_last4 = NULL, issuing_authority = NULL, issue_date = NULL,
          expiry_date = NULL, document_key = NULL, document_name = NULL, document_mime = NULL, document_size = NULL,
@@ -632,7 +643,7 @@ export async function purgeOldDisabilityCards(days: number): Promise<number> {
       [row.id],
     );
   }
-  return old.rows.length;
+  return purged;
 }
 
 // ---------------------------------------------------------------- expiry (the `disability-expiry` job)

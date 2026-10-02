@@ -45,32 +45,37 @@ export async function sweepTrips(nowMs = Date.now()): Promise<TripSweepResult> {
      WHERE status IN ${sqlIn(WAITING_TRIP_STATUSES)}`,
   );
   for (const t of waiting.rows) {
-    const arrived = t.status === 'DRIVER_ARRIVED';
-    const startedAt = arrived ? t.arrived_at : t.matched_at;
-    if (!startedAt) continue;
-    const seconds = secondsSince(startedAt.getTime(), nowMs);
-    const crossed = highestCrossed(seconds, thresholds);
-    if (crossed === null) continue;
+    // One ride's problem must not stop the waiting notices for every ride after it.
+    try {
+      const arrived = t.status === 'DRIVER_ARRIVED';
+      const startedAt = arrived ? t.arrived_at : t.matched_at;
+      if (!startedAt) continue;
+      const seconds = secondsSince(startedAt.getTime(), nowMs);
+      const crossed = highestCrossed(seconds, thresholds);
+      if (crossed === null) continue;
 
-    const ev = await recordTripEvent({
-      tripId: t.id,
-      type: arrived ? 'DRIVER_WAITING' : 'PASSENGER_WAITING',
-      payload: { seconds: crossed },
-      dedupeKey: `${arrived ? 'dw' : 'pw'}:${crossed}`, // each milestone at most once per trip
-    });
-    if (!ev) continue;
-    out.waitingEvents++;
+      const ev = await recordTripEvent({
+        tripId: t.id,
+        type: arrived ? 'DRIVER_WAITING' : 'PASSENGER_WAITING',
+        payload: { seconds: crossed },
+        dedupeKey: `${arrived ? 'dw' : 'pw'}:${crossed}`, // each milestone at most once per trip
+      });
+      if (!ev) continue;
+      out.waitingEvents++;
 
-    // Record when the other party was told, so both apps can show "notified".
-    if (arrived) {
-      await query('UPDATE trips SET passenger_notified_at = now() WHERE id = $1', [t.id]);
-      const row = await getTrip(t.id);
-      if (row) await saveMeta({ ...metaFromRow(row) });
-    } else {
-      const meta = await loadMeta(t.id);
-      if (meta) await saveMeta({ ...meta, driverNotifiedAtMs: nowMs });
+      // Record when the other party was told, so both apps can show "notified".
+      if (arrived) {
+        await query('UPDATE trips SET passenger_notified_at = now() WHERE id = $1', [t.id]);
+        const row = await getTrip(t.id);
+        if (row) await saveMeta({ ...metaFromRow(row) });
+      } else {
+        const meta = await loadMeta(t.id);
+        if (meta) await saveMeta({ ...meta, driverNotifiedAtMs: nowMs });
+      }
+      await bumpTripVersion(t.id);
+    } catch (err) {
+      log.error('waiting notice failed', t.id, err);
     }
-    await bumpTripVersion(t.id);
   }
 
   const lost = await query<{ id: string; driver_id: string }>(

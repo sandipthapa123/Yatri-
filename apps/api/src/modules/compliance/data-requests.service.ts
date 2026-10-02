@@ -16,6 +16,7 @@ import {
 import type { PoolClient } from 'pg';
 
 import { recordAudit } from '../../lib/audit';
+import { log } from '../../lib/logger';
 import { query, withTransaction } from '../../lib/db';
 import { notify } from '../../lib/notifications';
 import { sqlIn } from '../../lib/sql';
@@ -293,10 +294,20 @@ export async function actOnDataRequest(
   if (row.kind === 'ACCOUNT_DELETION' && to === 'COMPLETED') {
     await revokeAllUserSessions(row.user_id);
     await forceSuspend(row.user_id, adminId, 'ACCOUNT_DELETED').catch(() => undefined);
-    for (const key of keys)
-      await getStorageProvider()
-        .delete(key)
-        .catch(() => undefined);
+    // The account's records are already gone, so a file the store refused to delete can no longer be retried from
+    // them: say so loudly (a count, never the keys) so an operator removes the leftovers.
+    let refused = 0;
+    for (const key of keys) {
+      try {
+        await getStorageProvider().delete(key);
+      } catch {
+        refused++;
+      }
+    }
+    if (refused > 0)
+      log.error(`Account deletion left ${refused} stored file(s) that need manual removal`, {
+        requestId: id,
+      });
   }
   await recordAudit({
     actorId: adminId,

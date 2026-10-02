@@ -169,17 +169,21 @@ const JOBS: Record<string, (days: number) => Promise<number>> = {
        WHERE t.status = 'CLOSED' AND t.closed_at < now() - ($1::int * interval '1 day') LIMIT 500`,
       [days],
     );
+    // A row goes only once its file is gone: the row is the only pointer to the file, so a refused delete is retried
+    // on the next run instead of leaving evidence in storage with nothing that knows about it.
+    const gone: string[] = [];
     for (const a of old.rows) {
-      await getStorageProvider()
-        .delete(a.storage_key)
-        .catch(() => undefined);
+      try {
+        await getStorageProvider().delete(a.storage_key);
+        gone.push(a.id);
+      } catch (err) {
+        log.warn('Could not remove a support file; will retry', err);
+      }
     }
-    if (old.rows.length > 0) {
-      await query('DELETE FROM support_attachments WHERE id = ANY($1::uuid[])', [
-        old.rows.map((a) => a.id),
-      ]);
+    if (gone.length > 0) {
+      await query('DELETE FROM support_attachments WHERE id = ANY($1::uuid[])', [gone]);
     }
-    return old.rows.length;
+    return gone.length;
   },
 };
 

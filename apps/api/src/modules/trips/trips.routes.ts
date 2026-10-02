@@ -32,6 +32,8 @@ import {
   estimateHandler,
   eventsHandler,
   getPaymentHandler,
+  startDigitalPaymentHandler,
+  verifyDigitalPaymentHandler,
   getTripHandler,
   historyHandler,
   liveSnapshotHandler,
@@ -193,6 +195,22 @@ tripsRouter.post(
   userRateLimit('payment-confirm', 60, 3600),
   validateUuidParam('id'),
   confirmPaymentHandler,
+);
+// Online payment: the rider opens it and later asks whether it went through. The server decides the amount and
+// believes only the provider's own answer (digital-payments.service).
+tripsRouter.post(
+  '/:id/payment/digital',
+  requireRole('PASSENGER'),
+  userRateLimit('payment-digital', 20, 3600),
+  validateUuidParam('id'),
+  startDigitalPaymentHandler,
+);
+tripsRouter.post(
+  '/:id/payment/digital/verify',
+  requireRole('PASSENGER'),
+  userRateLimit('payment-digital-verify', 120, 3600),
+  validateUuidParam('id'),
+  verifyDigitalPaymentHandler,
 );
 tripsRouter.post(
   '/:id/rating',

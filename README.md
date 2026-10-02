@@ -174,6 +174,11 @@ Run from the repository root; each fans out to every workspace package via pnpm.
   referrals, win-back offers, message campaigns, reward points (an append-only ledger with expiry), usage limits, fraud signals
   through the risk system, an admin campaign dashboard, and offers, rewards and invites in the rider app. A promotion never
   changes a fare; Yatri pays the discount.
+- **Production service providers** (`docs/PHASE_25.md`): one interface per outside need (sign-in codes, push, maps and routes,
+  digital payments, files, calls, live updates, email, error reporting), the vendor chosen by server configuration per
+  environment (development, staging, production), one vendor-call function (deadline, named failures, safe retries, circuit
+  breaker, usage counters), stand-ins refused outside development, online payment with database-enforced idempotency and an exact
+  amount check, and a status-only admin screen. No vendor is called by business logic.
 - Running it for real: [`docs/OPERATIONS.md`](docs/OPERATIONS.md) (architecture, deployment, backups,
   monitoring, incident recovery, release and rollback) and [`docs/SECURITY.md`](docs/SECURITY.md) (the controls,
   what was audited, what is still open). Container images and a full local stack are in [`deploy/`](deploy/).

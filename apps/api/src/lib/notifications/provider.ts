@@ -19,5 +19,8 @@ export interface NotificationPayload {
  * one new class here, not touching business logic.
  */
 export interface NotificationProvider {
+  readonly name?: string;
+  /** A live check of the vendor, when it has one. */
+  check?(): Promise<void>;
   send(payload: NotificationPayload): Promise<void>;
 }

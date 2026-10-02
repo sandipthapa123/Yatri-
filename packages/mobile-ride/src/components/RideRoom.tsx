@@ -19,7 +19,7 @@ import {
 } from '@yatri/types';
 import { useUiPreferences } from '@yatri/mobile-ui';
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { useCall, useChat, useResyncOnReturn, useSos } from '../hooks';
 import { businessText, rideActions, type RideActionId } from '../rideActions';
@@ -99,6 +99,7 @@ export function RideRoom(props: RideRoomProps) {
   const [tab, setTab] = useState<Tab>('trip');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [form, setForm] = useState<'rate' | 'incident' | null>(null);
   const [reportNews, setReportNews] = useState<{ id: number; text: string } | null>(null);
   const [share, setShare] = useState(false);
@@ -129,6 +130,7 @@ export function RideRoom(props: RideRoomProps) {
     {
       status: trip?.status ?? status ?? 'SEARCHING',
       paymentStatus: trip?.paymentStatus ?? 'NONE',
+      onlinePaymentAvailable: trip?.onlinePaymentAvailable ?? false,
       rated: trip?.rated ?? false,
       cancelFeeNpr: trip?.cancelFeeNpr ?? 0,
       billedToOrganization: trip?.business?.billedToOrganization ?? false,
@@ -147,6 +149,7 @@ export function RideRoom(props: RideRoomProps) {
     }
     setBusy(true);
     setError(null);
+    setNotice(null);
     try {
       const token = await getAccessToken();
       if (id === 'cancel') await rideApi.cancel(token, tripId);
@@ -155,6 +158,23 @@ export function RideRoom(props: RideRoomProps) {
       else if (id === 'complete') await rideApi.complete(token, tripId);
       else if (id === 'noShow') await rideApi.noShow(token, tripId);
       else if (id === 'confirmPayment') await rideApi.confirmPayment(token, tripId);
+      else if (id === 'payOnline') {
+        // The server opens the payment for the amount it decided; the provider's page is where the rider pays.
+        const p = await rideApi.startOnlinePayment(token, tripId);
+        if (p.paymentUrl) {
+          setNotice('Opening the payment page. When you have paid, come back and choose "I have paid: check my payment".');
+          await Linking.openURL(p.paymentUrl);
+        }
+      } else if (id === 'checkOnlinePayment') {
+        const p = await rideApi.verifyOnlinePayment(token, tripId);
+        setNotice(
+          p.status === 'COMPLETED'
+            ? 'Your payment was received. Thank you.'
+            : p.status === 'INITIATED'
+              ? 'Your payment has not been confirmed yet. If you have paid, wait a moment and check again.'
+              : 'That payment did not go through. You can try again, or pay your driver in cash.',
+        );
+      }
       await reload();
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'That did not work. Please try again.');
@@ -422,6 +442,7 @@ export function RideRoom(props: RideRoomProps) {
                   actions={actions}
                   busy={busy}
                   error={error}
+                  notice={notice}
                   form={form}
                   onForm={setForm}
                   onAction={onAction}

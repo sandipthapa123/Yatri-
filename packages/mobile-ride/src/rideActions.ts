@@ -20,6 +20,8 @@ export type RideActionId =
   | 'complete'
   | 'noShow'
   | 'confirmPayment'
+  | 'payOnline'
+  | 'checkOnlinePayment'
   | 'rate'
   | 'dispute'
   | 'incident';
@@ -70,6 +72,7 @@ export function rideActions(
   trip: {
     status: TripStatus;
     paymentStatus: TripSummary['paymentStatus'];
+    onlinePaymentAvailable?: boolean;
     rated: boolean;
     /** What cancelling costs now, as the server's cancellation rules say (0 = free). */
     cancelFeeNpr?: number;
@@ -126,6 +129,10 @@ export function rideActions(
       if (role === 'DRIVER' && trip.paymentStatus === 'PENDING' && !trip.billedToOrganization) {
         out.push({ id: 'confirmPayment', label: 'Confirm cash received', tone: 'primary' });
       }
+      if (role === 'PASSENGER' && trip.onlinePaymentAvailable) {
+        out.push({ id: 'payOnline', label: 'Pay online', tone: 'primary' });
+        out.push({ id: 'checkOnlinePayment', label: 'I have paid: check my payment', tone: 'neutral' });
+      }
       // Ratings open when the ride is completed; how it was paid is a separate matter.
       if (!trip.rated) {
         out.push({
@@ -158,6 +165,10 @@ export function paymentText(
   amountNpr: number | null,
   /** Set for a business ride the organization pays for (the words differ: nobody pays the driver). */
   business: TripSummary['business'] = null,
+  /** How it was paid, when known (the words differ for an online payment). */
+  method: 'CASH' | 'ORGANIZATION' | 'DIGITAL' | null = null,
+  /** True when the rider can pay online (the server decides). */
+  online = false,
 ): string {
   const amount = amountNpr === null ? '' : ` ${formatNpr(amountNpr)}`;
   if (business?.billedToOrganization && (status === 'PENDING' || status === 'PAID')) {
@@ -168,10 +179,12 @@ export function paymentText(
   switch (status) {
     case 'PENDING':
       return role === 'PASSENGER'
-        ? `Please pay your driver${amount} in cash.`
+        ? online
+          ? `Please pay${amount}: online here, or in cash to your driver.`
+          : `Please pay your driver${amount} in cash.`
         : `Collect${amount} in cash from the passenger, then confirm.`;
     case 'PAID':
-      return `Payment${amount} received. Paid in cash.`;
+      return method === 'DIGITAL' ? `Payment${amount} received. Paid online.` : `Payment${amount} received. Paid in cash.`;
     case 'FAILED':
       return 'The payment did not go through.';
     case 'VOID':

@@ -5,6 +5,7 @@ import { assertUtf8Database, pool } from './config/database';
 import { env } from './config/env';
 import { closeRedis } from './config/redis';
 import { log } from './lib/logger';
+import { reportError } from './lib/monitoring';
 import { attachRealtimeGateway } from './modules/realtime/gateway';
 import { refreshSettings } from './modules/settings/settings.service';
 
@@ -49,10 +50,12 @@ async function main() {
   // A bug that escaped every handler: record it and restart cleanly rather than limp on in an unknown state.
   process.on('unhandledRejection', (err) => {
     log.error('Unhandled promise rejection', err);
+    reportError(err, { where: 'process:unhandledRejection' });
     shutdown('unhandledRejection', 1);
   });
   process.on('uncaughtException', (err) => {
     log.error('Uncaught exception', err);
+    reportError(err, { where: 'process:uncaughtException' });
     shutdown('uncaughtException', 1);
   });
 }

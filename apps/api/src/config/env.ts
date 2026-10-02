@@ -1,6 +1,14 @@
 import { config as loadDotenv } from 'dotenv';
 import path from 'node:path';
 import { z } from 'zod';
+
+import {
+  PROVIDER_CHOICES,
+  environmentProfileOf,
+  providerProblems,
+  type ProviderSelection,
+} from '@yatri/types';
+
 import { log } from '../lib/logger';
 
 // NODE_ENV=test loads .env.test instead of .env, so the suite runs against a
@@ -43,6 +51,11 @@ function boolFromEnv(defaultValue: boolean) {
     .transform((v) => (v === undefined ? defaultValue : v === 'true'));
 }
 
+/** A variable that may be absent; an empty value counts as absent. Used for every vendor credential. */
+function optionalString() {
+  return z.preprocess((v) => (v === '' ? undefined : v), z.string().optional());
+}
+
 const envSchema = z
   .object({
     NODE_ENV: z.enum(['development', 'test', 'staging', 'production']).default('development'),
@@ -78,7 +91,10 @@ const envSchema = z
     OTP_DEV_MODE: boolFromEnv(false),
 
     // --- SMS provider ---
-    SMS_PROVIDER: z.enum(['console', 'http']).default('console'),
+    SMS_PROVIDER: z.enum(PROVIDER_CHOICES.OTP).default('console'),
+    // A second vendor tried only when the first one fails in a way that may pass (a timeout, an outage). Never the same
+    // vendor, and never a development stand-in in a deployed environment (see providerProblems).
+    SMS_FALLBACK_PROVIDER: z.enum(['none', 'http', 'twilio']).default('none'),
     SMS_HTTP_ENDPOINT: z.preprocess((v) => (v === '' ? undefined : v), z.string().url().optional()),
     SMS_HTTP_API_KEY: z.preprocess((v) => (v === '' ? undefined : v), z.string().optional()),
 
@@ -98,7 +114,7 @@ const envSchema = z
       ),
 
     // --- Document storage ---
-    STORAGE_PROVIDER: z.enum(['local']).default('local'),
+    STORAGE_PROVIDER: z.enum(PROVIDER_CHOICES.STORAGE).default('local'),
     STORAGE_LOCAL_ROOT: z.string().min(1).default('./storage'),
     STORAGE_SIGNING_SECRET: z
       .string()
@@ -111,7 +127,7 @@ const envSchema = z
     // --- Location / maps ---
     // Provider-specific code lives in modules/location/providers; the rest
     // of the app only sees the LocationProvider / RouteProvider interfaces.
-    LOCATION_PROVIDER: z.enum(['nominatim', 'static', 'none']).default('nominatim'),
+    LOCATION_PROVIDER: z.enum(PROVIDER_CHOICES.MAPS_GEOCODING).default('nominatim'),
     LOCATION_PROVIDER_BASE_URL: z.string().url().default('https://nominatim.openstreetmap.org'),
     // Optional; sent as the `key` query param (LocationIQ-style Nominatim APIs). Never returned to clients.
     LOCATION_PROVIDER_API_KEY: z.preprocess(
@@ -133,7 +149,7 @@ const envSchema = z
     LOCATION_SEARCH_CACHE_TTL_SECONDS: z.coerce.number().int().min(0).default(86400),
     LOCATION_REVERSE_CACHE_TTL_SECONDS: z.coerce.number().int().min(0).default(86400),
     LOCATION_ROUTING_PROVIDER: z
-      .enum(['haversine', 'osrm', 'graphhopper', 'valhalla'])
+      .enum(PROVIDER_CHOICES.MAPS_ROUTING)
       .default('haversine'),
     LOCATION_ROUTING_BASE_URL: z.string().url().default('https://router.project-osrm.org'),
     LOCATION_ROUTING_API_KEY: z.preprocess(
@@ -190,6 +206,14 @@ const envSchema = z
     NAV_MAX_ACCURACY_METERS: z.coerce.number().int().min(10).max(500).default(50),
     NAV_REROUTE_MIN_SECONDS: z.coerce.number().int().min(5).max(600).default(20),
 
+    // --- Rewards and referrals (platform settings; see PHASE_24) ---
+    LOYALTY_POINTS_PER_100_NPR: z.coerce.number().int().min(0).max(100).default(1),
+    LOYALTY_POINT_VALUE_NPR: z.coerce.number().int().min(1).max(1000).default(1),
+    LOYALTY_POINTS_EXPIRE_DAYS: z.coerce.number().int().min(0).max(3650).default(365),
+    LOYALTY_MIN_REDEEM_POINTS: z.coerce.number().int().min(1).max(100000).default(50),
+    LOYALTY_MAX_REDEEM_PERCENT: z.coerce.number().int().min(1).max(100).default(50),
+    REFERRAL_MAX_INVITES_30D: z.coerce.number().int().min(1).max(1000).default(20),
+
     // --- Dispatch (matching) ---
     DISPATCH_RADIUS_METERS: z.coerce.number().int().positive().default(5000),
     DISPATCH_OFFER_TTL_SECONDS: z.coerce.number().int().positive().default(20),
@@ -206,18 +230,42 @@ const envSchema = z
     // Where share links point (the API host serves the contact's page). No trailing slash.
     PUBLIC_BASE_URL: z.string().url().default('http://localhost:4000'),
     // Which call provider carries voice/video. Only "webrtc" (peer-to-peer media, server signalling) exists.
-    // --- Rewards and referrals (platform settings; see PHASE_24) ---
-    LOYALTY_POINTS_PER_100_NPR: z.coerce.number().int().min(0).max(100).default(1),
-    LOYALTY_POINT_VALUE_NPR: z.coerce.number().int().min(1).max(1000).default(1),
-    LOYALTY_POINTS_EXPIRE_DAYS: z.coerce.number().int().min(0).max(3650).default(365),
-    LOYALTY_MIN_REDEEM_POINTS: z.coerce.number().int().min(1).max(100000).default(50),
-    LOYALTY_MAX_REDEEM_PERCENT: z.coerce.number().int().min(1).max(100).default(50),
-    REFERRAL_MAX_INVITES_30D: z.coerce.number().int().min(1).max(1000).default(20),
-
-    CALL_PROVIDER: z.enum(['webrtc']).default('webrtc'),
+    CALL_PROVIDER: z.enum(PROVIDER_CHOICES.CALLS).default('webrtc'),
     // How candidate drivers are ranked. Only "proximity" exists today; add a strategy in
     // dispatch/matching.ts and its name here, never in a controller or an app.
     MATCHING_STRATEGY: z.enum(['proximity', 'eta_workload']).default('eta_workload'),
+    // --- Service providers (Phase 25). One vendor per need, chosen here per environment (NODE_ENV: development/test,
+    // staging, production). Every secret below comes only from the environment or a secret manager, is never logged and
+    // never shown to anyone (see SECRET_ENV_KEYS in @yatri/types). Which vendors an environment may use is one rule:
+    // providerProblems, applied at the end of this schema. ---
+    PROVIDER_TIMEOUT_MS: z.coerce.number().int().min(500).max(30000).default(5000),
+    PUSH_PROVIDER: z.enum(PROVIDER_CHOICES.PUSH).default('console'),
+    EXPO_ACCESS_TOKEN: optionalString(),
+    REALTIME_PROVIDER: z.enum(PROVIDER_CHOICES.REALTIME).default('redis'),
+    EMAIL_PROVIDER: z.enum(PROVIDER_CHOICES.EMAIL).default('console'),
+    RESEND_API_KEY: optionalString(),
+    EMAIL_FROM: optionalString(),
+    MONITORING_PROVIDER: z.enum(PROVIDER_CHOICES.MONITORING).default('none'),
+    SENTRY_DSN: optionalString(),
+    RELEASE_VERSION: z.string().min(1).default('dev'),
+    // Digital payments. "none": cash and organization billing only. "sandbox": a stand-in for development.
+    PAYMENT_PROVIDER: z.enum(PROVIDER_CHOICES.PAYMENTS).default('none'),
+    KHALTI_SECRET_KEY: optionalString(),
+    KHALTI_BASE_URL: z.string().url().optional(),
+    // Where Khalti sends the rider back after paying. The app then asks the server to verify; this is never trusted.
+    KHALTI_RETURN_URL: z.string().url().optional(),
+    PAYMENT_ATTEMPT_TTL_MINUTES: z.coerce.number().int().min(5).max(1440).default(60),
+    TWILIO_ACCOUNT_SID: optionalString(),
+    TWILIO_AUTH_TOKEN: optionalString(),
+    TWILIO_FROM_NUMBER: optionalString(),
+    MAPBOX_ACCESS_TOKEN: optionalString(),
+    MAPBOX_BASE_URL: z.string().url().default('https://api.mapbox.com'),
+    S3_BUCKET: optionalString(),
+    S3_REGION: z.string().min(1).default('us-east-1'),
+    S3_ENDPOINT: z.preprocess((v) => (v === '' ? undefined : v), z.string().url().optional()),
+    S3_FORCE_PATH_STYLE: boolFromEnv(false),
+    S3_ACCESS_KEY_ID: optionalString(),
+    S3_SECRET_ACCESS_KEY: optionalString(),
     // Cancellation rules. A passenger who cancels within CANCEL_FREE_SECONDS of a driver being
     // assigned, or before any driver is assigned, pays nothing; later, the fee below is RECORDED on
     // the ride (not charged: payments are a later phase). 0 disables the fee.
@@ -344,12 +392,6 @@ const envSchema = z
     if (deployed) {
       if (data.OTP_DEV_MODE)
         issue('OTP_DEV_MODE', 'OTP_DEV_MODE must be false outside development and test');
-      if (data.SMS_PROVIDER === 'console') {
-        issue(
-          'SMS_PROVIDER',
-          'SMS_PROVIDER must not be "console" in staging or production (OTPs would only be logged)',
-        );
-      }
       for (const origin of data.CORS_ORIGINS) {
         let url: URL | null = null;
         try {
@@ -384,12 +426,37 @@ const envSchema = z
         'ADMIN_SEED_* are development-only and must not be set in production',
       );
     }
-    if (data.SMS_PROVIDER === 'http' && !data.SMS_HTTP_ENDPOINT) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['SMS_HTTP_ENDPOINT'],
-        message: 'SMS_HTTP_ENDPOINT is required when SMS_PROVIDER=http',
-      });
+    // The one rule for which vendors an environment may use and what each needs (providers.ts).
+    const chosen: ProviderSelection = {
+      OTP: data.SMS_PROVIDER,
+      PUSH: data.PUSH_PROVIDER,
+      MAPS_GEOCODING: data.LOCATION_PROVIDER,
+      MAPS_ROUTING: data.LOCATION_ROUTING_PROVIDER,
+      PAYMENTS: data.PAYMENT_PROVIDER,
+      STORAGE: data.STORAGE_PROVIDER,
+      CALLS: data.CALL_PROVIDER,
+      REALTIME: data.REALTIME_PROVIDER,
+      EMAIL: data.EMAIL_PROVIDER,
+      MONITORING: data.MONITORING_PROVIDER,
+    };
+    const configured = (key: string) => {
+      const v = (data as Record<string, unknown>)[key];
+      return typeof v === 'string' ? v.length > 0 : v !== undefined && v !== null;
+    };
+    for (const problem of providerProblems(environmentProfileOf(data.NODE_ENV), chosen, configured)) {
+      ctx.addIssue({ code: 'custom', path: [problem.split(/[ =]/)[0] ?? 'PROVIDERS'], message: problem });
+    }
+    if (data.SMS_FALLBACK_PROVIDER !== 'none' && data.SMS_FALLBACK_PROVIDER === data.SMS_PROVIDER) {
+      issue('SMS_FALLBACK_PROVIDER', 'SMS_FALLBACK_PROVIDER must be a different vendor from SMS_PROVIDER');
+    }
+    if (data.SMS_FALLBACK_PROVIDER === 'twilio' && !(data.TWILIO_ACCOUNT_SID && data.TWILIO_AUTH_TOKEN && data.TWILIO_FROM_NUMBER)) {
+      issue('SMS_FALLBACK_PROVIDER', 'SMS_FALLBACK_PROVIDER=twilio needs TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN and TWILIO_FROM_NUMBER');
+    }
+    if (data.SMS_FALLBACK_PROVIDER === 'http' && !data.SMS_HTTP_ENDPOINT) {
+      issue('SMS_FALLBACK_PROVIDER', 'SMS_FALLBACK_PROVIDER=http needs SMS_HTTP_ENDPOINT');
+    }
+    if (data.PAYMENT_PROVIDER === 'khalti' && !data.KHALTI_RETURN_URL) {
+      issue('KHALTI_RETURN_URL', 'KHALTI_RETURN_URL is required when PAYMENT_PROVIDER=khalti');
     }
     if (
       data.NODE_ENV === 'production' &&

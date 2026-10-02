@@ -19,7 +19,7 @@ import { recordAudit } from '../../lib/audit';
 import { query, withTransaction } from '../../lib/db';
 import { notify } from '../../lib/notifications';
 import { sqlIn } from '../../lib/sql';
-import { getStorageProvider } from '../../lib/storage/local-disk-provider';
+import { getStorageProvider } from '../../lib/storage';
 import { HttpError } from '../../middleware/errorHandler';
 import { revokeAllUserSessions } from '../auth/session.repository';
 import { forceSuspend } from '../availability/availability.service';

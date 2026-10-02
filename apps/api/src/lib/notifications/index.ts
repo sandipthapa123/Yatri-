@@ -1,6 +1,8 @@
 import { NOTIFICATION_MAX_ATTEMPTS, NOTIFICATION_RETRY_SECONDS } from '@yatri/types';
 
+import { env } from '../../config/env';
 import { getRedisClient } from '../../config/redis';
+import { ExpoPushProvider } from './expo-provider';
 import { query } from '../db';
 import { ConsoleNotificationProvider } from './console-provider';
 import type { NotificationPayload, NotificationProvider } from './provider';
@@ -9,9 +11,17 @@ import { shouldDeliver } from '../../modules/preferences/preferences.service';
 
 let provider: NotificationProvider | undefined;
 
-function getProvider(): NotificationProvider {
-  if (!provider) provider = new ConsoleNotificationProvider();
+export function getProvider(): NotificationProvider {
+  provider ??=
+    env.PUSH_PROVIDER === 'expo'
+      ? new ExpoPushProvider({ ...(env.EXPO_ACCESS_TOKEN ? { accessToken: env.EXPO_ACCESS_TOKEN } : {}), timeoutMs: env.PROVIDER_TIMEOUT_MS })
+      : new ConsoleNotificationProvider();
   return provider;
+}
+
+/** Test seam. */
+export function setPushProviderForTests(p: NotificationProvider | undefined): void {
+  provider = p;
 }
 
 /**

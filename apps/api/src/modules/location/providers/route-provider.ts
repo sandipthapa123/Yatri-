@@ -239,8 +239,13 @@ abstract class HttpRouteProvider implements RouteProvider {
 
 /** OSRM: GET /route/v1/driving/{lng,lat;lng,lat}. */
 export class OsrmRouteProvider extends HttpRouteProvider {
-  readonly name = 'osrm';
+  readonly name: string = 'osrm';
   readonly capabilities: RouteCapabilities = { steps: true, traffic: false };
+
+  /** The one place the request address is built, so an OSRM-compatible vendor only changes this. */
+  protected routeUrl(coords: string, qs: string): string {
+    return `${this.base()}/route/v1/driving/${coords}?${qs}`;
+  }
 
   async calculateRoute(
     from: Coordinate,
@@ -266,16 +271,16 @@ export class OsrmRouteProvider extends HttpRouteProvider {
       }>;
     }>(
       this.fetchImpl,
-      `${this.base()}/route/v1/driving/${coords}?${qs}`,
+      this.routeUrl(coords, qs),
       {},
       this.config.timeoutMs,
-      'osrm',
+      this.name,
     );
     const route = body?.routes?.[0];
     if (body?.code !== 'Ok' || !route) {
       throw new LocationProviderError('BAD_RESPONSE', 'osrm: no usable route');
     }
-    usable(route.distance, route.duration, 'osrm');
+    usable(route.distance, route.duration, this.name);
     const steps: RouteStep[] = opts.steps
       ? (route.legs ?? []).flatMap((leg) =>
           (leg.steps ?? []).flatMap((st) => {
@@ -301,12 +306,26 @@ export class OsrmRouteProvider extends HttpRouteProvider {
       distanceMeters: route.distance as number,
       durationSeconds: route.duration as number,
       method: 'route',
-      trafficAware: false,
+      trafficAware: this.capabilities.traffic,
       ...(opts.geometry && route.geometry?.coordinates
         ? { geometry: route.geometry.coordinates }
         : {}),
       ...(opts.steps && steps.length > 0 ? { steps } : {}),
     };
+  }
+}
+
+/**
+ * Mapbox Directions speaks the same JSON as OSRM, so it reuses every line of OsrmRouteProvider (steps, maneuvers, geometry)
+ * and differs only in the address, the access token and that its `driving-traffic` profile reflects live traffic.
+ */
+export class MapboxRouteProvider extends OsrmRouteProvider {
+  override readonly name = 'mapbox';
+  override readonly capabilities: RouteCapabilities = { steps: true, traffic: true };
+
+  protected override routeUrl(coords: string, qs: string): string {
+    const base = this.config.baseUrl.replace(/\/$/, '');
+    return `${base}/directions/v5/mapbox/driving-traffic/${coords}?${qs}&access_token=${encodeURIComponent(this.config.apiKey ?? '')}`;
   }
 }
 

@@ -4,6 +4,7 @@ import type {
   FareEstimateResponse,
   LiveTripSnapshot,
   NavigationRouteResponse,
+  DigitalPaymentInfo,
   PaymentInfo,
   TripEventRecord,
   TripHistoryPage,
@@ -24,6 +25,7 @@ import {
 } from '../dispatch/dispatch.service';
 import { readRoute } from '../navigation/navigation.service';
 import { buildSnapshot, isActive, loadMeta } from '../tracking/tracking.service';
+import { startDigitalPayment, verifyDigitalPayment } from './digital-payments.service';
 import { getPaymentFor, settlePayment } from './payments.service';
 import { rateTrip } from './ratings.service';
 import { listTripEvents } from './trip-events.service';
@@ -229,6 +231,14 @@ export async function getPaymentHandler(req: Request, res: Response<ApiResponse<
 
 export async function confirmPaymentHandler(req: Request, res: Response<ApiResponse<PaymentInfo>>) {
   res.json({ success: true, data: await settlePayment(idParam(req), uid(req)) });
+}
+
+export async function startDigitalPaymentHandler(req: Request, res: Response<ApiResponse<DigitalPaymentInfo>>) {
+  res.json({ success: true, data: await startDigitalPayment(idParam(req), uid(req)) });
+}
+
+export async function verifyDigitalPaymentHandler(req: Request, res: Response<ApiResponse<DigitalPaymentInfo>>) {
+  res.json({ success: true, data: await verifyDigitalPayment(idParam(req), uid(req)) });
 }
 
 export async function rateHandler(

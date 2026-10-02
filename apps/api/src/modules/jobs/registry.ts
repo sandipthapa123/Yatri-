@@ -12,6 +12,8 @@ import { runRiskSweep } from '../risk/sweep';
 import { expireDueShares } from '../sharing/sharing.service';
 import { sweepSupport } from '../support/tickets.service';
 import { sweepTrips } from '../trips/trip-maintenance';
+import { runProviderChecks } from '../providers/health';
+import { sweepPaymentAttempts } from '../trips/digital-payments.service';
 import { reconcilePayments } from '../trips/payment-reconcile';
 import type { JobDef } from './jobs';
 
@@ -62,6 +64,34 @@ export const JOBS: readonly JobDef[] = [
     help: 'Sends again the notifications whose push failed, with a back-off, and gives up after the last try.',
     everySeconds: 30,
     run: () => retryFailedNotifications(),
+  },
+  {
+    name: 'growth-messages',
+    label: 'Campaign messages and win-back offers',
+    help: 'Sends the message campaigns that are due and gives win-back offers to riders they fit, once each.',
+    everySeconds: 300,
+    run: () => sweepCampaignMessages(),
+  },
+  {
+    name: 'growth-expiry',
+    label: 'Reward points expiry',
+    help: 'Writes off reward points that have expired and warns riders whose points are about to.',
+    everySeconds: 3600,
+    run: () => expirePoints(),
+  },
+  {
+    name: 'payment-attempts',
+    label: 'Online payments',
+    help: 'Completes online payments whose rider never came back to the app, and closes the ones that ran out of time.',
+    everySeconds: 120,
+    run: () => sweepPaymentAttempts(),
+  },
+  {
+    name: 'provider-health',
+    label: 'Service provider checks',
+    help: 'Checks that the outside services Yatri depends on (texts, push, payments, storage, calls, email) are reachable.',
+    everySeconds: 600,
+    run: () => runProviderChecks(),
   },
   {
     name: 'payment-reconcile',

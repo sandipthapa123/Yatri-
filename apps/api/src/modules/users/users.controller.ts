@@ -5,7 +5,7 @@ import type { ApiResponse } from '@yatri/types';
 import { env } from '../../config/env';
 import { detectFileType } from '../../lib/file-signature';
 import { generateStorageKey } from '../../lib/safe-filename';
-import { getStorageProvider } from '../../lib/storage/local-disk-provider';
+import { getStorageProvider } from '../../lib/storage';
 import { HttpError } from '../../middleware/errorHandler';
 import { recordAuthEvent } from '../auth/auth-event.repository';
 import { revokeAllUserSessions } from '../auth/session.repository';

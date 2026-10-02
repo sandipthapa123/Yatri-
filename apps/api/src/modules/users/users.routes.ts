@@ -22,6 +22,7 @@ import {
 } from '../safety/safety.controller';
 import { emergencyContactSchema } from '../safety/safety.validators';
 import { updateProfileSchema } from './users.validators';
+import { pushTokenSchema, registerPushTokenHandler, removePushTokenHandler } from './push-tokens';
 
 export const usersRouter: RouterType = Router();
 
@@ -73,6 +74,14 @@ usersRouter.post(
   userRateLimit('deactivate', 5, 3600),
   deactivateMeHandler,
 );
+usersRouter.post(
+  '/me/push-token',
+  authenticate,
+  userRateLimit('push-token', 60, 3600),
+  validateBody(pushTokenSchema),
+  registerPushTokenHandler,
+);
+usersRouter.delete('/me/push-token', authenticate, userRateLimit('push-token', 60, 3600), removePushTokenHandler);
 usersRouter.use('/me/saved-places', savedPlacesRouter);
 // Preferences, recent destinations and devices (after the routes above, so they cannot shadow them).
 usersRouter.use('/me', preferencesRouter);

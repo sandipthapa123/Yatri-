@@ -113,6 +113,7 @@ export interface TripBusinessInfo {
 
 import type { TripAccessibility } from './accessibility';
 import type { NavigationGuidance } from './navigation';
+import type { PaymentMethod } from './trip-commerce';
 
 export interface TripSummary {
   id: string;
@@ -132,6 +133,10 @@ export interface TripSummary {
   /** Which side the requesting user is on. */
   viewerRole: TripRole;
   paymentStatus: TripPaymentStatus;
+  /** True when the rider can pay this finished ride online now (decided by the server: a provider is set up and the ride is not billed to an organization). */
+  onlinePaymentAvailable: boolean;
+  /** How the ride is (to be) paid, once a payment exists. */
+  paymentMethod: PaymentMethod | null;
   vehicleCategory: { code: string; label: string } | null;
   /**
    * What cancelling would cost right now under the server's cancellation rules (0 = free). Shown in

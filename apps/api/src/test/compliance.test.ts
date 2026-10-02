@@ -430,7 +430,7 @@ describe('account deletion', () => {
         ])
       ).rows[0].n,
     ).toBe(0);
-    const { getStorageProvider } = await import('../lib/storage/local-disk-provider');
+    const { getStorageProvider } = await import('../lib/storage');
     await expect(getStorageProvider().download(key)).rejects.toBeDefined();
   });
 
@@ -591,7 +591,7 @@ describe('retention', () => {
       (await pool.query('SELECT count(*)::int AS n FROM support_tickets WHERE id = $1', [t.id]))
         .rows[0].n,
     ).toBe(1);
-    const { getStorageProvider } = await import('../lib/storage/local-disk-provider');
+    const { getStorageProvider } = await import('../lib/storage');
     await expect(getStorageProvider().download(key)).rejects.toBeDefined();
   });
 });

@@ -17,6 +17,7 @@ import {
 import { StaticLocationProvider } from '../modules/location/providers/static-provider';
 
 const base: LocationProviderConfig = {
+  MAPBOX_BASE_URL: 'https://mapbox.test',
   LOCATION_PROVIDER: 'nominatim',
   LOCATION_PROVIDER_BASE_URL: 'https://geo.example.test',
   LOCATION_PROVIDER_USER_AGENT: 'Yatri-Test',

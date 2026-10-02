@@ -1,9 +1,11 @@
 import { env } from '../../../config/env';
 import type { LocationProvider } from './location-provider';
+import { MapboxGeocodingProvider } from './mapbox-provider';
 import { NominatimProvider } from './nominatim-provider';
 import {
   GraphHopperRouteProvider,
   HaversineRouteProvider,
+  MapboxRouteProvider,
   OsrmRouteProvider,
   ValhallaRouteProvider,
   type RouteProvider,
@@ -11,13 +13,15 @@ import {
 import { StaticLocationProvider } from './static-provider';
 
 export interface LocationProviderConfig {
-  LOCATION_PROVIDER: 'nominatim' | 'static' | 'none';
+  LOCATION_PROVIDER: 'nominatim' | 'static' | 'none' | 'mapbox';
+  MAPBOX_ACCESS_TOKEN?: string;
+  MAPBOX_BASE_URL: string;
   LOCATION_PROVIDER_BASE_URL: string;
   LOCATION_PROVIDER_API_KEY?: string;
   LOCATION_PROVIDER_USER_AGENT: string;
   LOCATION_COUNTRY_CODES: string[];
   LOCATION_REQUEST_TIMEOUT_MS: number;
-  LOCATION_ROUTING_PROVIDER: 'haversine' | 'osrm' | 'graphhopper' | 'valhalla';
+  LOCATION_ROUTING_PROVIDER: 'haversine' | 'osrm' | 'graphhopper' | 'valhalla' | 'mapbox';
   LOCATION_ROUTING_BASE_URL: string;
   LOCATION_ROUTING_API_KEY?: string;
 }
@@ -37,6 +41,14 @@ export function createLocationProvider(
         baseUrl: c.LOCATION_PROVIDER_BASE_URL,
         apiKey: c.LOCATION_PROVIDER_API_KEY,
         userAgent: c.LOCATION_PROVIDER_USER_AGENT,
+        countryCodes: c.LOCATION_COUNTRY_CODES,
+        timeoutMs: c.LOCATION_REQUEST_TIMEOUT_MS,
+        fetchImpl,
+      });
+    case 'mapbox':
+      return new MapboxGeocodingProvider({
+        baseUrl: c.MAPBOX_BASE_URL,
+        accessToken: c.MAPBOX_ACCESS_TOKEN ?? '',
         countryCodes: c.LOCATION_COUNTRY_CODES,
         timeoutMs: c.LOCATION_REQUEST_TIMEOUT_MS,
         fetchImpl,
@@ -65,6 +77,8 @@ export function createRouteProvider(
       return new GraphHopperRouteProvider(http);
     case 'valhalla':
       return new ValhallaRouteProvider(http);
+    case 'mapbox':
+      return new MapboxRouteProvider({ ...http, baseUrl: c.MAPBOX_BASE_URL, apiKey: c.MAPBOX_ACCESS_TOKEN });
     case 'haversine':
       return new HaversineRouteProvider();
   }

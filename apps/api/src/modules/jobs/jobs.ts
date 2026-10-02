@@ -5,6 +5,7 @@ import type { JobRunInfo, JobRunStatus, JobTrigger } from '@yatri/types';
 import { getRedisClient } from '../../config/redis';
 import { query } from '../../lib/db';
 import { log } from '../../lib/logger';
+import { reportError } from '../../lib/monitoring';
 
 /**
  * THE background job runner. A job is a name, how often it runs and a function; the registry (`registry.ts`) lists
@@ -104,6 +105,7 @@ export async function runJob(
   } catch (err) {
     const text = err instanceof Error ? err.message : String(err);
     log.error('Job failed', job.name, err);
+    reportError(err, { where: `job:${job.name}` });
     await record(job.name, trigger, 'FAILED', started, null, text.slice(0, 500)).catch(
       () => undefined,
     );

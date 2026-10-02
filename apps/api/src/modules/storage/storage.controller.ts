@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express';
 
 import { StorageObjectNotFoundError } from '../../lib/storage/storage-provider';
-import { getStorageProvider } from '../../lib/storage/local-disk-provider';
+import { getStorageProvider } from '../../lib/storage';
 import { verifySignedParams } from '../../lib/storage/signed-url';
 
 /**

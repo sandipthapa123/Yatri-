@@ -1,11 +1,11 @@
 import type {
   AdminAccountRow,
+  ProvidersOverview,
   AdminCityBody,
   AdminCityRow,
   CityAnalytics,
   CityDetail,
   AccessibilityStats,
-  NavigationMetrics,
   AdminCampaignBody,
   CampaignAnalytics,
   CampaignInfo,
@@ -14,6 +14,7 @@ import type {
   CampaignStatus,
   GrowthAdjustBody,
   LedgerEntryInfo,
+  NavigationMetrics,
   AdminAttributeBody,
   AdminCapabilityDecisionBody,
   AdminCapabilityReview,
@@ -893,3 +894,6 @@ export const getUserRewardsApi = (t: string, userId: string) =>
 export const adjustRewardsApi = (t: string, userId: string, body: GrowthAdjustBody) =>
   post<{ balance: number }>(`/growth/users/${userId}/points`, t, body);
 
+// ---- service providers (SETTINGS_VIEW): which outside services are in use and whether they work. Status only.
+
+export const providersApi = (t: string) => adminRequest<ProvidersOverview>('/providers', t);

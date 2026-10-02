@@ -4,7 +4,7 @@ import type { ApiResponse, DocumentSummary, DocumentTypeRef } from '@yatri/types
 import { env } from '../../config/env';
 import { detectFileType } from '../../lib/file-signature';
 import { generateStorageKey, sanitizeDisplayFilename } from '../../lib/safe-filename';
-import { getStorageProvider } from '../../lib/storage/local-disk-provider';
+import { getStorageProvider } from '../../lib/storage';
 import { HttpError } from '../../middleware/errorHandler';
 import { requireParam } from '../../lib/params';
 import { markOnboardingInProgress } from '../drivers/onboarding-status';

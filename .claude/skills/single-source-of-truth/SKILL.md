@@ -90,3 +90,13 @@ Yatri-specific reminders:
   `likeContains` for searches.
 - If you discover a duplicate, consolidate it or add it to "Known duplication" in the doc.
 
+## Service providers (Phase 25)
+
+- The vendors for each need, the variable that picks each, what each requires, which are development stand-ins and what a person is
+  told on failure are `@yatri/types` `providers.ts`; `config/env.ts` builds its enums from it. Never list vendors elsewhere.
+- Every outbound vendor HTTP call goes through `modules/providers/http.ts` (`providerRequest`): no raw `fetch`, no per-adapter
+  timeout, retry, error mapping or usage logging. Business code imports an interface (`getSmsProvider`, `getStorageProvider`,
+  `getPaymentGateway`, `sendEmail`, `reportError`, …), never a vendor class, SDK or address.
+- Which environment may use which vendor is `providerProblems` only. A new vendor is one adapter, one entry in `providers.ts`,
+  one case in that need's factory: no other file changes.
+- An online payment is marked paid only by `markPaidByProvider`, after a server-to-server lookup for the exact amount.

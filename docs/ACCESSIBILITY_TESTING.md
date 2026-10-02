@@ -425,3 +425,10 @@ and a screen reader:
 7. **Admin campaigns:** the tables have captions and row headers; the filters are links; each start/pause/end form names the campaign;
    confirmations appear in the page and results are announced.
 
+## X. Online payment and provider status (Phase 25)
+
+- Passenger, after a ride: "Pay online" and "I have paid: check my payment" are labelled buttons offered only when the server
+  says online payment is available; the result ("Your payment was received", "has not been confirmed yet", "did not go through")
+  is announced politely and is text, not colour. Cash still works if the provider is down.
+- Admin **Service providers**: a table with a caption, row headers, and a state written as words ("OK: Working", "Needs
+  attention: Not working"), never colour alone.

@@ -283,3 +283,12 @@ rules and data; clients present results and never re-derive them.
 `dist/` (`pnpm --filter @yatri/types build`) for Node — the API's `predev`/`prestart` run it —
 while Metro and TypeScript use `src/` (see its `exports`). Tests alias the source.
 
+## Service providers (Phase 25)
+
+One interface per outside need (sign-in codes, push, maps and routes, digital payments, files, calls, live updates, email,
+error reporting). Business code calls the interface; the vendor is server configuration per environment
+(`packages/types/src/providers.ts` is the one list; `config/env.ts` builds its enums from it). Every outbound vendor call goes
+through `modules/providers/http.ts` (`providerRequest`): deadline, named failures, retry only for calls safe to repeat, circuit
+breaker and usage counters. Staging and production refuse development stand-ins (`providerProblems`). Digital payments:
+`modules/payments` (gateway) and `modules/trips/digital-payments.service.ts`; the payment record and amount stay the
+server's. See `docs/PHASE_25.md`.

@@ -355,9 +355,21 @@ describe('environment validation', () => {
     NODE_ENV: 'production',
     CORS_ORIGINS: 'https://admin.example.org',
     PUBLIC_BASE_URL: 'https://api.example.org',
+    // A real provider for every need (Phase 25: staging and production may not run on development stand-ins).
     SMS_PROVIDER: 'http',
     SMS_HTTP_ENDPOINT: 'https://sms.example.org/send',
-    LOCATION_PROVIDER: 'static',
+    PUSH_PROVIDER: 'expo',
+    LOCATION_PROVIDER: 'mapbox',
+    MAPBOX_ACCESS_TOKEN: 'pk.example-token-value',
+    STORAGE_PROVIDER: 's3',
+    S3_BUCKET: 'yatri-documents',
+    S3_ACCESS_KEY_ID: 'AKIAEXAMPLEEXAMPLE',
+    S3_SECRET_ACCESS_KEY: 'example-secret-access-key-value-0123456789',
+    EMAIL_PROVIDER: 'resend',
+    RESEND_API_KEY: 're_example_key',
+    EMAIL_FROM: 'Yatri <no-reply@example.org>',
+    MONITORING_PROVIDER: 'sentry',
+    SENTRY_DSN: 'https://publickey@o1.ingest.sentry.io/1',
   };
   const problems = (env: Record<string, string>) => envIssues(env as NodeJS.ProcessEnv);
 

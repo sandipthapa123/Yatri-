@@ -12,6 +12,7 @@ import type {
   IceServersResponse,
   IncidentBody,
   IncidentInfo,
+  DigitalPaymentInfo,
   PaymentInfo,
   RatingInput,
   RatingSummary,
@@ -64,6 +65,9 @@ export const rideApi = {
   complete: (t: Token, id: string) => once<TripSummary>(`/trips/${id}/complete`, t),
   noShow: (t: Token, id: string) => once<TripSummary>(`/trips/${id}/no-show`, t),
   confirmPayment: (t: Token, id: string) => once<PaymentInfo>(`/trips/${id}/payment/confirm`, t),
+  // Online payment: the rider opens it (the server decides the amount), then asks whether it went through.
+  startOnlinePayment: (t: Token, id: string) => once<DigitalPaymentInfo>(`/trips/${id}/payment/digital`, t),
+  verifyOnlinePayment: (t: Token, id: string) => once<DigitalPaymentInfo>(`/trips/${id}/payment/digital/verify`, t),
 
   // ---- accessibility (the passenger's own saved needs; a ride's pickup instructions; a vehicle's features)
   accessibilityProfile: (t: Token) => get<AccessibilityProfile>('/users/me/accessibility', t),

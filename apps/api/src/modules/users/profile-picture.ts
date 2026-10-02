@@ -1,4 +1,4 @@
-import { getStorageProvider } from '../../lib/storage/local-disk-provider';
+import { getStorageProvider } from '../../lib/storage';
 import { toPublicProfile, type PublicProfile, type UserRow } from './users.types';
 
 /** How long a freshly issued picture link lasts. It is re-issued on every read, so this can be short. */

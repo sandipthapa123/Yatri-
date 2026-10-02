@@ -6,7 +6,7 @@ import {
   type PaymentStatus,
 } from '@yatri/types';
 
-import { query } from '../../lib/db';
+import { query, withTransaction } from '../../lib/db';
 import { HttpError } from '../../middleware/errorHandler';
 import { recordTripEvent } from './trip-events.service';
 import { getTrip } from './trips.repository';
@@ -56,9 +56,25 @@ export const organizationProvider: PaymentProvider = {
   },
 };
 
+/**
+ * An online payment is never "settled" by a person pressing a button: it is marked paid only by `markPaidByProvider`, after
+ * the payment vendor has said, server to server, that it took the amount (digital-payments.service).
+ */
+export const digitalProvider: PaymentProvider = {
+  method: 'DIGITAL',
+  async settle() {
+    throw new HttpError(
+      409,
+      'PAID_ONLINE',
+      'This ride is paid online. It is marked paid when the payment provider confirms it.',
+    );
+  },
+};
+
 const providers: Record<PaymentMethod, PaymentProvider> = {
   CASH: cashProvider,
   ORGANIZATION: organizationProvider,
+  DIGITAL: digitalProvider,
 };
 
 interface PaymentRow {
@@ -152,4 +168,47 @@ export async function settlePayment(tripId: string, actorId: string): Promise<Pa
     payload: { amountNpr: current.amountNpr, method: current.method },
   });
   return toInfo(r.rows[0]);
+}
+
+/**
+ * The only way a ride becomes paid online. Called once the vendor has confirmed the exact amount. Idempotent under the
+ * payment's row lock: a repeated call, a callback and the sweep racing each other, all end with one PAID payment and one
+ * "payment received" event.
+ */
+export async function markPaidByProvider(input: {
+  tripId: string;
+  actorId: string | null;
+  providerRef: string;
+  amountNpr: number;
+}): Promise<PaymentInfo> {
+  const changed = await withTransaction(async (client) => {
+    const cur = await client.query<PaymentRow>(
+      `SELECT trip_id, amount_npr, method, status, paid_at FROM trip_payments WHERE trip_id = $1 FOR UPDATE`,
+      [input.tripId],
+    );
+    const row = cur.rows[0];
+    if (!row) throw new HttpError(404, 'NOT_FOUND', 'No payment is due for this trip.');
+    if (row.status === 'PAID') return false;
+    if (row.method === 'ORGANIZATION') {
+      throw new HttpError(409, 'BILLED_TO_ORGANIZATION', "This ride is billed to the rider's organization.");
+    }
+    if (row.status !== 'PENDING' || row.amount_npr !== input.amountNpr) {
+      throw new HttpError(409, 'PAYMENT_NOT_PENDING', 'This payment can no longer be settled.');
+    }
+    await client.query(
+      `UPDATE trip_payments SET status = 'PAID', method = 'DIGITAL', paid_at = now(), confirmed_by = $2, provider_ref = $3
+       WHERE trip_id = $1`,
+      [input.tripId, input.actorId, input.providerRef],
+    );
+    return true;
+  });
+  if (changed) {
+    await recordTripEvent({
+      tripId: input.tripId,
+      type: 'PAYMENT_RECEIVED',
+      actorId: input.actorId,
+      payload: { amountNpr: input.amountNpr, method: 'DIGITAL' },
+    });
+  }
+  return (await getPayment(input.tripId)) as PaymentInfo;
 }

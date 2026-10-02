@@ -3,7 +3,7 @@ import type { ApiResponse, DocumentSummary } from '@yatri/types';
 
 import { env } from '../../config/env';
 import { notify } from '../../lib/notifications';
-import { getStorageProvider } from '../../lib/storage/local-disk-provider';
+import { getStorageProvider } from '../../lib/storage';
 import { HttpError } from '../../middleware/errorHandler';
 import { requireParam } from '../../lib/params';
 import { recordVerificationEvent } from '../drivers/verification-events.repository';

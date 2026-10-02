@@ -3,6 +3,7 @@ import { createHmac } from 'node:crypto';
 import type { IceServer, IceServersResponse } from '@yatri/types';
 
 import { env } from '../../config/env';
+import { TwilioIceProvider } from './twilio-ice-provider';
 
 /**
  * What a call provider is to the rest of the server. The call state machine, authorization and
@@ -12,6 +13,8 @@ import { env } from '../../config/env';
  */
 export interface CallProvider {
   readonly name: string;
+  /** A live check of the vendor (optional: peer-to-peer has none). */
+  check?(): Promise<void>;
   /** What the caller/callee needs to reach each other (for peer-to-peer: STUN, and TURN credentials). */
   connectionInfo(userId: string): Promise<IceServersResponse>;
 }
@@ -35,6 +38,18 @@ export const webrtcProvider: CallProvider = {
   },
 };
 
-const PROVIDERS: Record<(typeof env)['CALL_PROVIDER'], CallProvider> = { webrtc: webrtcProvider };
+let active: CallProvider | undefined;
 
-export const activeCallProvider = (): CallProvider => PROVIDERS[env.CALL_PROVIDER];
+/** The configured call provider (CALL_PROVIDER): peer-to-peer with our own relay, or a managed relay (Twilio). */
+export function activeCallProvider(): CallProvider {
+  active ??=
+    env.CALL_PROVIDER === 'twilio'
+      ? new TwilioIceProvider({
+          accountSid: env.TWILIO_ACCOUNT_SID ?? '',
+          authToken: env.TWILIO_AUTH_TOKEN ?? '',
+          ttlSeconds: env.CALL_TURN_CREDENTIAL_TTL_SECONDS,
+          timeoutMs: env.PROVIDER_TIMEOUT_MS,
+        })
+      : webrtcProvider;
+  return active;
+}

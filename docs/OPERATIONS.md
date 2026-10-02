@@ -403,5 +403,18 @@ The controls and their evidence are in `docs/SECURITY.md`. What operators must d
   Points that expire are written off hourly and riders are warned two weeks ahead.
 - **Invites.** Open by having an active referral campaign. One code brings in at most the 30-day limit of new riders. If invites
   look abused, check the risk signals (many invites, same network address, repeated own-code attempts); they are reasons to look.
+- **Messages.** A message campaign goes out once at its time to riders who opted in to "Offers and news"; others are recorded, not
+  pushed. No push provider means "sent" is "handed to the notification service".
 - **If a ride's payment is refunded**, an applied discount is not reversed automatically: use the refund flow and correct points if needed.
 
+## Service providers (Phase 25)
+
+- Set `NODE_ENV`, then the provider variables for that environment (`apps/api/.env.example` lists the recommended set for
+  development, staging and production). The API will not start on a stand-in in staging or production, or without a chosen
+  vendor's credentials. Production must set `MONITORING_PROVIDER=sentry`.
+- Admin > **Service providers** shows each service's state; the `provider-health` job (every 10 minutes) runs the live checks
+  that exist. A service with no live check shows as "set up, but there is no live check", never as working.
+- `payment-attempts` (every 2 minutes) completes online payments whose rider never came back and closes expired ones.
+- A vendor outage: sign-in codes use `SMS_FALLBACK_PROVIDER` if set; online payment says it is unavailable and cash still works;
+  push is retried by the notification retry job; maps return the straight-line estimate where the app already falls back.
+- Before relying on a vendor, run a staging pass with its real test keys: Phase 25's tests use pretend vendors only.

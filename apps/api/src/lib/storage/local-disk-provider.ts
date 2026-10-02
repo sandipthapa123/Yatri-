@@ -1,7 +1,6 @@
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
-import { env } from '../../config/env';
 import { buildSignedPath } from './signed-url';
 import {
   StorageObjectNotFoundError,
@@ -62,15 +61,3 @@ export class LocalDiskStorageProvider implements StorageProvider {
     return buildSignedPath(key, expiresInSeconds, options);
   }
 }
-
-let provider: StorageProvider | undefined;
-
-export function getStorageProvider(): StorageProvider {
-  if (!provider) {
-    provider = new LocalDiskStorageProvider(path.resolve(env.STORAGE_LOCAL_ROOT));
-  }
-  return provider;
-}
-
-export type { StorageProvider } from './storage-provider';
-export { StorageObjectNotFoundError } from './storage-provider';

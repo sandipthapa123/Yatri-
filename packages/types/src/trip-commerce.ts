@@ -4,8 +4,8 @@ import type { TripPlace, TripSummary } from './trip';
 
 /** Payment and rating definitions (ride problems and disputes are support tickets: see support.ts) — separate axes from trip status. */
 
-/** CASH: the driver collects it. ORGANIZATION: billed to the rider's organization on a monthly statement. */
-export const PAYMENT_METHODS = ['CASH', 'ORGANIZATION'] as const;
+/** CASH: the driver collects it. ORGANIZATION: billed to the rider's organization on a monthly statement. DIGITAL: paid online through the configured payment provider. */
+export const PAYMENT_METHODS = ['CASH', 'ORGANIZATION', 'DIGITAL'] as const;
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 
 export const PAYMENT_STATUSES = ['PENDING', 'PAID', 'FAILED', 'VOID'] as const;
@@ -31,6 +31,10 @@ export function describePayment(
   if (method === 'ORGANIZATION') {
     if (status === 'PENDING') return 'Billed to the organization';
     if (status === 'PAID') return 'Paid by the organization';
+  }
+  if (method === 'DIGITAL') {
+    if (status === 'PENDING') return 'Awaiting online payment';
+    if (status === 'PAID') return 'Paid online';
   }
   return PAYMENT_STATUS_LABELS[status];
 }
@@ -88,12 +92,12 @@ export interface TripRequestBody {
    * is ever inferred); given, it replaces the profile for this ride only.
    */
   accessibility?: TripAccessibilityRequest;
+  /** A promo or coupon code and whether to use reward points: the server decides what, if anything, they take off. */
+  promotion?: PromotionRequest;
 }
 
 /** A vehicle category a passenger can ride in. Categories are reference data owned by the server. */
 export interface VehicleCategoryInfo {
-  /** A promo or coupon code and whether to use reward points: the server decides what, if anything, they take off. */
-  promotion?: PromotionRequest;
   code: string;
   label: string;
 }
@@ -105,12 +109,12 @@ export interface VehicleCategoryInfo {
 export interface RideCategoryOption extends VehicleCategoryInfo {
   available: boolean;
   fare: FareBreakdown;
+  /** What the rider would pay after offers and points, worked out by the server. Null when nothing applies. */
+  promotion: PromotionQuote | null;
 }
 
 /** An estimate may omit the category: the server then prices the default one and returns them all. */
 export type TripEstimateBody = Omit<TripRequestBody, 'vehicleCategory'> & {
-  /** What the rider would pay after offers and points, worked out by the server. Null when nothing applies. */
-  promotion: PromotionQuote | null;
   vehicleCategory?: string;
 };
 

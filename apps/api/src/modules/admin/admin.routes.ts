@@ -258,6 +258,7 @@ import {
   listJobsHandler,
   runJobHandler,
 } from './admin-jobs';
+import { providersHandler } from './admin-providers';
 import {
   accessibilityStatsHandler,
   accessibilityStatsQuerySchema,
@@ -268,7 +269,6 @@ import {
   tripAccessibilityHandler,
 } from './admin-accessibility';
 import { navigationMetricsHandler, navigationMetricsQuerySchema } from './admin-navigation';
-import { attributeBodySchema, decisionSchema } from '../accessibility/accessibility.validators';
 import {
   adjustRewardsHandler,
   adjustSchema,
@@ -284,6 +284,7 @@ import {
   userRewardsHandler,
 } from './admin-growth';
 import { campaignBodySchema, statusBodySchema } from '../growth/campaigns.service';
+import { attributeBodySchema, decisionSchema } from '../accessibility/accessibility.validators';
 import {
   cityBodySchema,
   cityCategoriesSchema,
@@ -936,7 +937,6 @@ adminRouter.get(
 );
 adminRouter.post('/risk/sweep/run', requirePermission('RISK_MANAGE'), riskSweepHandler);
 
-// Navigation: route and arrival-time figures (counts and percentages, never a place or a track).
 // Growth: campaigns, redemptions, reward points and campaign figures. Reading needs GROWTH_VIEW, changing GROWTH_MANAGE.
 adminRouter.get(
   '/growth/campaigns',
@@ -996,6 +996,7 @@ adminRouter.post(
   adjustRewardsHandler,
 );
 
+// Navigation: route and arrival-time figures (counts and percentages, never a place or a track).
 adminRouter.get(
   '/navigation/metrics',
   requirePermission('OPERATIONS_VIEW'),
@@ -1049,6 +1050,8 @@ adminRouter.get(
 
 // Background jobs: reading needs OPERATIONS_VIEW, running one by hand SETTINGS_MANAGE.
 adminRouter.get('/jobs', requirePermission('OPERATIONS_VIEW'), listJobsHandler);
+// Status of the outside services (texts, push, maps, payments, storage, calls, email, error reporting). Status only.
+adminRouter.get('/providers', requirePermission('SETTINGS_VIEW'), providersHandler);
 adminRouter.get(
   '/jobs/:name/runs',
   requirePermission('OPERATIONS_VIEW'),

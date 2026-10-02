@@ -30,7 +30,7 @@ import { detectFileType } from '../../lib/file-signature';
 import { log } from '../../lib/logger';
 import { query, withTransaction } from '../../lib/db';
 import { generateStorageKey, sanitizeDisplayFilename } from '../../lib/safe-filename';
-import { getStorageProvider } from '../../lib/storage/local-disk-provider';
+import { getStorageProvider } from '../../lib/storage';
 import { HttpError } from '../../middleware/errorHandler';
 import { likeContains } from '../admin/admin-range';
 import { hasPermission } from '../admin/permissions';

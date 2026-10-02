@@ -1,6 +1,8 @@
 import type { NextFunction, Request, Response } from 'express';
 import type { ApiResponse } from '@yatri/types';
 import { log } from '../lib/logger';
+import { reportError } from '../lib/monitoring';
+import { ProviderError } from '../modules/providers/errors';
 
 export class HttpError extends Error {
   public details?: Record<string, unknown>;
@@ -48,16 +50,29 @@ export function errorHandler(
 ) {
   const err = bodyParserError(original) ?? original;
   const isHttpError = err instanceof HttpError;
-  const status = isHttpError ? err.status : 500;
-  const code = isHttpError ? err.code : 'INTERNAL_ERROR';
+  // A vendor that failed is "service unavailable" with a fixed sentence: never the vendor's words, status or address.
+  const isProviderError = err instanceof ProviderError;
+  const status = isHttpError ? err.status : isProviderError ? 503 : 500;
+  const code = isHttpError ? err.code : isProviderError ? 'SERVICE_UNAVAILABLE' : 'INTERNAL_ERROR';
   // Never leak internal error messages (which can include driver/library
   // detail) for unexpected 500s — only HttpErrors we raised ourselves have
   // messages meant for API consumers.
-  const message = isHttpError ? err.message : 'Something went wrong. Please try again.';
+  const message = isHttpError
+    ? err.message
+    : isProviderError
+      ? err.publicMessage
+      : 'Something went wrong. Please try again.';
 
-  if (!isHttpError) {
+  if (isProviderError) {
+    log.warn('Provider failure answered with 503', { requestId: req.id, route: req.route?.path, kind: err.kind });
+  } else if (!isHttpError) {
     // The correlation id lets support match the caller's "something went wrong" to this line.
     log.error('Unhandled error', { requestId: req.id, route: req.route?.path }, err);
+    reportError(err, {
+      where: `${req.method} ${req.baseUrl}${req.route?.path ?? ''}`,
+      status,
+      ...(req.id ? { requestId: String(req.id) } : {}),
+    });
   }
 
   res.status(status).json({

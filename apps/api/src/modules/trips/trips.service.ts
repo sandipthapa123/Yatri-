@@ -12,9 +12,11 @@ import {
   type TripRequestBody,
   type TripStatus,
   type TripSummary,
+  type PaymentMethod,
 } from '@yatri/types';
 
 import { env } from '../../config/env';
+import { getPaymentGateway } from '../payments/gateway';
 import { query } from '../../lib/db';
 import { sqlIn } from '../../lib/sql';
 import { HttpError } from '../../middleware/errorHandler';
@@ -145,7 +147,7 @@ async function businessInfoOf(t: TripRow): Promise<TripSummary['business']> {
 export async function buildTripSummary(t: TripRow, viewerId: string): Promise<TripSummary> {
   const viewerIsPassenger = t.passenger_id === viewerId;
   const [pay, rated, counterpart, business] = await Promise.all([
-    query<{ status: TripPaymentStatus }>('SELECT status FROM trip_payments WHERE trip_id = $1', [
+    query<{ status: TripPaymentStatus; method: PaymentMethod }>('SELECT status, method FROM trip_payments WHERE trip_id = $1', [
       t.id,
     ]),
     query('SELECT 1 FROM trip_ratings WHERE trip_id = $1 AND rater_id = $2', [t.id, viewerId]),
@@ -178,6 +180,9 @@ export async function buildTripSummary(t: TripRow, viewerId: string): Promise<Tr
     counterpart,
     viewerRole: viewerIsPassenger ? 'PASSENGER' : 'DRIVER',
     paymentStatus: pay.rows[0]?.status ?? 'NONE',
+    paymentMethod: pay.rows[0]?.method ?? null,
+    onlinePaymentAvailable:
+      viewerIsPassenger && t.status === 'COMPLETED' && pay.rows[0]?.status === 'PENDING' && pay.rows[0].method !== 'ORGANIZATION' && getPaymentGateway() !== null,
     vehicleCategory:
       t.vehicle_category_code && t.vehicle_category_label
         ? { code: t.vehicle_category_code, label: t.vehicle_category_label }

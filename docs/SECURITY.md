@@ -77,3 +77,15 @@ only as long as a ride needs it; nothing secret or personal is written to a log 
 - **Not tested:** behaviour under real network partitions and on real devices, a penetration test by a third
   party, and load beyond the seeded test dataset. Do an external penetration test before launch.
 
+## Service providers (Phase 25)
+
+- Credentials come only from the environment or a secret manager and are listed in `SECRET_ENV_KEYS`; `.env.example`
+  holds no vendor credential, and the start-up check refuses a chosen vendor that lacks them.
+- No provider error, status, address or credential reaches a user or an administrator: failures are answered with a fixed
+  sentence (503) and logged as a kind. The admin screen shows status only.
+- Usage counters hold the need, vendor, outcome and duration: no address, message, person or place.
+- Error reports are scrubbed before they leave the server (phone numbers, emails, tokens, ids, coordinates, long secrets) and
+  carry no request body or header.
+- An online payment is believed only for the exact amount, only after a server-to-server lookup; the unique indexes on
+  `payment_attempts` make a repeated request or callback harmless.
+- Push messages carry only the title, body, type and ride id: never an accessibility detail, note, location or document.

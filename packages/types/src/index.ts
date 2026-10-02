@@ -28,6 +28,7 @@ export * from './jobs';
 export * from './accessibility';
 export * from './navigation';
 export * from './growth';
+export * from './providers';
 export * from './compliance';
 export * from './realtime';
 export * from './format';

@@ -67,6 +67,7 @@ export function AuthProvider({
   const [driverStatus, setDriverStatus] = useState<string | undefined>(undefined);
 
   const tokensRef = useRef<StoredTokens | null>(null);
+  const refreshInFlight = useRef<Promise<string> | null>(null);
   const accessTokenExpiresAtRef = useRef<number>(0);
 
   const applySession = useCallback(
@@ -102,15 +103,24 @@ export function AuthProvider({
       return tokens.accessToken;
     }
 
-    try {
-      const refreshed = await api.refreshTokens(tokens.refreshToken);
-      await applySession(refreshed);
-      return refreshed.accessToken;
-    } catch (err) {
-      // Only the server rejecting the refresh token ends the session; being offline must not sign anyone out.
-      if (shouldEndSession(err)) await signOut();
-      throw err;
-    }
+    // Several parts of a screen ask for a token at once (a screen with four polled cards, say). They all wait for ONE refresh:
+    // two refreshes with the same refresh token would race, and the server accepts only the first.
+    if (refreshInFlight.current) return refreshInFlight.current;
+    const refresh = (async () => {
+      try {
+        const refreshed = await api.refreshTokens(tokens.refreshToken);
+        await applySession(refreshed);
+        return refreshed.accessToken;
+      } catch (err) {
+        // Only the server rejecting the refresh token ends the session; being offline must not sign anyone out.
+        if (shouldEndSession(err)) await signOut();
+        throw err;
+      } finally {
+        refreshInFlight.current = null;
+      }
+    })();
+    refreshInFlight.current = refresh;
+    return refresh;
   }, [applySession, signOut]);
 
   // On mount: try to resume a session from secure storage.

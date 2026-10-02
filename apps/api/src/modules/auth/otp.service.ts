@@ -1,13 +1,13 @@
 import { env } from '../../config/env';
 import { generateNumericOtp } from '../../lib/crypto';
 import { hashSecret, OTP_HASH_ROUNDS, verifySecret } from '../../lib/password';
-import { checkAndArmCooldown, checkWindowLimit } from '../../lib/rate-limit';
+import { checkAndArmCooldown, checkWindowLimit, clearCooldown } from '../../lib/rate-limit';
 import type { UserRole } from '../users/users.types';
 import { recordAuthEvent } from './auth-event.repository';
 import {
   createOtpRequest,
   findActiveOtpRequest,
-  incrementOtpAttempts,
+  reserveOtpAttempt,
   invalidateActiveOtps,
   markOtpConsumed,
   type OtpPurpose,
@@ -117,10 +117,18 @@ export async function requestOtp(input: RequestOtpInput): Promise<RequestOtpResu
     userAgent,
   });
 
-  await getSmsProvider().send({
-    toPhoneNumber: phoneNumber,
-    body: `Your Yatri verification code is ${code}. It expires in ${env.OTP_TTL_MINUTES} minutes. Do not share this code.`,
-  });
+  try {
+    await getSmsProvider().send({
+      toPhoneNumber: phoneNumber,
+      body: `Your Yatri verification code is ${code}. It expires in ${env.OTP_TTL_MINUTES} minutes. Do not share this code.`,
+    });
+  } catch (err) {
+    // The text never left: the person must not be punished for the vendor's failure. The code that was never sent is
+    // withdrawn and the resend wait is lifted, so they can ask again at once (the caller answers with the fixed 503).
+    await invalidateActiveOtps(phoneNumber, role, PURPOSE);
+    await clearCooldown(cooldownKey);
+    throw err;
+  }
 
   await recordAuthEvent({
     eventType: 'OTP_REQUESTED',
@@ -160,7 +168,9 @@ export async function verifyOtp(input: VerifyOtpInput): Promise<void> {
     throw new OtpInvalidError();
   }
 
-  if (otpRequest.attempts >= otpRequest.max_attempts) {
+  // A guess is counted before it is compared (atomically), so parallel guesses cannot exceed the limit.
+  const used = await reserveOtpAttempt(otpRequest.id);
+  if (used === null) {
     await recordAuthEvent({
       eventType: 'OTP_LOCKED',
       phoneNumber,
@@ -173,7 +183,7 @@ export async function verifyOtp(input: VerifyOtpInput): Promise<void> {
 
   const isMatch = await verifySecret(code, otpRequest.otp_hash);
   if (!isMatch) {
-    const newAttempts = await incrementOtpAttempts(otpRequest.id);
+    const newAttempts = used;
     if (newAttempts >= otpRequest.max_attempts) {
       await recordAuthEvent({
         eventType: 'OTP_LOCKED',
@@ -194,7 +204,7 @@ export async function verifyOtp(input: VerifyOtpInput): Promise<void> {
     throw new OtpInvalidError();
   }
 
-  await markOtpConsumed(otpRequest.id);
+  if (!(await markOtpConsumed(otpRequest.id))) throw new OtpInvalidError(); // another request used this correct code first
   await recordAuthEvent({
     eventType: 'OTP_VERIFIED',
     phoneNumber,

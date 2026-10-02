@@ -5,12 +5,14 @@ Yatri (यात्री — "traveller" in Nepali) is a ride-sharing platform 
 This repository is a TypeScript monorepo containing the passenger app, driver app, admin
 dashboard, and backend API that make up the Yatri platform.
 
-> **Status: Phase 3 — driver onboarding & verification.** Passenger profiles, the full
-> driver onboarding wizard (personal info, vehicle, documents), and an admin verification
-> dashboard are implemented and tested end-to-end — a driver can only become `VERIFIED`
-> once an admin has approved every requirement. Ride booking, matching, tracking, and
-> payments land in later phases. See [`docs/PHASE_3.md`](docs/PHASE_3.md),
-> [`docs/PHASE_2.md`](docs/PHASE_2.md), and [`docs/AUTHENTICATION.md`](docs/AUTHENTICATION.md).
+> **Status: Phase 28.** Sign-in, driver onboarding and verification, ride booking, matching, live
+> tracking, calls and chat, safety, cash and online payments with refunds and driver payouts, support
+> and compliance, fleets, business accounts, accessible rides, navigation, growth and loyalty,
+> production service providers, and disability benefit verification are implemented and tested. What
+> each phase added, and what it did **not** verify, is in `docs/PHASE_<n>.md` (start with
+> [`docs/PHASE_1.md`](docs/PHASE_1.md), [`docs/AUTHENTICATION.md`](docs/AUTHENTICATION.md) and
+> [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)). Nothing has been run against real payment, SMS, map,
+> storage or error-reporting vendors yet: use `pnpm --filter @yatri/api providers:check` against staging.
 
 ## Tech stack
 
@@ -24,8 +26,8 @@ dashboard, and backend API that make up the Yatri platform.
 | Realtime / rate limiting | Redis                                                                               |
 | Tooling                  | pnpm workspaces, ESLint, Prettier, Vitest                                           |
 
-The backend is a **modular monolith**: each domain (health today; users, trips, and payments
-later) is its own module under `apps/api/src/modules`, mounted on a single Express app. No
+The backend is a **modular monolith**: each domain (auth, users, trips, payments, dispatch, support,
+growth, providers, and more) is its own module under `apps/api/src/modules`, mounted on a single Express app. No
 microservices until there's a real operational reason for one.
 
 ## Project structure
@@ -43,6 +45,10 @@ yatri/
 │   ├── mobile-auth/ # Shared RN auth client: API client, secure token storage, AuthContext,
 │   │                # accessible phone/OTP inputs (used by passenger + driver)
 │   ├── mobile-ui/   # Theme hook and crash boundary shared by both apps
+│   ├── mobile-ride/ # Ride room, offers, live trip view, navigation, accessibility screens
+│   ├── mobile-location/, mobile-support/, mobile-business/, mobile-preferences/
+│   │                # Place search; support, privacy and push; business accounts; settings,
+│   │                # rewards, disability benefit and payouts screens
 │   └── config/      # Shared TypeScript & ESLint base configuration
 ├── deploy/          # Container images, a full local stack, backup and restore scripts
 ├── scripts/         # Repository audits (unused dependencies, dead files, duplicate definitions)

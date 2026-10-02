@@ -102,7 +102,18 @@ export async function refreshSession(
 
   const newRefreshToken = generateOpaqueToken();
   const newExpiresAt = refreshExpiry();
-  await rotateSession(session.id, sha256Hex(newRefreshToken), newExpiresAt);
+  const swapped = await rotateSession(session.id, sha256Hex(refreshToken), sha256Hex(newRefreshToken), newExpiresAt);
+  if (!swapped) {
+    // Someone else used this refresh token a moment ago (or it was revoked): only one use of a token can win.
+    await recordAuthEvent({
+      eventType: 'TOKEN_REFRESH_FAILED',
+      userId: session.user_id,
+      ipAddress: ctx.ipAddress,
+      userAgent: ctx.userAgent,
+      metadata: { reason: 'already_used' },
+    });
+    throw new InvalidRefreshTokenError();
+  }
 
   const accessToken = signAccessToken({ sub: user.id, sid: session.id, role: user.role });
 

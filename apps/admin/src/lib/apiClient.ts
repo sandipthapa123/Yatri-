@@ -152,6 +152,23 @@ export class ApiError extends Error {
   }
 }
 
+/** How long the admin site waits for the API before giving up, so a stuck API shows an error instead of a page that never loads. */
+export const API_TIMEOUT_MS = 15_000;
+
+/** The one way the admin site calls the API: with a deadline, and with a failure to reach it reported as an ApiError. */
+async function apiFetch(url: string, init: RequestInit): Promise<Response> {
+  try {
+    return await fetch(url, { ...init, signal: AbortSignal.timeout(API_TIMEOUT_MS) });
+  } catch (err) {
+    const timedOut = err instanceof Error && (err.name === 'TimeoutError' || err.name === 'AbortError');
+    throw new ApiError(
+      timedOut ? 504 : 503,
+      'API_UNREACHABLE',
+      timedOut ? 'The server did not answer in time. Please try again.' : 'The server could not be reached. Please try again.',
+    );
+  }
+}
+
 interface SessionPayload {
   accessToken: string;
   accessTokenExpiresInSeconds: number;
@@ -163,7 +180,7 @@ async function request<T>(
   path: string,
   options: { method?: string; body?: unknown } = {},
 ): Promise<T> {
-  const response = await fetch(`${env.API_BASE_URL}${path}`, {
+  const response = await apiFetch(`${env.API_BASE_URL}${path}`, {
     method: options.method ?? 'GET',
     headers: { 'Content-Type': 'application/json' },
     body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
@@ -184,7 +201,7 @@ async function adminRequest<T>(
   accessToken: string,
   options: { method?: string; body?: unknown } = {},
 ): Promise<T> {
-  const response = await fetch(`${env.API_BASE_URL}/admin${path}`, {
+  const response = await apiFetch(`${env.API_BASE_URL}/admin${path}`, {
     method: options.method ?? 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -331,7 +348,7 @@ export function rejectVehicle(
 }
 
 export async function logoutAdminSession(accessToken: string) {
-  const response = await fetch(`${env.API_BASE_URL}/auth/logout`, {
+  const response = await apiFetch(`${env.API_BASE_URL}/auth/logout`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
     body: JSON.stringify({}),
@@ -548,7 +565,7 @@ export const setAdminPermissions = (t: string, id: string, body: SetPermissionsB
 
 // ---- support (DISPUTES_MANAGE; raising refunds SUPPORT_MANAGE; deciding them REFUNDS_MANAGE)
 async function adminUpload<T>(path: string, accessToken: string, form: FormData): Promise<T> {
-  const response = await fetch(`${env.API_BASE_URL}/admin${path}`, {
+  const response = await apiFetch(`${env.API_BASE_URL}/admin${path}`, {
     method: 'POST',
     // No Content-Type: fetch sets the multipart boundary itself.
     headers: { Authorization: `Bearer ${accessToken}` },

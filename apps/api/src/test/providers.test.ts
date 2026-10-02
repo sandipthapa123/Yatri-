@@ -281,6 +281,29 @@ describe('SMS: Twilio and the fallback', () => {
   });
 });
 
+describe('a failed text does not punish the person', () => {
+  it('answers with the fixed sentence, withdraws the unsent code and lets them ask again at once', async () => {
+    const { setSmsProviderForTests } = await import('../modules/auth/sms');
+    const phone = `+97798${Math.floor(10000000 + Math.random() * 89999999)}`;
+    let failing = true;
+    setSmsProviderForTests({ name: 'down', send: async () => { if (failing) throw new ProviderError('OTP', 'down', 'UNAVAILABLE'); } });
+    try {
+      const first = await api.post('/api/v1/auth/request-otp').send({ phoneNumber: phone, role: 'PASSENGER' });
+      expect(first.status).toBe(503);
+      expect(first.body.error.message).toBe(PROVIDER_PUBLIC_MESSAGES.OTP);
+      expect(first.body.error.code).toBe('SERVICE_UNAVAILABLE');
+      expect(first.body.error.message).not.toMatch(/down/i); // the vendor's name never reaches the person
+      const open = await pool.query(`SELECT count(*)::int AS n FROM otp_requests WHERE phone_number = $1 AND consumed_at IS NULL AND invalidated_at IS NULL`, [phone]);
+      expect(open.rows[0].n).toBe(0); // the code nobody received cannot be used
+      failing = false;
+      const second = await api.post('/api/v1/auth/request-otp').send({ phoneNumber: phone, role: 'PASSENGER' });
+      expect(second.status, JSON.stringify(second.body)).toBe(200); // no "please wait" for a text that never went
+    } finally {
+      setSmsProviderForTests(undefined);
+    }
+  });
+});
+
 describe('Push: Expo', () => {
   it('sends only the title, body and a minimal data, and removes a phone the service says is gone', async () => {
     resetBreakers();

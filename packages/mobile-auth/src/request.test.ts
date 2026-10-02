@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { ApiError, NETWORK_ERROR_MESSAGE, request } from './apiClient';
+import { ApiError, NETWORK_ERROR_MESSAGE, REQUEST_TIMEOUT_MS, TIMEOUT_ERROR_MESSAGE, request } from './apiClient';
 import { connectivity } from './connectivity';
 import { serverClock } from './serverClock';
 
@@ -20,6 +20,26 @@ describe('request', () => {
     expect(err).toBeInstanceOf(ApiError);
     expect(err).toMatchObject({ status: 0, code: 'NETWORK_ERROR', message: NETWORK_ERROR_MESSAGE });
     expect(connectivity.getState().failures).toBe(before + 1);
+  });
+
+  it('ends a request that gets no answer, in plain words, and still lets the caller cancel', async () => {
+    vi.useFakeTimers();
+    try {
+      // a connection that never answers, but honours the abort signal like a real fetch
+      vi.stubGlobal('fetch', vi.fn((_url: string, init: RequestInit) => new Promise((_res, rej) => init.signal?.addEventListener('abort', () => rej(new DOMException('aborted', 'AbortError'))))));
+      const pending = request('/slow').catch((e) => e);
+      await vi.advanceTimersByTimeAsync(REQUEST_TIMEOUT_MS + 10);
+      const err = await pending;
+      expect(err).toBeInstanceOf(ApiError);
+      expect(err).toMatchObject({ status: 0, code: 'NETWORK_ERROR', message: TIMEOUT_ERROR_MESSAGE });
+      // the caller's own cancel is not reported as a timeout or a network problem
+      const controller = new AbortController();
+      const cancelled = request('/slow', { signal: controller.signal }).catch((e) => e);
+      controller.abort();
+      await expect(cancelled).resolves.toMatchObject({ name: 'AbortError' });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('does not call a cancelled request a network problem', async () => {

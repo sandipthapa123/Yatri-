@@ -148,7 +148,7 @@ async function choicesOf(userId: string): Promise<PreferenceValues> {
 }
 
 /** One person's value for one setting: what they chose, else the setting's own default. */
-export async function preferenceValue(userId: string, key: string): Promise<PreferenceValue | null> {
+export async function personalPreference(userId: string, key: string): Promise<PreferenceValue | null> {
   const chosen = (await choicesOf(userId))[key];
   return chosen === undefined ? (preferenceDef(key)?.default ?? null) : chosen;
 }

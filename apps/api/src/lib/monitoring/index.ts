@@ -16,7 +16,7 @@ export function getErrorReporter(): ErrorReporter {
       ? new SentryErrorReporter({
           dsn: env.SENTRY_DSN ?? '',
           environment: env.NODE_ENV,
-          release: env.RELEASE_VERSION,
+          release: env.APP_VERSION ?? 'dev', // the one version the service already reports (health)
           timeoutMs: env.PROVIDER_TIMEOUT_MS,
         })
       : new ConsoleErrorReporter();

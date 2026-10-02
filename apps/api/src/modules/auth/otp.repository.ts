@@ -84,15 +84,26 @@ export async function findActiveOtpRequest(
 }
 
 /** Returns the row's new attempt count. */
-export async function incrementOtpAttempts(id: string): Promise<number> {
+/**
+ * Take one of the code's guesses BEFORE the guess is compared. The count and the limit are checked in one statement, so a
+ * burst of parallel guesses cannot all be evaluated before any is counted: at most `max_attempts` guesses are ever compared.
+ * Returns the number of guesses used including this one, or null when none is left (the code is locked).
+ */
+export async function reserveOtpAttempt(id: string): Promise<number | null> {
   const result = await query<{ attempts: number }>(
-    `UPDATE otp_requests SET attempts = LEAST(attempts + 1, max_attempts) WHERE id = $1
+    `UPDATE otp_requests SET attempts = attempts + 1
+     WHERE id = $1 AND attempts < max_attempts AND consumed_at IS NULL AND invalidated_at IS NULL
      RETURNING attempts`,
     [id],
   );
-  return result.rows[0]?.attempts ?? 0;
+  return result.rows[0]?.attempts ?? null;
 }
 
-export async function markOtpConsumed(id: string): Promise<void> {
-  await query(`UPDATE otp_requests SET consumed_at = now() WHERE id = $1`, [id]);
+/** Use the code up. True only for the one caller that did: a correct code cannot sign two people (or two requests) in. */
+export async function markOtpConsumed(id: string): Promise<boolean> {
+  const result = await query(
+    `UPDATE otp_requests SET consumed_at = now() WHERE id = $1 AND consumed_at IS NULL AND invalidated_at IS NULL`,
+    [id],
+  );
+  return (result.rowCount ?? 0) === 1;
 }

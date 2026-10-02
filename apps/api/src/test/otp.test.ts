@@ -102,6 +102,26 @@ describe('OTP', () => {
     expect(afterLock.body.error.code).toBe('OTP_LOCKED');
   });
 
+  it('counts a guess before comparing it, so parallel guesses cannot exceed the limit', async () => {
+    const { reserveOtpAttempt } = await import('../modules/auth/otp.repository');
+    const phoneNumber = uniquePhone();
+    await api.post('/api/v1/auth/request-otp').send({ phoneNumber, role: 'PASSENGER' });
+    const row = (await pool.query('SELECT id, max_attempts FROM otp_requests WHERE phone_number = $1', [phoneNumber])).rows[0];
+    const results = await Promise.all(Array.from({ length: 25 }, () => reserveOtpAttempt(row.id)));
+    expect(results.filter((r) => r !== null)).toHaveLength(row.max_attempts); // exactly the allowed number of guesses
+    expect([...results.filter((r) => r !== null)].sort()).toEqual(Array.from({ length: row.max_attempts }, (_, i) => i + 1));
+  });
+
+  it('lets a correct code sign in once, even when it is sent twice at the same moment', async () => {
+    const phoneNumber = uniquePhone();
+    const requestRes = await api.post('/api/v1/auth/request-otp').send({ phoneNumber, role: 'PASSENGER' });
+    const code = requestRes.body.data.devOtp;
+    const answers = await Promise.all([1, 2, 3].map(() => api.post('/api/v1/auth/verify-otp').send({ phoneNumber, role: 'PASSENGER', code })));
+    expect(answers.filter((r) => r.status === 200)).toHaveLength(1);
+    const sessions = await pool.query('SELECT count(*)::int AS n FROM auth_sessions s JOIN users u ON u.id = s.user_id WHERE u.phone_number = $1', [phoneNumber]);
+    expect(sessions.rows[0].n).toBe(1);
+  });
+
   it('enforces a resend cooldown', async () => {
     const phoneNumber = uniquePhone();
     const first = await api

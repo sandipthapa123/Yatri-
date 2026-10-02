@@ -261,7 +261,6 @@ const envSchema = z
     EMAIL_FROM: optionalString(),
     MONITORING_PROVIDER: z.enum(PROVIDER_CHOICES.MONITORING).default('none'),
     SENTRY_DSN: optionalString(),
-    RELEASE_VERSION: z.string().min(1).default('dev'),
     // Digital payments. "none": cash and organization billing only. "sandbox": a stand-in for development.
     PAYMENT_PROVIDER: z.enum(PROVIDER_CHOICES.PAYMENTS).default('none'),
     KHALTI_SECRET_KEY: optionalString(),

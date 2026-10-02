@@ -22,20 +22,41 @@ export class ApiError extends Error {
 export const NETWORK_ERROR_MESSAGE =
   'Could not reach Yatri. Check your internet connection and try again.';
 
+/** How long a request may wait for an answer; an upload of a photo or document is given longer. */
+export const REQUEST_TIMEOUT_MS = 20_000;
+export const UPLOAD_TIMEOUT_MS = 60_000;
+export const TIMEOUT_ERROR_MESSAGE = 'Yatri did not answer in time. Check your internet connection and try again.';
+
 /**
  * The one place a request leaves the device. It also keeps what the app knows about its connection (every answer, even
  * an error answer, proves the network works; a failure to reach the server is recorded) and the server's clock (from
  * the response `Date`), and turns "fetch threw" into a plain ApiError with code NETWORK_ERROR.
  */
-async function send(url: string, init: RequestInit): Promise<Response> {
+async function send(url: string, init: RequestInit, timeoutMs: number = REQUEST_TIMEOUT_MS): Promise<Response> {
   const sentAt = Date.now();
   let response: Response;
+  // A request that gets no answer must end: on a stalled connection a screen would otherwise wait for ever. The caller's own
+  // signal still cancels it, and that is told apart from running out of time.
+  const controller = new AbortController();
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, timeoutMs);
+  const caller = init.signal ?? undefined;
+  const onCallerAbort = () => controller.abort();
+  if (caller?.aborted) controller.abort();
+  else caller?.addEventListener('abort', onCallerAbort, { once: true });
   try {
-    response = await fetch(url, init);
+    response = await fetch(url, { ...init, signal: controller.signal });
   } catch (err) {
-    if (init.signal?.aborted) throw err; // the caller cancelled; that is not a network problem
+    if (caller?.aborted) throw err; // the caller cancelled; that is not a network problem
     connectivity.reportUnreachable();
-    throw new ApiError(0, 'NETWORK_ERROR', NETWORK_ERROR_MESSAGE);
+    // Same code as a dropped connection (an action sent with an idempotency key is safely sent again), plainer words.
+    throw new ApiError(0, 'NETWORK_ERROR', timedOut ? TIMEOUT_ERROR_MESSAGE : NETWORK_ERROR_MESSAGE);
+  } finally {
+    clearTimeout(timer);
+    caller?.removeEventListener('abort', onCallerAbort);
   }
   connectivity.reportReachable();
   const date = response.headers?.get?.('date');
@@ -111,7 +132,7 @@ export async function requestMultipart<T>(
     // No Content-Type here — fetch sets the multipart boundary itself.
     headers: { Authorization: `Bearer ${accessToken}` },
     body: form,
-  });
+  }, UPLOAD_TIMEOUT_MS);
   return unwrap<T>(response);
 }
 

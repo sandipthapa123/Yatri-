@@ -76,17 +76,24 @@ export async function findSessionByTokenHash(refreshTokenHash: string): Promise<
   return result.rows[0] ?? null;
 }
 
+/**
+ * Swap a session's refresh token for the next one, only if it is still the one that was presented (compare and swap). Two
+ * refreshes with the same token cannot both win: the loser gets false, so a token that was already used (a replay, a race)
+ * is refused instead of silently overwriting the winner's new token and logging that device out later.
+ */
 export async function rotateSession(
   sessionId: string,
+  presentedRefreshTokenHash: string,
   newRefreshTokenHash: string,
   newExpiresAt: Date,
-): Promise<void> {
-  await query(
+): Promise<boolean> {
+  const r = await query(
     `UPDATE auth_sessions
-     SET refresh_token_hash = $2, expires_at = $3, last_used_at = now()
-     WHERE id = $1`,
-    [sessionId, newRefreshTokenHash, newExpiresAt],
+     SET refresh_token_hash = $3, expires_at = $4, last_used_at = now()
+     WHERE id = $1 AND refresh_token_hash = $2 AND revoked_at IS NULL`,
+    [sessionId, presentedRefreshTokenHash, newRefreshTokenHash, newExpiresAt],
   );
+  return (r.rowCount ?? 0) === 1;
 }
 
 export async function revokeSession(sessionId: string): Promise<void> {

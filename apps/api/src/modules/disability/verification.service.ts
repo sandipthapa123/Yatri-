@@ -45,7 +45,7 @@ import { getStorageProvider } from '../../lib/storage';
 import { HttpError } from '../../middleware/errorHandler';
 import { acceptPolicy, listPolicies, withdrawConsent } from '../compliance/compliance.service';
 import { todayKey } from '../fleet/expiry.service';
-import { preferenceValue } from '../preferences/preferences.service';
+import { personalPreference } from '../preferences/preferences.service';
 import { settingBool } from '../settings/settings.service';
 import { getDisabilityVerifier, officialMethodState } from './verifier';
 
@@ -170,7 +170,7 @@ export async function driverNoteFor(
   live: boolean,
 ): Promise<TripDisabilityNote | null> {
   if (!trip.driver_id || trip.driver_id !== viewerId || !live) return null; // only the assigned driver, only while the ride is live
-  if ((await preferenceValue(trip.passenger_id, 'shareDisabilityStatusWithDriver')) !== true) return null;
+  if ((await personalPreference(trip.passenger_id, 'shareDisabilityStatusWithDriver')) !== true) return null;
   if (!(await benefitActiveFor(trip.passenger_id))) return null;
   return { verified: true, text: DISABILITY_DRIVER_TEXT };
 }
@@ -372,7 +372,7 @@ export async function viewFor(userId: string): Promise<DisabilityVerificationVie
     canSubmit: featureOn() && consent.given && editable && gaps.length === 0,
     gaps: featureOn() && consent.given && editable ? gaps : [],
     canWithdraw: consent.given || (!!row && status !== 'NOT_SUBMITTED'),
-    driverSharing: (await preferenceValue(userId, 'shareDisabilityStatusWithDriver')) === true,
+    driverSharing: (await personalPreference(userId, 'shareDisabilityStatusWithDriver')) === true,
     benefit: {
       active,
       text: active

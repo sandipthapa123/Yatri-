@@ -7,7 +7,11 @@ import { getStorageProvider } from '../../lib/storage';
 import { HttpError } from '../../middleware/errorHandler';
 import { requireParam } from '../../lib/params';
 import { recordVerificationEvent } from '../drivers/verification-events.repository';
-import { findDocumentById, setDocumentReview } from '../documents/documents.repository';
+import {
+  findDocumentById,
+  isPastExpiry,
+  setDocumentReview,
+} from '../documents/documents.repository';
 import { toDocumentSummary, type DocumentRow } from '../documents/documents.types';
 import { findVehicleById, setVehicleVerification } from '../vehicles/vehicles.repository';
 
@@ -43,6 +47,14 @@ export async function approveDocumentHandler(
   if (!req.auth) throw new HttpError(401, 'UNAUTHENTICATED', 'Authentication required.');
   const doc = await loadDocumentOr404(requireParam(req, 'id'));
   const driverUserId = await resolveDriverUserId(doc);
+  // Approving a document that has already run out would make the driver eligible until the next expiry sweep.
+  if (await isPastExpiry(doc.id)) {
+    throw new HttpError(
+      409,
+      'DOCUMENT_EXPIRED',
+      'This document has already expired. Ask the driver to upload a current one.',
+    );
+  }
 
   const updated = await setDocumentReview(doc.id, 'APPROVED', null, req.auth.userId);
   if (!updated) throw new HttpError(404, 'NOT_FOUND', 'Document not found.');

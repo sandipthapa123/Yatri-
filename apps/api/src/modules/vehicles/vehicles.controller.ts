@@ -8,6 +8,7 @@ import {
   findVehicleById,
   findVehiclesByDriver,
   listActiveVehicleCategories,
+  orRegistrationTaken,
   updateVehicle,
   type CreateVehicleInput,
   type UpdateVehicleInput,
@@ -33,7 +34,7 @@ export async function createVehicleHandler(req: Request, res: Response<ApiRespon
     });
   }
 
-  const vehicle = await createVehicle(req.auth.userId, input);
+  const vehicle = await orRegistrationTaken(() => createVehicle(req.auth!.userId, input));
   res.status(201).json({ success: true, data: toPublicVehicle(vehicle) });
 }
 
@@ -53,7 +54,7 @@ export async function updateVehicleHandler(req: Request, res: Response<ApiRespon
   }
 
   const update = req.body as UpdateVehicleInput;
-  const updated = await updateVehicle(existing.id, update);
+  const updated = await orRegistrationTaken(() => updateVehicle(existing.id, update));
   if (!updated) throw new HttpError(404, 'NOT_FOUND', 'Vehicle not found.');
   res.json({ success: true, data: toPublicVehicle(updated) });
 }

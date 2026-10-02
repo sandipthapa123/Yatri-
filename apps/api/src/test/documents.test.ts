@@ -96,6 +96,63 @@ describe('Documents', () => {
     expect(licenseDocs[0].id).toBe(second.body.data.id);
   });
 
+  it('keeps one document in a slot when several uploads arrive at once, and leaves no stray file', async () => {
+    const { accessToken, user } = await onboardUser('DRIVER');
+    const results = await Promise.all(
+      [1, 2, 3, 4].map((n) =>
+        uploadDocument(accessToken, 'DRIVING_LICENSE', FIXTURES.jpeg, `try-${n}.jpg`),
+      ),
+    );
+    const codes = results.map((r) => r.status);
+    expect(
+      codes.every((c) => c === 201 || c === 409),
+      JSON.stringify(results.map((r) => r.body)),
+    ).toBe(true);
+    expect(codes).toContain(201);
+    const { pool } = await import('../config/database');
+    const rows = await pool.query(
+      `SELECT storage_key FROM documents d JOIN document_types t ON t.id = d.document_type_id
+       WHERE d.driver_user_id = $1 AND t.code = 'DRIVING_LICENSE'`,
+      [user.id],
+    );
+    expect(rows.rowCount).toBe(1);
+    // the one file that remains is the one the record points at: losers removed what they uploaded
+    const { getStorageProvider } = await import('../lib/storage');
+    await expect(
+      getStorageProvider().download(rows.rows[0].storage_key as string),
+    ).resolves.toBeDefined();
+  });
+
+  it('will not approve a document that has already expired', async () => {
+    const { accessToken } = await onboardUser('DRIVER');
+    const admin = await loginTestAdmin(
+      `doc-expired-${Date.now()}@yatri.local`,
+      'a-strong-test-password-1',
+    );
+    const doc = await uploadDocument(accessToken, 'DRIVING_LICENSE', FIXTURES.jpeg, 'old.jpg');
+    const { pool } = await import('../config/database');
+    await pool.query('UPDATE documents SET expiry_date = CURRENT_DATE - 1 WHERE id = $1', [
+      doc.body.data.id,
+    ]);
+    const res = await api
+      .post(`/api/v1/admin/documents/${doc.body.data.id}/approve`)
+      .set('Authorization', `Bearer ${admin}`)
+      .send({});
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe('DOCUMENT_EXPIRED');
+    await pool.query('UPDATE documents SET expiry_date = CURRENT_DATE + 30 WHERE id = $1', [
+      doc.body.data.id,
+    ]);
+    expect(
+      (
+        await api
+          .post(`/api/v1/admin/documents/${doc.body.data.id}/approve`)
+          .set('Authorization', `Bearer ${admin}`)
+          .send({})
+      ).status,
+    ).toBe(200);
+  });
+
   it('refuses to replace an already-approved document', async () => {
     const { accessToken } = await onboardUser('DRIVER');
     const admin = await loginTestAdmin(

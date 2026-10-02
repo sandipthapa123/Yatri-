@@ -247,6 +247,19 @@ export async function applyLocationUpdate(input: {
     }
     void refreshPlaceName(tripId, party, decision.next, nowMs); // never blocks the update path
 
+    // The ride may have ended, or its driver dropped out, while this update was in flight: the state was cleared, and
+    // what was just written would bring a position back after its ride (or hand the old driver's position to the next
+    // driver). Look again, and take back what was written if the ride no longer shows live positions.
+    const now = await loadMeta(tripId);
+    if (
+      !now ||
+      !isActive(now.status) ||
+      now.status === 'SEARCHING' ||
+      now.driverId !== meta.driverId
+    ) {
+      await clearLiveState(tripId);
+      return { accepted: false as const, reason: 'not_active' as const };
+    }
     await bumpTripVersion(tripId);
     if (wasLost && party === 'driver') {
       await recordTripEvent({ tripId, type: 'DRIVER_LOCATION_RESTORED' });
@@ -406,7 +419,11 @@ export async function buildSnapshot(
     // What the driver's navigation says (the passenger sees progress as text from `trip`, never the route).
     navigation: viewer === 'DRIVER' && active ? await readGuidance(meta.tripId) : null,
     // Waiting is computed from server timestamps only; both apps render exactly this.
-    waiting: computeWaiting(meta, nowMs, await pricingConfigForTrip({ id: meta.tripId, city_id: meta.cityId })),
+    waiting: computeWaiting(
+      meta,
+      nowMs,
+      await pricingConfigForTrip({ id: meta.tripId, city_id: meta.cityId }),
+    ),
   };
 }
 

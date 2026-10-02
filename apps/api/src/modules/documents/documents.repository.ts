@@ -109,8 +109,23 @@ export async function findExistingDocumentForSlot(
   return result.rows[0] ?? null;
 }
 
-export async function deleteDocument(id: string): Promise<void> {
-  await query(`DELETE FROM documents WHERE id = $1`, [id]);
+/**
+ * Remove a document that has not been approved. Decided by the row itself in one statement: a check made earlier
+ * can be overtaken by a reviewer approving it a moment later, and an approved document must never be deleted by its owner.
+ * Returns false when it was approved (or already gone) and nothing was removed.
+ */
+export async function deleteUnapprovedDocument(id: string): Promise<boolean> {
+  const r = await query(`DELETE FROM documents WHERE id = $1 AND status <> 'APPROVED'`, [id]);
+  return (r.rowCount ?? 0) === 1;
+}
+
+/** True when the document's own expiry date has passed (by the database's date, the same one the expiry sweep uses). */
+export async function isPastExpiry(id: string): Promise<boolean> {
+  const r = await query<{ past: boolean | null }>(
+    'SELECT expiry_date < CURRENT_DATE AS past FROM documents WHERE id = $1',
+    [id],
+  );
+  return r.rows[0]?.past === true;
 }
 
 export async function setDocumentReview(

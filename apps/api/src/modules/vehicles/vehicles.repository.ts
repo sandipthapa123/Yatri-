@@ -1,6 +1,7 @@
 import type { VehicleCreateBody, VehicleUpdateBody } from '@yatri/types';
 
 import { query } from '../../lib/db';
+import { HttpError } from '../../middleware/errorHandler';
 import type { VehicleCategoryRow, VehicleRow } from './vehicles.types';
 
 export async function listActiveVehicleCategories(): Promise<VehicleCategoryRow[]> {
@@ -17,6 +18,20 @@ export async function findVehicleCategoryById(id: string): Promise<VehicleCatego
     [id],
   );
   return result.rows[0] ?? null;
+}
+
+/** The one answer for a registration number that another vehicle already holds. */
+export const registrationTaken = () =>
+  new HttpError(409, 'REGISTRATION_TAKEN', 'A vehicle with that registration already exists.');
+
+/** Run a write that may collide on the registration number, and answer a collision in words rather than as a server error. */
+export async function orRegistrationTaken<T>(write: () => Promise<T>): Promise<T> {
+  try {
+    return await write();
+  } catch (err) {
+    if ((err as { code?: string }).code === '23505') throw registrationTaken();
+    throw err;
+  }
 }
 
 export type CreateVehicleInput = VehicleCreateBody;

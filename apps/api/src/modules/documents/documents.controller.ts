@@ -3,6 +3,7 @@ import type { ApiResponse, DocumentSummary, DocumentTypeRef } from '@yatri/types
 
 import { env } from '../../config/env';
 import { detectFileType } from '../../lib/file-signature';
+import { log } from '../../lib/logger';
 import { generateStorageKey, sanitizeDisplayFilename } from '../../lib/safe-filename';
 import { getStorageProvider } from '../../lib/storage';
 import { HttpError } from '../../middleware/errorHandler';
@@ -12,7 +13,7 @@ import { findVehicleById } from '../vehicles/vehicles.repository';
 import { findDocumentTypeByCode } from './document-types.repository';
 import {
   createDocument,
-  deleteDocument,
+  deleteUnapprovedDocument,
   expireStaleDocuments,
   findDocumentById,
   findDocumentsForDriver,
@@ -123,8 +124,15 @@ export async function uploadDocumentHandler(
         'This document has already been approved. Contact support if it needs to change.',
       );
     }
-    await getStorageProvider().delete(existing.storage_key);
-    await deleteDocument(existing.id);
+    // The record goes first, decided by its own status (a reviewer may have approved it a moment ago), then its file.
+    if (!(await deleteUnapprovedDocument(existing.id))) {
+      throw new HttpError(
+        409,
+        'DOCUMENT_ALREADY_APPROVED',
+        'This document has already been approved. Contact support if it needs to change.',
+      );
+    }
+    await removeFile(existing.storage_key);
   }
 
   const ownerSegment =
@@ -138,17 +146,30 @@ export async function uploadDocumentHandler(
     contentType: detected.mimeType,
   });
 
-  const document = await createDocument({
-    ownerType: documentType.owner_type,
-    driverUserId,
-    vehicleId: ownerVehicleId,
-    documentTypeId: documentType.id,
-    storageKey,
-    originalFilename: sanitizeDisplayFilename(file.originalname),
-    mimeType: detected.mimeType,
-    fileSize: file.size,
-    expiryDate: expiryDate ?? null,
-  });
+  let document;
+  try {
+    document = await createDocument({
+      ownerType: documentType.owner_type,
+      driverUserId,
+      vehicleId: ownerVehicleId,
+      documentTypeId: documentType.id,
+      storageKey,
+      originalFilename: sanitizeDisplayFilename(file.originalname),
+      mimeType: detected.mimeType,
+      fileSize: file.size,
+      expiryDate: expiryDate ?? null,
+    });
+  } catch (err) {
+    await removeFile(storageKey); // the record did not take it (for example two uploads to one slot at once): leave no file behind
+    if ((err as { code?: string }).code === '23505') {
+      throw new HttpError(
+        409,
+        'UPLOAD_IN_PROGRESS',
+        'This document was just uploaded. Check your documents, and upload again only if it is missing.',
+      );
+    }
+    throw err;
+  }
 
   await markOnboardingInProgress(req.auth.userId);
 
@@ -164,6 +185,13 @@ export async function listMyDocumentsHandler(
   const vehicleId = typeof req.query.vehicleId === 'string' ? req.query.vehicleId : undefined;
   const rows = await findDocumentsForDriver(req.auth.userId, vehicleId);
   res.json({ success: true, data: rows.map(toDocumentSummary) });
+}
+
+/** Remove a stored file. The record is already decided; a store that refuses is logged, never shown to the driver. */
+async function removeFile(key: string): Promise<void> {
+  await getStorageProvider()
+    .delete(key)
+    .catch((err) => log.error('Could not remove a stored document file', err));
 }
 
 async function assertOwnsDocument(userId: string, documentId: string) {
@@ -196,8 +224,14 @@ export async function deleteDocumentHandler(
     );
   }
 
-  await getStorageProvider().delete(doc.storage_key);
-  await deleteDocument(doc.id);
+  if (!(await deleteUnapprovedDocument(doc.id))) {
+    throw new HttpError(
+      409,
+      'DOCUMENT_ALREADY_APPROVED',
+      'An approved document cannot be deleted.',
+    );
+  }
+  await removeFile(doc.storage_key);
   res.json({ success: true, data: { deleted: true } });
 }
 

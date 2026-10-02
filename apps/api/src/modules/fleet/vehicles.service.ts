@@ -18,7 +18,7 @@ import { documentSatisfies, isPastDate } from '../drivers/onboarding.service';
 import type { DocumentRow } from '../documents/documents.types';
 import { likeContains } from '../admin/admin-range';
 import { ACTIVE_SQL } from '../trips/trips.repository';
-import { createVehicle } from '../vehicles/vehicles.repository';
+import { createVehicle, registrationTaken } from '../vehicles/vehicles.repository';
 import { VEHICLE_RIDEABLE_SQL, vehicleRideProblems } from './eligibility';
 import { enforceEligibility } from './enforcement';
 import { expiryItems } from './expiry.service';
@@ -391,11 +391,7 @@ export async function createFleetVehicle(
   } catch (err) {
     const code = (err as { code?: string }).code;
     if (code === '23505') {
-      throw new HttpError(
-        409,
-        'REGISTRATION_TAKEN',
-        'A vehicle with that registration already exists.',
-      );
+      throw registrationTaken();
     }
     if (code === '23503') throw new HttpError(400, 'VALIDATION_ERROR', 'Unknown vehicle category.');
     throw err;

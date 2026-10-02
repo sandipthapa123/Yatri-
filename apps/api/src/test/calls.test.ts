@@ -114,6 +114,20 @@ describe('call setup and state', () => {
     expect(events.rows[0].n).toBe(1);
   });
 
+  it('an answered call whose media never connects is ended, so the ride can be called again', async () => {
+    const { w, pc, dc } = await room();
+    pc.send({ type: 'call_start', tripId: w.tripId, kind: 'AUDIO' });
+    const ringing = (await dc.waitFor(callState('RINGING'))).call;
+    dc.send({ type: 'call_answer', callId: ringing.id });
+    await pc.waitFor(callState('CONNECTING'));
+    expect(await sweepCalls()).toBe(0); // still within the connect window
+    await pool.query("UPDATE trip_calls SET answered_at = now() - interval '5 minutes' WHERE trip_id = $1", [w.tripId]);
+    expect(await sweepCalls()).toBe(1);
+    expect((await pc.waitFor(callState('ENDED'))).call.endReason).toBe('FAILED');
+    pc.send({ type: 'call_start', tripId: w.tripId, kind: 'AUDIO' });
+    expect((await pc.waitFor(callState('RINGING'))).call.state).toBe('RINGING');
+  });
+
   it('allows one live call per ride, then a new one after it ends', async () => {
     const r = await room();
     r.pc.send({ type: 'call_start', tripId: r.w.tripId, kind: 'AUDIO' });

@@ -312,6 +312,7 @@ const envSchema = z
 
     // --- Calls (WebRTC) ---
     CALL_RING_TIMEOUT_SECONDS: z.coerce.number().int().positive().default(45),
+    CALL_CONNECT_TIMEOUT_SECONDS: z.coerce.number().int().positive().default(60),
     // STUN/TURN for media. Comma-separated URLs; TURN uses coturn's time-limited shared-secret credentials.
     CALL_STUN_URLS: z.string().default('stun:stun.l.google.com:19302').transform(strList),
     CALL_TURN_URLS: z.string().default('').transform(strList),

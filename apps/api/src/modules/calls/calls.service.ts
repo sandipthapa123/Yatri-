@@ -94,16 +94,18 @@ async function publishState(row: Row, trip: TripRow) {
 async function cas(
   callId: string,
   to: CallState,
-  extra: { reason?: CallEndReason },
+  extra: { reason?: CallEndReason; hangUpBy?: string },
 ): Promise<Row | null> {
   const r = await query<Row>(
     `UPDATE trip_calls SET state = $2,
        answered_at = CASE WHEN $2 = 'CONNECTING' THEN now() ELSE answered_at END,
        connected_at = CASE WHEN $2 = 'CONNECTED' THEN now() ELSE connected_at END,
        ended_at = CASE WHEN $2 = 'ENDED' THEN now() ELSE ended_at END,
-       end_reason = CASE WHEN $2 = 'ENDED' THEN $3 ELSE end_reason END
+       end_reason = CASE WHEN $2 = 'ENDED' THEN COALESCE($3::text,
+         CASE WHEN state = 'RINGING' THEN (CASE WHEN caller_id = $5::uuid THEN 'CANCELLED' ELSE 'DECLINED' END) ELSE 'COMPLETED' END)
+         ELSE end_reason END
      WHERE id = $1 AND state = ANY($4::text[]) RETURNING ${COLS}`,
-    [callId, to, extra.reason ?? null, statesLeadingTo(to)],
+    [callId, to, extra.reason ?? null, statesLeadingTo(to), extra.hangUpBy ?? null],
   );
   return r.rows[0] ?? null;
 }
@@ -177,12 +179,11 @@ export async function declineCall(callId: string, userId: string): Promise<CallI
 export async function endCall(callId: string, userId: string): Promise<CallInfo> {
   const { row, trip } = await loadCall(callId, userId);
   if (row.state === 'ENDED') return toInfo(row, trip);
-  // Before it was answered, the caller hanging up is a cancelled (missed) call; afterwards, a normal end.
-  const reason: CallEndReason =
-    row.state === 'RINGING' ? (row.caller_id === userId ? 'CANCELLED' : 'DECLINED') : 'COMPLETED';
-  const next = await cas(callId, 'ENDED', { reason });
+  // Before it was answered, the caller hanging up is a cancelled (missed) call; afterwards, a normal end. The reason is
+  // decided in the update from the call's state at that instant, so an answer arriving a moment earlier is not mislabelled.
+  const next = await cas(callId, 'ENDED', { hangUpBy: userId });
   if (!next) return toInfo((await loadCall(callId, userId)).row, trip); // lost a race: already ended
-  if (row.state === 'RINGING' && reason === 'CANCELLED') {
+  if (next.end_reason === 'CANCELLED') {
     await recordTripEvent({ tripId: trip.id, type: 'CALL_MISSED', actorId: row.caller_id });
   }
   return publishState(next, trip);
@@ -247,7 +248,19 @@ export async function sweepCalls(): Promise<number> {
     await recordTripEvent({ tripId: trip.id, type: 'CALL_MISSED', actorId: row.caller_id });
     await publishState(row, trip);
   }
-  return r.rows.length;
+  // An answered call whose media never connected (an app closed or crashed) would otherwise stay live for the rest of the
+  // ride and block every new call with "already a call on this ride".
+  const stuck = await query<Row>(
+    `UPDATE trip_calls SET state = 'ENDED', ended_at = now(), end_reason = 'FAILED'
+     WHERE state = 'CONNECTING' AND answered_at < now() - ($1::int * interval '1 second')
+     RETURNING ${COLS}`,
+    [env.CALL_CONNECT_TIMEOUT_SECONDS],
+  );
+  for (const row of stuck.rows) {
+    const trip = await getTrip(row.trip_id);
+    if (trip) await publishState(row, trip);
+  }
+  return r.rows.length + stuck.rows.length;
 }
 
 /** STUN plus, when configured, short-lived TURN credentials (coturn shared-secret scheme). */

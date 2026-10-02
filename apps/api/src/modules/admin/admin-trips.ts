@@ -18,7 +18,7 @@ import { HttpError } from '../../middleware/errorHandler';
 import { locationFreshness } from '../availability/availability.machine';
 import { listCallsForTrip } from '../calls/calls.service';
 import { getChatForAdmin } from '../chat/chat.service';
-import { pricingConfigForCityId } from '../cities/city-rules';
+import { pricingConfigForTrip } from '../cities/city-rules';
 import { getDriverFix } from '../tracking/tracking.service';
 import { getPayment } from '../trips/payments.service';
 import { listTripEvents } from '../trips/trip-events.service';
@@ -250,7 +250,7 @@ export async function tripDetailHandler(req: Request, res: Response<ApiResponse<
             },
       passenger: { id: trip.passenger_id, name: nameOf(trip.passenger_id) },
       driver: trip.driver_id ? { id: trip.driver_id, name: nameOf(trip.driver_id) } : null,
-      waiting: computeWaiting(metaFromRow(trip), now, await pricingConfigForCityId(trip.city_id)),
+      waiting: computeWaiting(metaFromRow(trip), now, await pricingConfigForTrip(trip)),
       location: {
         driverFreshness: locationFreshness(
           fix?.receivedAtMs ?? null,

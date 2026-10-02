@@ -102,7 +102,7 @@ export async function offerNext(tripId: string): Promise<OfferOutcome> {
     requiredAttributes,
     pickup: pickupOf(trip),
     vehicleCategoryId: trip.vehicle_category_id,
-    radiusMeters: searchRadius(offersSoFar),
+    radiusMeters: searchRadius(offersSoFar, requiredAttributes.length > 0),
   });
   for (const c of ranked.slice(0, 5)) {
     const offer = await insertOffer({

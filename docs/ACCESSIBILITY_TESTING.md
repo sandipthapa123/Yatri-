@@ -441,3 +441,11 @@ and a screen reader:
   twice with the consequence in words.
 - Admin: the applications list and a case are captioned tables and lists with row headers; state is written as words; filters and
   paging are links; each decision is a two-step confirmation with the consequence read first and a result announced.
+
+## Z. Disability benefits and accessible ride services (Phase 27)
+
+- Request screen: the fare is read as "Standard fare, Disability benefit, Loyalty benefit, Other discount, Amount payable" in that order
+  when a benefit applies, every figure the server's, no colour-only meaning.
+- Settings > accessibility: "Who travels with me" (a labelled switch) and the need "I need extra time to get in and out of the
+  vehicle" are announced with their help text; saving is announced.
+- Admin > Disability benefits: captioned policy table with row headers, the service options as a list, and review items as sentences.

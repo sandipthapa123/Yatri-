@@ -11,6 +11,7 @@ import {
 } from './accessibilityText';
 
 const empty: AccessibilityProfile = {
+  companion: false,
   needs: [],
   communication: 'ANY',
   pickupInstructions: [],

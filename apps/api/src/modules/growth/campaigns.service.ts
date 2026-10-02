@@ -102,6 +102,7 @@ const eligibilitySchema = z
     minFareNpr: z.number().int().min(1).max(1_000_000).optional(),
     userIds: z.array(z.string().uuid()).max(5000).optional(),
     requiresDisabilityVerified: z.literal(true).optional(),
+    companionAllowed: z.boolean().optional(),
   })
   .strict();
 

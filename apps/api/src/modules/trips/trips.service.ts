@@ -39,6 +39,7 @@ import {
   cancellationRulesForCityId,
   pricingConfigFor,
   pricingConfigForCityId,
+  pricingConfigForTrip,
 } from '../cities/city-rules';
 import { metaFromRow } from './trip-meta';
 import { settingBool, settingText } from '../settings/settings.service';
@@ -278,7 +279,7 @@ export async function estimateForRequest(passengerId: string, body: TripEstimate
         // What they would pay after offers and points: the growth engine's answer, never worked out here.
         promotion: await quoteRide(
           passengerId,
-          { fareNpr: fare.totalNpr, categoryCode: c.code, cityId: offeredHere?.info.id ?? null },
+          { fareNpr: fare.totalNpr, categoryCode: c.code, cityId: offeredHere?.info.id ?? null, companion: accessibility.companion },
           body.promotion,
         ),
       };
@@ -380,6 +381,7 @@ export async function requestTrip(
                 fareNpr: fare.totalNpr,
                 categoryCode: category.code,
                 cityId: city?.info.id ?? null,
+                companion: accessibility.companion,
               },
               req: body.promotion,
             }),
@@ -524,7 +526,7 @@ export async function startTrip(tripId: string, driverId: string): Promise<TripR
   const at = await requireDriverFix(tripId);
   // Waiting is priced once, from server timestamps, at the moment the ride starts.
   const waitedSeconds = trip.arrived_at ? secondsSince(trip.arrived_at.getTime(), Date.now()) : 0;
-  const { chargeNpr } = waitingCharge(waitedSeconds, await pricingConfigForCityId(trip.city_id));
+  const { chargeNpr } = waitingCharge(waitedSeconds, await pricingConfigForTrip(trip));
   return transition(tripId, {
     to: 'IN_PROGRESS',
     from: ['DRIVER_ARRIVED'],
@@ -675,7 +677,7 @@ export async function driverDropsOut(
 export async function driverNoShow(tripId: string, driverId: string): Promise<TripRow> {
   const trip = await getTrip(tripId);
   if (!trip || trip.driver_id !== driverId) throw notFound();
-  const cfg = await pricingConfigForCityId(trip.city_id);
+  const cfg = await pricingConfigForTrip(trip);
   const waited = trip.arrived_at ? secondsSince(trip.arrived_at.getTime(), Date.now()) : 0;
   if (trip.status !== 'DRIVER_ARRIVED' || waited < cfg.noShowAfterSeconds) {
     throw new HttpError(

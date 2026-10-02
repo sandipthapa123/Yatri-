@@ -262,6 +262,7 @@ import { providersHandler } from './admin-providers';
 import {
   disabilityActionBodySchema,
   disabilityActionHandler,
+  disabilityBenefitsOverviewHandler,
   disabilityDocumentHandler,
   disabilityListQuerySchema,
   getDisabilityHandler,
@@ -1006,6 +1007,11 @@ adminRouter.post(
 
 // Disability benefit verification. Reading cases needs DISABILITY_VERIFICATION_VIEW; deciding one and opening its document need
 // DISABILITY_VERIFICATION_REVIEW. The card number is never in any answer, and every decision and document opening is audited.
+adminRouter.get(
+  '/disability-benefits/overview',
+  requirePermission('DISABILITY_VERIFICATION_VIEW'),
+  disabilityBenefitsOverviewHandler,
+);
 adminRouter.get(
   '/disability-verifications',
   requirePermission('DISABILITY_VERIFICATION_VIEW'),

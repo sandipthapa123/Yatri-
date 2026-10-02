@@ -25,7 +25,7 @@ import {
 export function profileSummary(
   p: Pick<
     AccessibilityProfile,
-    'needs' | 'communication' | 'pickupInstructions' | 'pickupNote' | 'otherNote'
+    'needs' | 'companion' | 'communication' | 'pickupInstructions' | 'pickupNote' | 'otherNote'
   >,
 ): string {
   const a: TripAccessibility = { ...p, requiredVehicleAttributes: [] };
@@ -34,6 +34,7 @@ export function profileSummary(
   const parts: string[] = [];
   if (p.needs.length > 0)
     parts.push(p.needs.map((n) => PASSENGER_NEED_BY_CODE[n].label).join('; '));
+  if (p.companion) parts.push('Someone travels with me');
   if (p.communication !== 'ANY')
     parts.push(`Reach me by: ${COMMUNICATION_LABELS[p.communication].label}`);
   if (p.pickupInstructions.length > 0) {

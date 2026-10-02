@@ -131,11 +131,25 @@ export function CampaignForm({ campaign }: { campaign?: CampaignInfo }) {
             defaultValue={e.maxCompletedRides}
           />
         )}
-        <Checkbox
-          name="requiresDisabilityVerified"
-          label="Only riders with a verified disability benefit (a disability benefit)"
-          checked={e.requiresDisabilityVerified === true}
-        />
+        {kind === 'DISABILITY_BENEFIT' ? (
+          <p style={hint}>This benefit is only for riders whose disability benefit is verified. That is fixed for this kind.</p>
+        ) : (
+          <Checkbox
+            name="requiresDisabilityVerified"
+            label="Only riders with a verified disability benefit"
+            checked={e.requiresDisabilityVerified === true}
+          />
+        )}
+        {kind === 'DISABILITY_BENEFIT' || e.requiresDisabilityVerified === true ? (
+          <>
+            <input type="hidden" name="companionField" value="1" />
+            <Checkbox
+              name="companionAllowed"
+              label="Still applies when a companion rides along"
+              checked={e.companionAllowed !== false}
+            />
+          </>
+        ) : null}
         <p style={hint}>
           Eligibility comes only from the verification workspace: nobody can be added here by name. The value, vehicle types, cities,
           limits, dates and stacking below are ordinary campaign settings.
@@ -305,7 +319,7 @@ export function CampaignForm({ campaign }: { campaign?: CampaignInfo }) {
 }
 
 /** Start, pause or end a campaign. The API allows only the legal moves and keeps the reason. */
-export function StatusForm({
+export function CampaignStatusForm({
   campaign,
   to,
   label,

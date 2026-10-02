@@ -56,6 +56,9 @@ export default async function DisabilityPage({
         Riders who chose to apply for disability benefits. Open a case to see the card details, the document and the history,
         and to decide. Every decision is recorded and the rider is told.
       </p>
+      <p style={{ margin: 0 }}>
+        <Link href="/disability/benefits">Benefit policies, service options and what to review</Link>
+      </p>
       <p role="status" style={{ margin: 0, fontWeight: 600 }}>
         {data.total} {data.total === 1 ? 'application' : 'applications'} match. {waiting} on this page {waiting === 1 ? 'is' : 'are'} waiting for a person.
       </p>

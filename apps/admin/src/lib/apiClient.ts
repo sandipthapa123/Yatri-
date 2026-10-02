@@ -3,6 +3,7 @@ import type {
   ProvidersOverview,
   AdminDisabilityDetail,
   AdminDisabilityList,
+  DisabilityBenefitsOverview,
   AdminDisabilityListFilters,
   DisabilityAdminAction,
   AdminCityBody,
@@ -923,3 +924,5 @@ export const disabilityActionApi = (
 ) => post<{ ok: true }>(`/disability-verifications/${id}/${action}`, t, body);
 export const disabilityDocumentApi = (t: string, id: string) =>
   adminRequest<{ url: string; expiresInSeconds: number }>(`/disability-verifications/${id}/document`, t);
+export const disabilityBenefitsOverviewApi = (t: string) =>
+  adminRequest<DisabilityBenefitsOverview>('/disability-benefits/overview', t);

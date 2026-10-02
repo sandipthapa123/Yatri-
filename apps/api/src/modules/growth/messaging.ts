@@ -2,7 +2,7 @@ import {
   DISABILITY_CONSENT_POLICY_KEY,
   GROWTH_NOTIFICATION_TYPES,
   evaluateEligibility,
-  describeOffer,
+  describeCampaignOffer,
   type EligibilityFacts,
 } from '@yatri/types';
 
@@ -111,7 +111,7 @@ async function grantRetention(c: CampaignRow): Promise<number> {
         userId: a.id,
         type: GROWTH_NOTIFICATION_TYPES.OFFER_GRANTED,
         title: c.message.title,
-        body: `${c.message.body} (${describeOffer(c.offer)})`,
+        body: `${c.message.body} (${describeCampaignOffer(c.offer)})`,
         metadata: { campaignId: c.id },
         dedupeKey: `grant:${c.id}:${a.id}`,
       }).catch((err) => log.warn('Offer notice failed for one rider', err));

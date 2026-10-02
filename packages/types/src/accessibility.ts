@@ -15,6 +15,7 @@
 export const PASSENGER_NEED_CODES = [
   'WHEELCHAIR',
   'ASSISTANCE',
+  'EXTRA_BOARDING_TIME',
   'VISUAL',
   'HEARING',
   'SERVICE_ANIMAL',
@@ -50,6 +51,13 @@ export const PASSENGER_NEEDS: readonly PassengerNeedDef[] = [
     label: 'I need help getting in and out of the vehicle',
     help: 'Your driver is told you may need a hand at pickup and drop-off.',
     driverText: 'May need help getting in and out of the vehicle.',
+    vehicleAttribute: null,
+  },
+  {
+    code: 'EXTRA_BOARDING_TIME',
+    label: 'I need extra time to get in and out of the vehicle',
+    help: 'Your driver waits longer before any waiting charge starts and before they can cancel because you have not come. Nothing extra is charged for the extra time.',
+    driverText: 'Needs extra time to get in and out of the vehicle. Please be patient: the waiting time is longer for this ride.',
     vehicleAttribute: null,
   },
   {
@@ -162,6 +170,9 @@ export const PICKUP_INSTRUCTION_LABELS: Record<
 };
 
 export const ACCESSIBILITY_NOTE_MAX = 200;
+
+/** What the driver reads when a companion travels with the passenger. Never anything about why. */
+export const COMPANION_DRIVER_TEXT = 'Someone travels with the passenger. Please allow room for them.';
 export const COMMUNICATION_ALLOWED_TO_CALL: Record<CommunicationPreference, boolean> = {
   ANY: true,
   TEXT_PREFERRED: true,
@@ -177,6 +188,8 @@ export interface AccessibilityProfile {
   pickupInstructions: PickupInstructionCode[];
   pickupNote: string | null;
   otherNote: string | null;
+  /** Someone (a helper, a relative) usually travels with the passenger. They need no account and say nothing about themselves. */
+  companion: boolean;
   /** Raised on every save; a save must name the version it saw so two devices cannot overwrite each other. */
   version: number;
   updatedAt: string | null;
@@ -193,6 +206,8 @@ export interface TripAccessibility {
   pickupInstructions: PickupInstructionCode[];
   pickupNote: string | null;
   otherNote: string | null;
+  /** A companion rides with the passenger. The driver is told that, and nothing about why. */
+  companion: boolean;
   /** The vehicle features the matching engine required for this ride. */
   requiredVehicleAttributes: string[];
 }
@@ -211,6 +226,7 @@ export type TripAccessibilityUpdateBody = Pick<
 export const hasAccessibilityContent = (a: TripAccessibility | null | undefined): boolean =>
   !!a &&
   (a.needs.length > 0 ||
+    a.companion ||
     a.communication !== 'ANY' ||
     a.pickupInstructions.length > 0 ||
     !!a.pickupNote ||
@@ -223,6 +239,7 @@ export const hasAccessibilityContent = (a: TripAccessibility | null | undefined)
 export function describeAccessibilityForDriver(a: TripAccessibility): string[] {
   const lines: string[] = [];
   for (const code of a.needs) lines.push(PASSENGER_NEED_BY_CODE[code].driverText);
+  if (a.companion) lines.push(COMPANION_DRIVER_TEXT);
   if (a.otherNote) lines.push(`Note about their needs: ${a.otherNote}`);
   if (a.communication !== 'ANY') lines.push(COMMUNICATION_LABELS[a.communication].driverText);
   for (const code of a.pickupInstructions) lines.push(PICKUP_INSTRUCTION_LABELS[code].driverText);

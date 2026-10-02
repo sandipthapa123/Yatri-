@@ -99,3 +99,13 @@ only as long as a ride needs it; nothing secret or personal is written to a log 
 - A driver never sees the number, the document, the dates or the history; only, for an accepted live ride and only if the rider
   allowed it (off by default), that the benefit is verified. Withdrawing consent erases the card and the document at once.
 - Ended applications are erased after the retention period (`DISABILITY_VERIFICATION`, enforced).
+
+## Disability benefits and accessible ride services (Phase 27)
+
+- Eligibility comes only from the verification module; a benefit campaign cannot be created without it, and a redemption stores
+  references only (campaign, rider, ride, amounts), never a card, document or identity.
+- A companion is a flag on the ride: no account, no verification, nothing stored about them, and the driver is told only that
+  someone travels with the passenger.
+- Drivers receive operational instructions (needs, companion, pickup note), never a verification, card or benefit detail.
+- Benefit limits and validity are enforced under campaign row locks; a ride's benefit is settled once; unusual use raises a
+  risk signal for a person to review and never stops a benefit by itself.

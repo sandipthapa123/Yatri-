@@ -41,7 +41,7 @@ export const SETTING_GROUP_LABELS: Record<SettingGroup, string> = {
   experience: 'Passenger experience',
   navigation: 'Navigation and route guidance',
   growth: 'Rewards and referrals',
-  disability: 'Disability benefits',
+  disability: 'Disability benefits and accessible rides',
 };
 
 export type SettingKind = 'boolean' | 'int' | 'number' | 'intList' | 'text';
@@ -62,6 +62,26 @@ export interface SettingDef {
 }
 
 export const PLATFORM_SETTINGS = [
+  {
+    key: 'EXTRA_BOARDING_SECONDS',
+    group: 'disability',
+    label: 'Extra boarding time',
+    help: 'For a rider who needs extra time to get in and out, the free waiting time and the time before a driver may cancel for a no-show are this much longer. No extra charge.',
+    kind: 'int',
+    min: 0,
+    max: 1800,
+    unit: 'seconds',
+  },
+  {
+    key: 'ACCESSIBLE_SEARCH_RADIUS_BONUS_PERCENT',
+    group: 'disability',
+    label: 'Wider search for accessible vehicles',
+    help: 'A ride that needs a particular vehicle feature (for example wheelchair access) looks this much farther for a driver, because such vehicles are fewer. This is the priority an accessible request gets.',
+    kind: 'int',
+    min: 0,
+    max: 300,
+    unit: 'percent',
+  },
   {
     key: 'DISABILITY_VERIFICATION_ENABLED',
     group: 'disability',

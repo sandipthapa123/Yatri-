@@ -109,3 +109,12 @@ Yatri-specific reminders:
   (`requiresDisabilityVerified`); never a second discount engine, points ledger or eligibility list.
 - Consent is `compliance_policies`/`compliance_records` (`withdrawConsent`); the driver-sharing choice is the preference
   `shareDisabilityStatusWithDriver`. Card documents use the storage provider and the shared file checks.
+
+## Disability benefits and accessible ride services (Phase 27)
+
+- A benefit policy is a `DISABILITY_BENEFIT` campaign. Discounts, points, limits, validity, categories, cities, stacking and the
+  companion rule are campaign fields; never a benefits table, a second discount function or a points ledger of its own.
+- The five figures before booking are `payableBreakdown` (server); apps list them and add nothing up.
+- The waiting rule for one ride is `pricingConfigForTrip` (city rule plus extra boarding time); the search radius is `searchRadius`.
+  Do not read the city or platform waiting values directly for a ride.
+- A companion is `TripAccessibility.companion`; wording for a driver is `describeAccessibilityForDriver`.

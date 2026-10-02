@@ -112,6 +112,14 @@ export const DETECTORS: Record<RiskRuleCode, Detector> = {
             AND ${WINDOW('v.updated_at')}
           GROUP BY v.user_id HAVING count(o.id) >= $1`,
   },
+  DISABILITY_BENEFIT_BURST: {
+    sql: `SELECT r.user_id, count(*)::int AS count, ${IDS('r.trip_id', 'r.created_at DESC')} AS trips
+          FROM campaign_redemptions r JOIN campaigns c ON c.id = r.campaign_id
+          WHERE r.status <> 'VOID'
+            AND (c.kind = 'DISABILITY_BENEFIT' OR c.eligibility @> '{"requiresDisabilityVerified": true}'::jsonb)
+            AND ${WINDOW('r.created_at')}
+          GROUP BY r.user_id HAVING count(*) >= $1`,
+  },
   DISABILITY_REPEATED_SUBMISSIONS: {
     sql: `SELECT v.user_id, count(*)::int AS count
           FROM disability_verification_events e JOIN disability_verifications v ON v.id = e.verification_id

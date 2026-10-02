@@ -11,7 +11,7 @@ import {
 import { env } from '../../config/env';
 import { getRedisClient } from '../../config/redis';
 import { reverseGeocode } from '../location/location.service';
-import { pricingConfigForCityId } from '../cities/city-rules';
+import { pricingConfigForTrip } from '../cities/city-rules';
 import { settingList } from '../settings/settings.service';
 import { publishTripChange } from '../realtime/bus';
 import { getLastEventSeq, recordTripEvent } from '../trips/trip-events.service';
@@ -406,7 +406,7 @@ export async function buildSnapshot(
     // What the driver's navigation says (the passenger sees progress as text from `trip`, never the route).
     navigation: viewer === 'DRIVER' && active ? await readGuidance(meta.tripId) : null,
     // Waiting is computed from server timestamps only; both apps render exactly this.
-    waiting: computeWaiting(meta, nowMs, await pricingConfigForCityId(meta.cityId)),
+    waiting: computeWaiting(meta, nowMs, await pricingConfigForTrip({ id: meta.tripId, city_id: meta.cityId })),
   };
 }
 

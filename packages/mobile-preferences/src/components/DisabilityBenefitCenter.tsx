@@ -30,7 +30,7 @@ export function DisabilityBenefitCenter(props: UiProps & { onExit: () => void })
   const ui = { colors, minTouchTarget };
   const { getAccessToken } = useAuth();
   const [news, say] = useNews();
-  const state = usePolled(async () => disabilityApi.get(await getAccessToken()), null, 30_000);
+  const state = usePolled(async () => disabilityApi.get(await getAccessToken()), 30_000);
   const [busy, setBusy] = useState<string | null>(null);
   const [number, setNumber] = useState('');
   const [authority, setAuthority] = useState('');

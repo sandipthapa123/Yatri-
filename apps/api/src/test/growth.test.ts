@@ -917,7 +917,8 @@ describe('messages and win-back offers', () => {
       "UPDATE trips SET passenger_id = $2, ended_at = now() - interval '45 days' WHERE id = $1",
       [lapsedRide.tripId, lapsed.user.id],
     );
-    const activeRide = await finishedRide(true);
+    // The same driver takes both rides: a second free driver online at the same spot could be offered the next ride first.
+    const activeRide = await finishedRide(true, lapsedRide.driver);
     await pool.query('UPDATE trips SET passenger_id = $2 WHERE id = $1', [
       activeRide.tripId,
       active.user.id,

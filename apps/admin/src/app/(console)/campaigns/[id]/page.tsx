@@ -5,7 +5,7 @@ import {
   CAMPAIGN_STATUS_LABELS,
   CAMPAIGN_TRANSITIONS,
   describeConditions,
-  describeOffer,
+  describeCampaignOffer,
 } from '@yatri/types';
 import { notFound } from 'next/navigation';
 
@@ -14,7 +14,7 @@ import { loadOrDenied } from '../../../../lib/access';
 import { requireAdminAccessToken } from '../../../../lib/session';
 import { styles } from '../../drivers/styles';
 import { NoAccess } from '../../ui/NoAccess';
-import { CampaignForm, StatusForm } from '../Forms';
+import { CampaignForm, CampaignStatusForm } from '../Forms';
 
 const when = (iso: string | null) => (iso ? new Date(iso).toLocaleString() : 'not set');
 
@@ -50,7 +50,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ id: s
             State: {CAMPAIGN_STATUS_LABELS[c.status]}. {CAMPAIGN_PHASE_LABELS[c.phase]}.
           </li>
           {c.code ? <li>Code: {c.code}</li> : null}
-          <li>Offer: {c.offer ? describeOffer(c.offer) : 'a message only'}</li>
+          <li>Offer: {c.offer ? describeCampaignOffer(c.offer) : 'a message only'}</li>
           {c.referrerPoints !== null ? (
             <li>The person who invited earns {c.referrerPoints} points</li>
           ) : null}
@@ -76,7 +76,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ id: s
             Start, pause or end
           </h2>
           {moves.includes('ACTIVE') ? (
-            <StatusForm
+            <CampaignStatusForm
               campaign={c}
               to="ACTIVE"
               label={c.status === 'PAUSED' ? 'Resume the campaign' : 'Start the campaign'}
@@ -84,7 +84,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ id: s
             />
           ) : null}
           {moves.includes('PAUSED') ? (
-            <StatusForm
+            <CampaignStatusForm
               campaign={c}
               to="PAUSED"
               label="Pause the campaign"
@@ -92,7 +92,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ id: s
             />
           ) : null}
           {moves.includes('ENDED') ? (
-            <StatusForm
+            <CampaignStatusForm
               campaign={c}
               to="ENDED"
               label="End the campaign"

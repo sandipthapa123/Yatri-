@@ -571,6 +571,33 @@ export interface AdminDisabilityMessageBody {
   message: string;
 }
 
+/** The benefit side of the staff workspace: policies and their use, service options, and what a person should look at. */
+export interface DisabilityBenefitsOverview {
+  waitingForReview: number;
+  policies: Array<{
+    campaignId: string;
+    name: string;
+    status: 'DRAFT' | 'ACTIVE' | 'PAUSED' | 'ENDED';
+    uses: number;
+    discountNpr: number;
+    distinctRiders: number;
+  }>;
+  serviceOptions: {
+    extraBoardingSeconds: number;
+    accessibleSearchRadiusBonusPercent: number;
+    verificationEnabled: boolean;
+    officialCheckOffered: boolean;
+  };
+  toReview: Array<{
+    riskEventId: string;
+    userId: string;
+    userName: string | null;
+    rule: string;
+    points: number;
+    at: string;
+  }>;
+}
+
 export interface AdminDisabilityListFilters {
   status?: DisabilityVerificationStatus;
   method?: DisabilityMethod;

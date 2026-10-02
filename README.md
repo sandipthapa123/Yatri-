@@ -183,6 +183,10 @@ Run from the repository root; each fans out to every workspace package via pnpm.
   card (manual review, with an official check only if one is ever connected), a server-owned state machine a client can never
   set, duplicate and expiry handling, an accessible reviewer workspace with every decision audited, and a benefit that is an
   ordinary promotion-engine campaign. Drivers never see card details.
+- **Disability benefits and accessible ride services** (`docs/PHASE_27.md`): benefit policies as configurable campaigns (discount,
+  loyalty points, vehicle types, cities, limits, validity, stacking, companion rules) that only a verified benefit can use, a fare
+  shown as standard fare, disability benefit, loyalty benefit, other discount and amount payable, a companion flag, extra boarding
+  time, a wider search for accessible requests, and an accessible admin view with abuse signals.
 - Running it for real: [`docs/OPERATIONS.md`](docs/OPERATIONS.md) (architecture, deployment, backups,
   monitoring, incident recovery, release and rollback) and [`docs/SECURITY.md`](docs/SECURITY.md) (the controls,
   what was audited, what is still open). Container images and a full local stack are in [`deploy/`](deploy/).

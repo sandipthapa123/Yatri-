@@ -5,7 +5,7 @@ import {
   CAMPAIGN_PHASE_LABELS,
   CAMPAIGN_STATUSES,
   CAMPAIGN_STATUS_LABELS,
-  describeOffer,
+  describeCampaignOffer,
   type CampaignKind,
   type CampaignStatus,
 } from '@yatri/types';
@@ -169,7 +169,7 @@ export default async function CampaignsPage({
                 </th>
                 <td style={styles.td}>{CAMPAIGN_KIND_LABELS[c.kind].label}</td>
                 <td style={styles.td}>{CAMPAIGN_PHASE_LABELS[c.phase]}</td>
-                <td style={styles.td}>{c.offer ? describeOffer(c.offer) : 'A message'}</td>
+                <td style={styles.td}>{c.offer ? describeCampaignOffer(c.offer) : 'A message'}</td>
                 <td style={styles.td}>{when(c.startsAt)}</td>
                 <td style={styles.td}>{when(c.endsAt)}</td>
                 <td style={styles.td}>{c.redemptions}</td>

@@ -20,6 +20,7 @@
  * FIRST_RIDE  an offer for a person's first completed ride (always only that)
  * REFERRAL    what a new person and the person who invited them each get
  * RETENTION   an offer (and a message) for people who stopped riding
+ * DISABILITY_BENEFIT  a benefit for riders whose disability benefit is verified (the verification module is the only eligibility source)
  * PUSH        a message to a group of people, once, at a scheduled time
  */
 export const CAMPAIGN_KINDS = [
@@ -28,6 +29,7 @@ export const CAMPAIGN_KINDS = [
   'FIRST_RIDE',
   'REFERRAL',
   'RETENTION',
+  'DISABILITY_BENEFIT',
   'PUSH',
 ] as const;
 export type CampaignKind = (typeof CAMPAIGN_KINDS)[number];
@@ -50,6 +52,10 @@ export const CAMPAIGN_KIND_LABELS: Record<CampaignKind, { label: string; help: s
     label: 'Win-back offer',
     help: 'An offer, with a message, for riders who have not ridden for a while.',
   },
+  DISABILITY_BENEFIT: {
+    label: 'Disability benefit',
+    help: 'A discount or bonus points for riders whose disability benefit is verified. Applied automatically; the value, vehicle types, cities, limits, dates, stacking and whether it applies with a companion are all set here.',
+  },
   PUSH: {
     label: 'Message campaign',
     help: 'A notification sent once, at the scheduled time, to the riders it is meant for.',
@@ -63,6 +69,7 @@ export const CAMPAIGN_KIND_HAS_OFFER: Record<CampaignKind, boolean> = {
   FIRST_RIDE: true,
   REFERRAL: true,
   RETENTION: true,
+  DISABILITY_BENEFIT: true,
   PUSH: false,
 };
 /** Kinds that need a message (the title and text people read). */
@@ -72,6 +79,7 @@ export const CAMPAIGN_KIND_HAS_MESSAGE: Record<CampaignKind, boolean> = {
   FIRST_RIDE: false,
   REFERRAL: false,
   RETENTION: true,
+  DISABILITY_BENEFIT: false,
   PUSH: true,
 };
 
@@ -143,6 +151,11 @@ export interface CampaignEligibility {
    * dates and stacking are ordinary campaign settings.
    */
   requiresDisabilityVerified?: boolean;
+  /**
+   * Whether the benefit still applies when a companion rides with the passenger (default yes). The companion needs no
+   * account and is never asked about disability; only the ride's companion flag is looked at.
+   */
+  companionAllowed?: boolean;
 }
 
 /** What is known about a person (and, when quoting, the ride) when eligibility is judged. */
@@ -155,7 +168,7 @@ export interface EligibilityFacts {
   /** Whether this person has a verified, unexpired disability benefit with consent in force. */
   disabilityVerified: boolean;
   /** The ride being priced; null when judging a person with no ride (a push audience, a grant). */
-  ride: { categoryCode: string | null; cityId: string | null; fareNpr: number } | null;
+  ride: { categoryCode: string | null; cityId: string | null; fareNpr: number; withCompanion?: boolean } | null;
 }
 
 export interface EligibilityVerdict {
@@ -203,6 +216,9 @@ export function evaluateEligibility(
     if (rule.cityIds && rule.cityIds.length > 0) {
       if (!f.ride.cityId || !rule.cityIds.includes(f.ride.cityId))
         return no('This offer does not apply in this city.');
+    }
+    if (rule.companionAllowed === false && f.ride.withCompanion) {
+      return no('This benefit does not apply when a companion rides along.');
     }
     if (rule.minFareNpr !== undefined && f.ride.fareNpr < rule.minFareNpr) {
       return no(`This offer needs a fare of at least NPR ${rule.minFareNpr}.`);
@@ -314,7 +330,7 @@ export function computeDiscount(o: CampaignOffer, fareNpr: number): number {
 }
 
 /** A short plain description of an offer ("10% off, up to NPR 100"). */
-export function describeOffer(o: CampaignOffer): string {
+export function describeCampaignOffer(o: CampaignOffer): string {
   switch (o.type) {
     case 'PERCENT_OFF':
       return `${o.percent}% off your fare${o.maxDiscountNpr ? `, up to NPR ${o.maxDiscountNpr}` : ''}`;
@@ -377,6 +393,7 @@ export function describeConditions(
     out.push(`Vehicle types: ${e.vehicleCategoryCodes.join(', ')}.`);
   if (e.minFareNpr !== undefined) out.push(`For fares of at least NPR ${e.minFareNpr}.`);
   if (e.requiresDisabilityVerified) out.push('For riders with a verified disability benefit.');
+  if (e.requiresDisabilityVerified && e.companionAllowed === false) out.push('Does not apply when a companion rides along.');
   if (limits.perUser !== null)
     out.push(limits.perUser === 1 ? 'Can be used once.' : `Can be used ${limits.perUser} times.`);
   return out;
@@ -447,6 +464,9 @@ export function campaignProblem(b: Omit<AdminCampaignBody, 'reason' | 'version'>
     return 'A code is 4 to 20 capital letters and digits.';
   }
   if (b.kind === 'COUPON' && b.code === null) return 'A coupon needs a code.';
+  if (b.kind === 'DISABILITY_BENEFIT' && b.eligibility.requiresDisabilityVerified !== true) {
+    return 'A disability benefit is only for riders with a verified benefit.';
+  }
   if (b.kind !== 'COUPON' && b.kind !== 'PROMO' && b.code !== null) {
     return 'Only promotions and coupons can have a code.';
   }
@@ -562,7 +582,7 @@ export function combineOffers(
       discountNpr: d,
       bonusPoints: 0,
       pointsMultiplier: 1,
-      description: describeOffer(s.c.offer),
+      description: describeCampaignOffer(s.c.offer),
       disabilityBenefit: !!s.c.disabilityBenefit,
     });
   }
@@ -575,7 +595,7 @@ export function combineOffers(
       discountNpr: 0,
       bonusPoints: s.c.offer.type === 'BONUS_POINTS' ? (s.c.offer.points ?? 0) : 0,
       pointsMultiplier: s.c.offer.type === 'POINTS_MULTIPLIER' ? (s.c.offer.multiplier ?? 1) : 1,
-      description: describeOffer(s.c.offer),
+      description: describeCampaignOffer(s.c.offer),
       disabilityBenefit: !!s.c.disabilityBenefit,
     });
   }
@@ -697,6 +717,37 @@ export interface PromotionQuote {
   pointsToEarn: number;
   /** Why a typed code was not applied, in words. */
   codeProblem: string | null;
+  /** The same money, grouped for the fare screen. Decided by the server; no app adds anything up. */
+  breakdown: PayableBreakdown;
+}
+
+/**
+ * What the rider is shown before booking: the standard fare, what the disability benefit took off, what loyalty took off
+ * (reward points used), what any other offer took off, and the amount payable. The five numbers always add up:
+ * standard - disability - loyalty - other = payable.
+ */
+export interface PayableBreakdown {
+  standardFareNpr: number;
+  disabilityBenefitNpr: number;
+  loyaltyBenefitNpr: number;
+  otherDiscountNpr: number;
+  payableNpr: number;
+}
+
+export function payableBreakdown(p: {
+  fareNpr: number;
+  offers: readonly AppliedOffer[];
+  pointsValueNpr: number;
+  payableNpr: number;
+}): PayableBreakdown {
+  const sum = (list: readonly AppliedOffer[]) => list.reduce((s, o) => s + o.discountNpr, 0);
+  return {
+    standardFareNpr: p.fareNpr,
+    disabilityBenefitNpr: sum(p.offers.filter((o) => o.disabilityBenefit)),
+    loyaltyBenefitNpr: p.pointsValueNpr,
+    otherDiscountNpr: sum(p.offers.filter((o) => !o.disabilityBenefit)),
+    payableNpr: p.payableNpr,
+  };
 }
 
 export interface PromotionRequest {

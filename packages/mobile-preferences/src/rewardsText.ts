@@ -83,20 +83,22 @@ export function referralSentences(v: ReferralView): string[] {
  * whether or not an offer applies, so the layout does not change under a screen reader.
  */
 export function quoteLines(q: PromotionQuote): Array<{ label: string; value: string }> {
+  // With a disability benefit the fare is laid out in the five parts the rider is owed: standard fare, disability benefit,
+  // loyalty benefit, other discount, amount payable. Every figure is the server's (q.breakdown); nothing is added up here.
   const hasBenefit = q.offers.some((o) => o.disabilityBenefit);
-  const lines = [{ label: hasBenefit ? 'Normal fare' : 'Fare', value: formatNpr(q.fareNpr) }];
+  const lines = [{ label: hasBenefit ? 'Standard fare' : 'Fare', value: formatNpr(q.fareNpr) }];
   for (const o of q.offers) {
-    const label = o.disabilityBenefit ? 'Disability benefit' : `Offer: ${o.name}`;
+    const label = o.disabilityBenefit ? 'Disability benefit' : hasBenefit ? `Other discount: ${o.name}` : `Offer: ${o.name}`;
     if (o.discountNpr > 0) lines.push({ label, value: `minus ${formatNpr(o.discountNpr)}` });
     else lines.push({ label, value: o.description });
   }
   if (q.pointsUsed > 0) {
     lines.push({
-      label: `Reward points (${q.pointsUsed} points)`,
+      label: hasBenefit ? `Loyalty benefit (${q.pointsUsed} points)` : `Reward points (${q.pointsUsed} points)`,
       value: `minus ${formatNpr(q.pointsValueNpr)}`,
     });
   }
-  lines.push({ label: 'You pay', value: formatNpr(q.payableNpr) });
+  lines.push({ label: hasBenefit ? 'Amount payable' : 'You pay', value: formatNpr(q.payableNpr) });
   if (q.pointsToEarn > 0)
     lines.push({
       label: 'You will earn',

@@ -1,5 +1,6 @@
 import type { CityOverridableSetting } from '@yatri/types';
 
+import { extraBoardingSeconds } from '../accessibility/boarding';
 import { cancellationRules, type CancellationRules } from '../trips/cancellation';
 import { pricingConfig, type PricingConfig } from '../pricing/pricing.config';
 import { cityOverride, getCityData, type CityData } from './cities.service';
@@ -39,6 +40,20 @@ export function cancellationRulesFor(city: CityData | null): CancellationRules {
 /** For code that has a ride (or any record) with a `city_id`. */
 export async function pricingConfigForCityId(id: string | null): Promise<PricingConfig> {
   return pricingConfigFor(await getCityData(id));
+}
+/**
+ * The pricing rules for ONE ride: the city's, with the extra boarding time a rider who needs it was promised added to the free
+ * waiting time and to the wait before a driver may cancel for a no-show. No charge is added for the extra time.
+ */
+export async function pricingConfigForTrip(t: { id: string; city_id: string | null }): Promise<PricingConfig> {
+  const cfg = await pricingConfigForCityId(t.city_id);
+  const extra = await extraBoardingSeconds(t.id);
+  if (extra <= 0) return cfg;
+  return {
+    ...cfg,
+    waitingFreeSeconds: cfg.waitingFreeSeconds + extra,
+    noShowAfterSeconds: cfg.noShowAfterSeconds + extra,
+  };
 }
 export async function cancellationRulesForCityId(id: string | null): Promise<CancellationRules> {
   return cancellationRulesFor(await getCityData(id));

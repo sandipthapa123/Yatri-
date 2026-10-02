@@ -20,6 +20,13 @@ import { ChoiceRadios, ChoiceSwitches } from './AccessibilityChoices';
 import { ActionButton, Announcer, Card, type UiProps } from './RideUi';
 
 const NEEDS = PASSENGER_NEEDS.map((n) => ({ value: n.code, label: n.label, help: n.help }));
+const COMPANION_CHOICE = [
+  {
+    value: 'COMPANION' as const,
+    label: 'Someone usually travels with me (a companion or helper)',
+    help: 'Your driver is told that someone travels with you, so they leave room. Nothing is asked or kept about the other person.',
+  },
+];
 const COMM = COMMUNICATION_PREFERENCES.map((c) => ({
   value: c,
   label: COMMUNICATION_LABELS[c].label,
@@ -43,6 +50,7 @@ export function AccessibilityProfilePanel(
   const ui = { colors, minTouchTarget: props.minTouchTarget };
   const [saved, setSaved] = useState<AccessibilityProfile | null>(null);
   const [needs, setNeeds] = useState<PassengerNeedCode[]>([]);
+  const [companion, setCompanion] = useState(false);
   const [communication, setCommunication] = useState<CommunicationPreference>('ANY');
   const [pickup, setPickup] = useState<PickupInstructionCode[]>([]);
   const [pickupNote, setPickupNote] = useState('');
@@ -55,6 +63,7 @@ export function AccessibilityProfilePanel(
   const adopt = useCallback((p: AccessibilityProfile) => {
     setSaved(p);
     setNeeds(p.needs);
+    setCompanion(p.companion);
     setCommunication(p.communication);
     setPickup(p.pickupInstructions);
     setPickupNote(p.pickupNote ?? '');
@@ -81,6 +90,7 @@ export function AccessibilityProfilePanel(
     try {
       const next = await rideApi.saveAccessibilityProfile(await getAccessToken(), {
         needs,
+        companion,
         communication,
         pickupInstructions: pickup,
         pickupNote: pickupNote.trim() || null,
@@ -125,6 +135,14 @@ export function AccessibilityProfilePanel(
         choices={NEEDS}
         selected={needs}
         onChange={setNeeds}
+        disabled={busy}
+      />
+      <ChoiceSwitches
+        {...ui}
+        legend="Who travels with me"
+        choices={COMPANION_CHOICE}
+        selected={companion ? ['COMPANION'] : []}
+        onChange={(next) => setCompanion(next.length > 0)}
         disabled={busy}
       />
       <Text style={{ color: colors.textPrimary }}>Anything else about your needs (optional)</Text>

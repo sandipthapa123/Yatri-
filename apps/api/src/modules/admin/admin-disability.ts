@@ -12,6 +12,7 @@ import {
   type AdminDisabilityEvent,
   type AdminDisabilityList,
   type AdminDisabilityRow,
+  type DisabilityBenefitsOverview,
   type ApiResponse,
   type DisabilityAdminAction,
   type DisabilityActor,
@@ -27,6 +28,7 @@ import { query } from '../../lib/db';
 import { requireParam } from '../../lib/params';
 import { getStorageProvider } from '../../lib/storage';
 import { HttpError } from '../../middleware/errorHandler';
+import { settingBool, settingNumber } from '../settings/settings.service';
 import { columnsFor, consentActive, duplicateCount, staffMove, type VerificationRow } from '../disability/verification.service';
 
 /**
@@ -40,6 +42,58 @@ const adminId = (req: Request) => {
   if (!req.auth) throw new HttpError(401, 'UNAUTHENTICATED', 'Authentication required.');
   return req.auth.userId;
 };
+
+/**
+ * The benefit side of the workspace: the benefit policies (ordinary campaigns of the disability-benefit kind) with how much each
+ * has been used, the accessible-ride service options (platform settings), and what looks unusual for a person to review. It holds
+ * counts and references only: no card, no document, no identity.
+ */
+export async function disabilityBenefitsOverviewHandler(_req: Request, res: Res<DisabilityBenefitsOverview>) {
+  const policies = await query<{ id: string; name: string; status: string; kind: string; uses: string; discount: string; riders: string }>(
+    `SELECT c.id, c.name, c.status, c.kind,
+            count(r.id) FILTER (WHERE r.status <> 'VOID')::text AS uses,
+            COALESCE(sum(r.discount_npr) FILTER (WHERE r.status = 'APPLIED'), 0)::text AS discount,
+            count(DISTINCT r.user_id) FILTER (WHERE r.status <> 'VOID')::text AS riders
+     FROM campaigns c LEFT JOIN campaign_redemptions r ON r.campaign_id = c.id
+     WHERE c.kind = 'DISABILITY_BENEFIT' OR c.eligibility @> '{"requiresDisabilityVerified": true}'::jsonb
+     GROUP BY c.id ORDER BY c.created_at DESC LIMIT 100`,
+  );
+  const review = await query<{ id: string; user_id: string; rule_code: string; points: number; created_at: Date; full_name: string | null }>(
+    `SELECT e.id, e.user_id, e.rule_code, e.points, e.created_at, u.full_name
+     FROM risk_events e JOIN users u ON u.id = e.user_id
+     WHERE e.status = 'OPEN' AND e.rule_code IN ('DISABILITY_BENEFIT_BURST', 'DISABILITY_DUPLICATE_CARD', 'DISABILITY_REPEATED_SUBMISSIONS')
+     ORDER BY e.created_at DESC LIMIT 50`,
+  );
+  const waiting = await query<{ n: number }>(`SELECT count(*)::int AS n FROM disability_verifications WHERE status IN ('SUBMITTED', 'UNDER_REVIEW')`);
+  res.json({
+    success: true,
+    data: {
+      waitingForReview: waiting.rows[0]?.n ?? 0,
+      policies: policies.rows.map((p) => ({
+        campaignId: p.id,
+        name: p.name,
+        status: p.status as DisabilityBenefitsOverview['policies'][number]['status'],
+        uses: Number(p.uses),
+        discountNpr: Number(p.discount),
+        distinctRiders: Number(p.riders),
+      })),
+      serviceOptions: {
+        extraBoardingSeconds: settingNumber('EXTRA_BOARDING_SECONDS'),
+        accessibleSearchRadiusBonusPercent: settingNumber('ACCESSIBLE_SEARCH_RADIUS_BONUS_PERCENT'),
+        verificationEnabled: settingBool('DISABILITY_VERIFICATION_ENABLED'),
+        officialCheckOffered: settingBool('DISABILITY_OFFICIAL_API_ENABLED'),
+      },
+      toReview: review.rows.map((r) => ({
+        riskEventId: r.id,
+        userId: r.user_id,
+        userName: r.full_name,
+        rule: r.rule_code,
+        points: r.points,
+        at: r.created_at.toISOString(),
+      })),
+    },
+  });
+}
 
 export const disabilityListQuerySchema = z.object({
   status: z.enum(DISABILITY_VERIFICATION_STATUSES).optional(),

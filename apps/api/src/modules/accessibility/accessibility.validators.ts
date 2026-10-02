@@ -15,6 +15,7 @@ const communication = z.enum(COMMUNICATION_PREFERENCES);
 /** A ride request or estimate may carry any part of this; what is left out comes from the saved profile. */
 export const accessibilityRequestSchema = z
   .object({
+    companion: z.boolean().optional(),
     needs: needs.optional(),
     communication: communication.optional(),
     pickupInstructions: pickup.optional(),
@@ -26,6 +27,7 @@ export const accessibilityRequestSchema = z
 export const profileBodySchema = z
   .object({
     needs,
+    companion: z.boolean().optional(),
     communication,
     pickupInstructions: pickup,
     pickupNote: note,

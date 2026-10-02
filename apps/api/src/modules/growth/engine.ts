@@ -2,11 +2,12 @@ import {
   GROWTH_NOTIFICATION_TYPES,
   combineOffers,
   describeConditions,
-  describeOffer,
+  describeCampaignOffer,
   evaluateEligibility,
   pointsForFare,
   redeemablePoints,
   usageAllowed,
+  payableBreakdown,
   type AppliedOffer,
   type CampaignEligibility,
   type EligibilityFacts,
@@ -46,6 +47,8 @@ export interface RideContext {
   fareNpr: number;
   categoryCode: string | null;
   cityId: string | null;
+  /** A companion rides with the passenger (the benefit's own rule decides whether that matters). */
+  companion?: boolean;
 }
 
 type Q = Queryable;
@@ -72,7 +75,7 @@ async function loadFacts(
     daysSinceLastRide: row?.since === null || row?.since === undefined ? null : Number(row.since),
     disabilityVerified: await benefitActiveFor(userId),
     ride: ride
-      ? { categoryCode: ride.categoryCode, cityId: ride.cityId, fareNpr: ride.fareNpr }
+      ? { categoryCode: ride.categoryCode, cityId: ride.cityId, fareNpr: ride.fareNpr, withCompanion: ride.companion ?? false }
       : null,
   };
 }
@@ -104,7 +107,7 @@ async function consider(
      WHERE c.status = 'ACTIVE' AND c.offer IS NOT NULL
        AND (c.starts_at IS NULL OR c.starts_at <= now()) AND (c.ends_at IS NULL OR c.ends_at > now())
        AND (
-         (c.kind IN ('PROMO', 'COUPON', 'FIRST_RIDE') AND (c.code IS NULL OR ($2 <> '' AND c.code = $2)))
+         (c.kind IN ('PROMO', 'COUPON', 'FIRST_RIDE', 'DISABILITY_BENEFIT') AND (c.code IS NULL OR ($2 <> '' AND c.code = $2)))
          OR (g.id IS NOT NULL AND (g.expires_at IS NULL OR g.expires_at > now()))
        )
      ORDER BY c.id ${lock ? 'FOR UPDATE OF c' : ''}`,
@@ -232,6 +235,7 @@ const toQuote = (p: Plan, fareNpr: number): PromotionQuote => ({
   payableNpr: p.payableNpr,
   pointsToEarn: p.pointsToEarn,
   codeProblem: p.codeProblem,
+  breakdown: payableBreakdown({ fareNpr, offers: p.applied, pointsValueNpr: p.pointsValueNpr, payableNpr: p.payableNpr }),
 });
 
 /** What the rider would pay. Null when nothing applies and nothing was asked for (so the screen shows only the fare). */
@@ -437,7 +441,7 @@ const viewOf = (row: CampaignRow, usableUntil: Date | null): OfferView => {
     kind: row.kind,
     name: row.name,
     description: row.description,
-    summary: row.offer ? describeOffer(row.offer) : row.name,
+    summary: row.offer ? describeCampaignOffer(row.offer) : row.name,
     code: row.code,
     endsAt: info.endsAt,
     usableUntil: usableUntil?.toISOString() ?? null,

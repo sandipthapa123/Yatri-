@@ -300,3 +300,11 @@ applied only by the server under a row lock, with an append-only history. Consen
 (`compliance_policies`/`compliance_records`, with `withdrawn_at`). The card number is never stored (keyed hash and last four
 characters); the document is behind the storage provider. The benefit is an ordinary growth campaign whose eligibility is
 `requiresDisabilityVerified`, answered by `benefitActiveFor`: no second discount engine or ledger. See `docs/PHASE_26.md`.
+
+## Disability benefits and accessible ride services (Phase 27)
+
+A disability benefit is a campaign of kind `DISABILITY_BENEFIT` whose eligibility is `requiresDisabilityVerified`, answered only by
+the Phase 26 verification (`benefitActiveFor`). The one promotion engine applies it (quote, reserve, settle), the one points
+ledger records any bonus points, and `PromotionQuote.breakdown` gives the five figures shown before booking. Accessible services
+reuse the accessibility and dispatch modules: a companion flag, the need `EXTRA_BOARDING_TIME` (`pricingConfigForTrip`) and a wider
+search for requests that need a vehicle feature (`searchRadius`). See `docs/PHASE_27.md`.

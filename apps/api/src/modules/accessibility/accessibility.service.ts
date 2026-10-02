@@ -191,6 +191,7 @@ const codeFromLabel = (label: string) =>
 // ---------------------------------------------------------------- the passenger's saved profile
 
 interface ProfileRow {
+  companion: boolean;
   needs: string[];
   communication: CommunicationPreference;
   pickup_instructions: string[];
@@ -201,6 +202,7 @@ interface ProfileRow {
 }
 
 const EMPTY_PROFILE: AccessibilityProfile = {
+  companion: false,
   needs: [],
   communication: 'ANY',
   pickupInstructions: [],
@@ -220,6 +222,7 @@ const unique = <T>(xs: readonly T[]) => [...new Set(xs)];
 
 /** Check a set of choices against the one definition. Anything unknown is refused, never dropped silently. */
 export function checkAccessibility(input: {
+  companion?: boolean;
   needs?: readonly string[];
   communication?: string;
   pickupInstructions?: readonly string[];
@@ -244,6 +247,7 @@ export function checkAccessibility(input: {
   }
   return {
     needs: needs as PassengerNeedCode[],
+    companion: input.companion === true,
     communication,
     pickupInstructions: pickupInstructions as PickupInstructionCode[],
     pickupNote: clean(input.pickupNote),
@@ -253,7 +257,7 @@ export function checkAccessibility(input: {
 
 export async function getProfile(userId: string): Promise<AccessibilityProfile> {
   const r = await query<ProfileRow>(
-    `SELECT needs, communication, pickup_instructions, pickup_note, other_note, version, updated_at
+    `SELECT needs, companion, communication, pickup_instructions, pickup_note, other_note, version, updated_at
      FROM passenger_accessibility WHERE user_id = $1`,
     [userId],
   );
@@ -261,6 +265,7 @@ export async function getProfile(userId: string): Promise<AccessibilityProfile> 
   if (!row) return { ...EMPTY_PROFILE };
   return {
     needs: row.needs as PassengerNeedCode[],
+    companion: row.companion,
     communication: row.communication,
     pickupInstructions: row.pickup_instructions as PickupInstructionCode[],
     pickupNote: row.pickup_note,
@@ -290,11 +295,11 @@ export async function saveProfile(
       );
     }
     await c.query(
-      `INSERT INTO passenger_accessibility (user_id, needs, communication, pickup_instructions, pickup_note, other_note)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO passenger_accessibility (user_id, needs, communication, pickup_instructions, pickup_note, other_note, companion)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        ON CONFLICT (user_id) DO UPDATE SET needs = $2, communication = $3, pickup_instructions = $4,
-         pickup_note = $5, other_note = $6, version = passenger_accessibility.version + 1, updated_at = now()`,
-      [userId, v.needs, v.communication, v.pickupInstructions, v.pickupNote, v.otherNote],
+         pickup_note = $5, other_note = $6, companion = $7, version = passenger_accessibility.version + 1, updated_at = now()`,
+      [userId, v.needs, v.communication, v.pickupInstructions, v.pickupNote, v.otherNote, v.companion],
     );
   });
   return getProfile(userId);
@@ -312,6 +317,7 @@ export async function resolveForRequest(
 ): Promise<TripAccessibility> {
   const profile = await getProfile(passengerId);
   const merged = checkAccessibility({
+    companion: requested?.companion ?? profile.companion,
     needs: requested?.needs ?? profile.needs,
     communication: requested?.communication ?? profile.communication,
     pickupInstructions: requested?.pickupInstructions ?? profile.pickupInstructions,
@@ -338,8 +344,8 @@ export async function resolveForRequest(
 export async function saveForTrip(tripId: string, a: TripAccessibility): Promise<void> {
   if (!hasAccessibilityContent(a)) return; // an ordinary ride stores nothing
   await query(
-    `INSERT INTO trip_accessibility (trip_id, needs, communication, pickup_instructions, pickup_note, other_note, required_attributes)
-     VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (trip_id) DO NOTHING`,
+    `INSERT INTO trip_accessibility (trip_id, needs, communication, pickup_instructions, pickup_note, other_note, required_attributes, companion)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT (trip_id) DO NOTHING`,
     [
       tripId,
       a.needs,
@@ -348,11 +354,13 @@ export async function saveForTrip(tripId: string, a: TripAccessibility): Promise
       a.pickupNote,
       a.otherNote,
       a.requiredVehicleAttributes,
+      a.companion,
     ],
   );
 }
 
 interface TripAccRow {
+  companion: boolean;
   needs: string[];
   communication: CommunicationPreference;
   pickup_instructions: string[];
@@ -361,6 +369,7 @@ interface TripAccRow {
   required_attributes: string[];
 }
 const toTripAcc = (r: TripAccRow): TripAccessibility => ({
+  companion: r.companion,
   needs: r.needs as PassengerNeedCode[],
   communication: r.communication,
   pickupInstructions: r.pickup_instructions as PickupInstructionCode[],
@@ -371,7 +380,7 @@ const toTripAcc = (r: TripAccRow): TripAccessibility => ({
 
 export async function getForTrip(tripId: string): Promise<TripAccessibility | null> {
   const r = await query<TripAccRow>(
-    `SELECT needs, communication, pickup_instructions, pickup_note, other_note, required_attributes
+    `SELECT needs, companion, communication, pickup_instructions, pickup_note, other_note, required_attributes
      FROM trip_accessibility WHERE trip_id = $1`,
     [tripId],
   );

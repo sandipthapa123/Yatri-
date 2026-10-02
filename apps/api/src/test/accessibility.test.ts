@@ -107,7 +107,8 @@ describe('the definitions agree', () => {
 
   it('words the needs for a driver without a diagnosis', () => {
     const lines = describeAccessibilityForDriver({
-      needs: ['VISUAL', 'WHEELCHAIR'],
+      needs: ['VISUAL', 'WHEELCHAIR', 'EXTRA_BOARDING_TIME'],
+      companion: true,
       communication: 'TEXT_ONLY',
       pickupInstructions: ['MEET_AT_ACCESSIBLE_ENTRANCE'],
       pickupNote: 'Blue gate',
@@ -117,6 +118,8 @@ describe('the definitions agree', () => {
     expect(lines.join(' ')).toContain('wheelchair-accessible vehicle');
     expect(lines.join(' ')).toContain('Messages only');
     expect(lines.join(' ')).toContain('Pickup note: Blue gate');
+    expect(lines.join(' ')).toContain('extra time');
+    expect(lines.join(' ')).toContain('Someone travels with the passenger');
     expect(lines.join(' ')).not.toMatch(/disab|diagnos|condition/i);
   });
 });

@@ -217,6 +217,17 @@ export const RISK_RULES = [
     unit: 'applications',
   },
   {
+    code: 'DISABILITY_BENEFIT_BURST',
+    category: 'PROMOTION',
+    label: 'Disability benefit used many times in a day',
+    help: 'A rider used a disability benefit on many rides in one day. A person with several errands can do that, so only a high count adds points, and it asks a reviewer to look rather than stopping the benefit.',
+    subject: 'PASSENGER',
+    points: 10,
+    threshold: 5,
+    windowHours: 24,
+    unit: 'rides',
+  },
+  {
     code: 'ROUTE_DEVIATION_PATTERN',
     category: 'GPS',
     label: 'Repeatedly far off the planned route',

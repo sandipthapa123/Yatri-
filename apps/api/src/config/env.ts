@@ -218,6 +218,8 @@ const envSchema = z
       .enum(['true', 'false'])
       .default('true')
       .transform((v) => v === 'true'),
+    EXTRA_BOARDING_SECONDS: z.coerce.number().int().min(0).max(1800).default(300),
+    ACCESSIBLE_SEARCH_RADIUS_BONUS_PERCENT: z.coerce.number().int().min(0).max(300).default(50),
     DISABILITY_OFFICIAL_API_ENABLED: z
       .enum(['true', 'false'])
       .default('false')

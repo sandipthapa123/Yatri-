@@ -4,7 +4,7 @@ import {
   GROWTH_NOTIFICATION_TYPES,
   REFERRAL_CODE_PATTERN,
   REFERRAL_STATUS_LABELS,
-  describeOffer,
+  describeCampaignOffer,
   type ReferralStatus,
   type ReferralView,
 } from '@yatri/types';
@@ -77,7 +77,7 @@ export async function referralView(userId: string): Promise<ReferralView> {
   const n = (s: ReferralStatus) => Number(counts.rows.find((c) => c.status === s)?.n ?? 0);
   const used = await query('SELECT 1 FROM referrals WHERE referee_id = $1', [userId]);
   const info = campaign ? toCampaign(campaign) : null;
-  const friendGets = info?.offer ? describeOffer(info.offer) : null;
+  const friendGets = info?.offer ? describeCampaignOffer(info.offer) : null;
   return {
     code,
     open: !!campaign,
@@ -191,7 +191,7 @@ export async function applyReferral(userId: string, rawCode: string): Promise<{ 
     throw err;
   }
   const info = toCampaign(campaign);
-  const gets = info.offer ? describeOffer(info.offer) : null;
+  const gets = info.offer ? describeCampaignOffer(info.offer) : null;
   await notify({
     userId,
     type: GROWTH_NOTIFICATION_TYPES.OFFER_GRANTED,

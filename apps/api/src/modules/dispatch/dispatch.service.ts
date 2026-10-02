@@ -111,7 +111,11 @@ export async function offerNext(tripId: string): Promise<OfferOutcome> {
       pickupDistanceMeters: c.distanceMeters,
       ttlSeconds: env.DISPATCH_OFFER_TTL_SECONDS,
     });
-    if (!offer) continue; // another dispatcher run took this driver: try the next one
+    if (!offer) {
+      // Either this driver was taken by another dispatcher run, or another run already placed the ride's one open offer.
+      if (await openOfferForTrip(tripId)) return 'offered';
+      continue;
+    }
     await publishToUser(c.driverId, {
       type: 'trip_offer',
       offer: toOfferInfo(offer, trip, await vehicleNeedsOf(tripId)),

@@ -45,3 +45,10 @@ settings; bundle integrity of both apps.
 - Push could not be received on a phone.
 - Earlier phases' documents were not re-audited line by line against the code; the test suite is the guarantee for their behaviour.
 - A load test was not run.
+
+## Second round (dispatch and promotions)
+
+| Where | What was wrong | Effect | Fix |
+|---|---|---|---|
+| Dispatch (Phase 6) | "One open offer per ride" was only checked in code (`openOfferForTrip`, then insert) | Two dispatch runs at the same moment (a decline and the sweep, or two servers) could offer one ride to two drivers, burning offers and showing a driver an offer that vanished | A unique partial index `trip_offers_one_open_per_trip`; the loser of the race reports the existing offer; a test fires six dispatch runs at once and gets exactly one open offer |
+| Promotions (Phase 24) | If releasing an offer failed once when a ride was cancelled, nothing ever gave it back | The rider's use limit stayed held for a ride that never happened | The hourly `growth-expiry` job voids reservations of cancelled or driverless rides (`voidStaleReservations`); tested |

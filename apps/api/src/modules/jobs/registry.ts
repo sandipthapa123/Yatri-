@@ -3,6 +3,7 @@ import { retryFailedNotifications } from '../../lib/notifications';
 import { sweepDrivers } from '../availability/availability.service';
 import { sweepCalls } from '../calls/calls.service';
 import { runRetention } from '../compliance/retention.service';
+import { voidStaleReservations } from '../growth/engine';
 import { expirePoints } from '../growth/loyalty';
 import { sweepCampaignMessages } from '../growth/messaging';
 import { sweepDispatch } from '../dispatch/dispatch.service';
@@ -77,9 +78,9 @@ export const JOBS: readonly JobDef[] = [
   {
     name: 'growth-expiry',
     label: 'Reward points expiry',
-    help: 'Writes off reward points that have expired and warns riders whose points are about to.',
+    help: 'Writes off reward points that have expired and warns riders whose points are about to, and gives back offers still held for rides that did not happen.',
     everySeconds: 3600,
-    run: () => expirePoints(),
+    run: async () => ({ ...(await expirePoints()), reservationsReleased: await voidStaleReservations() }),
   },
   {
     name: 'disability-expiry',

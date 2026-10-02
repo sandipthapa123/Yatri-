@@ -298,6 +298,19 @@ export async function releaseReservations(tripId: string): Promise<void> {
   ]);
 }
 
+/**
+ * Recovery for a release that did not happen: an offer reserved for a ride that was cancelled or found no driver, whose release
+ * failed at the time (a database blip), would otherwise hold the rider's usage limit for ever. Safe to run any time and from two
+ * servers: it only voids reservations of rides that can no longer be completed.
+ */
+export async function voidStaleReservations(): Promise<number> {
+  const r = await query(
+    `UPDATE campaign_redemptions r SET status = 'VOID'
+     FROM trips t WHERE t.id = r.trip_id AND r.status = 'RESERVED' AND t.status IN ('CANCELLED', 'NO_DRIVERS')`,
+  );
+  return r.rowCount ?? 0;
+}
+
 export interface Settlement {
   discountNpr: number;
   pointsUsed: number;

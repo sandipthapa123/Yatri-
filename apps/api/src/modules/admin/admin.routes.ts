@@ -260,6 +260,16 @@ import {
 } from './admin-jobs';
 import { providersHandler } from './admin-providers';
 import {
+  getPayoutHandler,
+  listPayoutsHandler,
+  payoutAccountHandler,
+  payoutActionHandler,
+  payoutActionSchema,
+  payoutListQuerySchema,
+  payoutPrepareSchema,
+  preparePayoutsHandler,
+} from './admin-payouts';
+import {
   disabilityActionBodySchema,
   disabilityActionHandler,
   disabilityBenefitsOverviewHandler,
@@ -1003,6 +1013,20 @@ adminRouter.post(
   validateUuidParam('id'),
   validateBody(adjustSchema),
   adjustRewardsHandler,
+);
+
+// Driver payouts for online rides. Seeing them needs PAYOUTS_VIEW; preparing one, opening the account to pay and recording a step
+// need PAYOUTS_MANAGE. The person who prepared a payout cannot mark it paid.
+adminRouter.get('/payouts', requirePermission('PAYOUTS_VIEW'), validateQuery(payoutListQuerySchema), listPayoutsHandler);
+adminRouter.post('/payouts/prepare', requirePermission('PAYOUTS_MANAGE'), validateBody(payoutPrepareSchema), preparePayoutsHandler);
+adminRouter.get('/payouts/:id', requirePermission('PAYOUTS_VIEW'), validateUuidParam('id'), getPayoutHandler);
+adminRouter.get('/payouts/:id/account', requirePermission('PAYOUTS_MANAGE'), validateUuidParam('id'), payoutAccountHandler);
+adminRouter.post(
+  '/payouts/:id/act',
+  requirePermission('PAYOUTS_MANAGE'),
+  validateUuidParam('id'),
+  validateBody(payoutActionSchema),
+  payoutActionHandler,
 );
 
 // Disability benefit verification. Reading cases needs DISABILITY_VERIFICATION_VIEW; deciding one and opening its document need

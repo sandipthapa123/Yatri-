@@ -218,6 +218,9 @@ const envSchema = z
       .enum(['true', 'false'])
       .default('true')
       .transform((v) => v === 'true'),
+    PAYOUT_HOLD_HOURS: z.coerce.number().int().min(0).max(720).default(48),
+    PAYOUT_MIN_NPR: z.coerce.number().int().min(1).max(100000).default(500),
+    ONLINE_REFUND_DRIVER_SHARE_PERCENT: z.coerce.number().int().min(0).max(100).default(0),
     EXTRA_BOARDING_SECONDS: z.coerce.number().int().min(0).max(1800).default(300),
     ACCESSIBLE_SEARCH_RADIUS_BONUS_PERCENT: z.coerce.number().int().min(0).max(300).default(50),
     DISABILITY_OFFICIAL_API_ENABLED: z

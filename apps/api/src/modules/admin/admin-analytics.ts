@@ -1,6 +1,5 @@
 import {
   ACTIVE_TRIP_STATUSES,
-  FINANCE_NOT_SUPPORTED,
   type AnalyticsData,
   type ApiResponse,
   type DailyPoint,
@@ -10,6 +9,7 @@ import {
 import type { Request, Response } from 'express';
 
 import { env } from '../../config/env';
+import { payoutFigures } from '../payouts/payouts.service';
 import { query } from '../../lib/db';
 import { resolveRange, type RangeQuery } from './admin-range';
 
@@ -159,7 +159,7 @@ export async function analyticsHandler(req: Request, res: Response<ApiResponse<A
         outstandingNpr: Math.max(0, m.gross - m.collected),
         cancellationFeesNpr: m.fees,
         driverEarningsNpr: m.gross,
-        payouts: { supported: false, reason: FINANCE_NOT_SUPPORTED },
+        payouts: await payoutFigures(),
       },
       drivers: {
         active: ppl.drivers,

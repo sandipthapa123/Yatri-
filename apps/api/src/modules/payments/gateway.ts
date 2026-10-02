@@ -31,8 +31,32 @@ export interface GatewayPaymentLookup {
   amountNpr: number | null;
 }
 
+export interface GatewayRefundRequest {
+  /** The vendor's reference for the payment being refunded. */
+  providerRef: string;
+  /** Whole rupees, decided by the server (never more than was paid). */
+  amountNpr: number;
+  /** Yatri's own refund id: sent as the idempotency key, so asking twice returns the same refund and never pays back twice. */
+  refundId: string;
+}
+
+export type GatewayRefundState = 'COMPLETED' | 'PENDING' | 'FAILED';
+
+export interface GatewayRefundResult {
+  /** The vendor's reference for the refund, kept on the refund record. */
+  refundRef: string;
+  state: GatewayRefundState;
+}
+
 export interface PaymentGateway {
   readonly name: string;
+  /**
+   * Whether this vendor can return money through its API. Where it cannot (a vendor that only refunds in its merchant
+   * dashboard), a refund of an online payment is returned by staff there and the vendor's reference is recorded here.
+   */
+  readonly supportsRefund: boolean;
+  /** Return money to the payer. Idempotent on `refundId`. Only when `supportsRefund`. */
+  refund?(request: GatewayRefundRequest): Promise<GatewayRefundResult>;
   /** Opening a payment is never repeated automatically (a retry could open two). */
   initiate(request: GatewayPaymentRequest): Promise<GatewayPaymentOpened>;
   /** A read: safe to repeat, retried on a passing failure. */

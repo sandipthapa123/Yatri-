@@ -82,7 +82,7 @@ export default async function PaymentsPage({ searchParams }: PageProps) {
         <dl style={styles.definitionList}>
           <dt style={styles.dt}>Fares of completed rides</dt>
           <dd style={styles.dd}>{formatNpr(summary.grossFaresNpr)}</dd>
-          <dt style={styles.dt}>Cash confirmed as received</dt>
+          <dt style={styles.dt}>Payments confirmed as received (cash and online)</dt>
           <dd style={styles.dd}>{formatNpr(summary.collectedNpr)}</dd>
           <dt style={styles.dt}>Not yet confirmed</dt>
           <dd style={styles.dd}>{formatNpr(summary.outstandingNpr)}</dd>
@@ -98,8 +98,18 @@ export default async function PaymentsPage({ searchParams }: PageProps) {
           ))}
           <dt style={styles.dt}>Wallets</dt>
           <dd style={styles.dd}>{summary.wallets.reason}</dd>
-          <dt style={styles.dt}>Payouts</dt>
-          <dd style={styles.dd}>{summary.payouts.reason}</dd>
+          <dt style={styles.dt}>Online payments collected</dt>
+          <dd style={styles.dd}>{formatNpr(summary.onlineCollectedNpr)}</dd>
+          <dt style={styles.dt}>Online payments refunded</dt>
+          <dd style={styles.dd}>{formatNpr(summary.onlineRefundedNpr)}</dd>
+          <dt style={styles.dt}>Owed to drivers and ready to pay out</dt>
+          <dd style={styles.dd}>{formatNpr(summary.payouts.readyNpr)}</dd>
+          <dt style={styles.dt}>In a payout being prepared or sent</dt>
+          <dd style={styles.dd}>{formatNpr(summary.payouts.inPayoutNpr)}</dd>
+          <dt style={styles.dt}>Paid out to drivers</dt>
+          <dd style={styles.dd}>
+            {formatNpr(summary.payouts.paidNpr)}. <Link href="/payouts">Driver payouts</Link>
+          </dd>
         </dl>
       </section>
 
@@ -139,7 +149,7 @@ export default async function PaymentsPage({ searchParams }: PageProps) {
                     href={(s) => href({ esort: s })}
                   />
                   <th scope="col" style={styles.th}>
-                    Cash confirmed
+                    Payments confirmed
                   </th>
                   <th scope="col" style={styles.th}>
                     Not yet confirmed

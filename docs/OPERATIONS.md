@@ -418,3 +418,14 @@ The controls and their evidence are in `docs/SECURITY.md`. What operators must d
 - A vendor outage: sign-in codes use `SMS_FALLBACK_PROVIDER` if set; online payment says it is unavailable and cash still works;
   push is retried by the notification retry job; maps return the straight-line estimate where the app already falls back.
 - Before relying on a vendor, run a staging pass with its real test keys: Phase 25's tests use pretend vendors only.
+
+## Refunds, payouts, push and the live check (Phase 28)
+
+- **Before relying on a vendor**, run `pnpm --filter @yatri/api providers:check` against staging with the real test credentials.
+  Add `--sms-to=`, `--email-to=`, `--initiate-payment` and `--sentry-event` for the steps that reach a person or open a payment.
+- **Payouts**: Admin > Driver payouts. Prepare (rides older than the hold, no refund under way, driver has an account and at least the
+  smallest amount), send the money from your bank or wallet using "Show the account to pay", then a different person records it as
+  paid with the reference. A failed payout can be tried again or cancelled (its rides return to the driver's balance).
+- **Online refunds**: a provider without a refund API (Khalti) needs the refund made in its dashboard and the reference recorded.
+  The `refund-settle` job finishes provider refunds that were cut short.
+- **Settings**: `PAYOUT_HOLD_HOURS`, `PAYOUT_MIN_NPR`, `ONLINE_REFUND_DRIVER_SHARE_PERCENT` (Settings > Online payments, refunds and payouts).

@@ -11,11 +11,14 @@ export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 export const PAYMENT_STATUSES = ['PENDING', 'PAID', 'FAILED', 'VOID'] as const;
 export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
 
-/** Payment wording for lists and admin (a ride with no payment yet is NONE). One set of words. */
+/**
+ * Payment wording where the METHOD is not known (counts and filters across rides, which mix cash and online payments), so it
+ * never says "cash" for money that came online. Where the method is known, `describePayment` is the one wording.
+ */
 export const PAYMENT_STATUS_LABELS: Record<PaymentStatus | 'NONE', string> = {
   NONE: 'No payment yet',
-  PENDING: 'Awaiting cash',
-  PAID: 'Paid in cash',
+  PENDING: 'Awaiting payment',
+  PAID: 'Paid',
   FAILED: 'Failed',
   VOID: 'Not due',
 };
@@ -28,6 +31,10 @@ export function describePayment(
   method: PaymentMethod | null,
   status: PaymentStatus | 'NONE',
 ): string {
+  if (method === 'CASH') {
+    if (status === 'PENDING') return 'Awaiting cash';
+    if (status === 'PAID') return 'Paid in cash';
+  }
   if (method === 'ORGANIZATION') {
     if (status === 'PENDING') return 'Billed to the organization';
     if (status === 'PAID') return 'Paid by the organization';

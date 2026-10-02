@@ -12,6 +12,9 @@ export {
 export { SettingsCenter } from './components/SettingsCenter';
 export type { SettingsLinks } from './components/SettingsCenter';
 export { RewardsCenter } from './components/RewardsCenter';
+export { PayoutsCenter } from './components/PayoutsCenter';
+export { payoutsApi } from './payoutsApi';
+export type { PayoutsApi } from './payoutsApi';
 export { DisabilityBenefitCenter } from './components/DisabilityBenefitCenter';
 export { disabilityApi } from './disabilityApi';
 export type { DisabilityApi } from './disabilityApi';

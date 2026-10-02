@@ -4,6 +4,13 @@ import type {
   AdminDisabilityDetail,
   AdminDisabilityList,
   DisabilityBenefitsOverview,
+  AdminPayoutAccountReveal,
+  AdminPayoutActionBody,
+  AdminPayoutDetail,
+  AdminPayoutList,
+  AdminPayoutRow,
+  PayoutInfo,
+  PayoutStatus,
   AdminDisabilityListFilters,
   DisabilityAdminAction,
   AdminCityBody,
@@ -926,3 +933,18 @@ export const disabilityDocumentApi = (t: string, id: string) =>
   adminRequest<{ url: string; expiresInSeconds: number }>(`/disability-verifications/${id}/document`, t);
 export const disabilityBenefitsOverviewApi = (t: string) =>
   adminRequest<DisabilityBenefitsOverview>('/disability-benefits/overview', t);
+
+// ---- driver payouts (PAYOUTS_VIEW to read, PAYOUTS_MANAGE to prepare, send and see the account)
+
+export const listPayoutsApi = (t: string, f: { status?: PayoutStatus | undefined; limit?: number; offset?: number }) => {
+  const qs = new URLSearchParams();
+  if (f.status) qs.set('status', f.status);
+  if (f.limit) qs.set('limit', String(f.limit));
+  if (f.offset) qs.set('offset', String(f.offset));
+  return adminRequest<AdminPayoutList>(`/payouts${qs.size ? `?${qs}` : ''}`, t);
+};
+export const getPayoutApi = (t: string, id: string) => adminRequest<AdminPayoutDetail>(`/payouts/${id}`, t);
+export const payoutAccountApi = (t: string, id: string) => adminRequest<AdminPayoutAccountReveal>(`/payouts/${id}/account`, t);
+export const payoutPrepareApi = (t: string, driverId?: string) =>
+  post<PayoutInfo | { prepared: number; skipped: number; totalNpr: number }>('/payouts/prepare', t, driverId ? { driverId } : {});
+export const payoutActionApi = (t: string, id: string, body: AdminPayoutActionBody) => post<AdminPayoutRow>(`/payouts/${id}/act`, t, body);

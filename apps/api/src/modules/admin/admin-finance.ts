@@ -14,6 +14,7 @@ import { z } from 'zod';
 import { recordAudit } from '../../lib/audit';
 import { query } from '../../lib/db';
 import { HttpError } from '../../middleware/errorHandler';
+import { payoutFigures } from '../payouts/payouts.service';
 import { likeContains, rangeFields, resolveRange, type RangeQuery } from './admin-range';
 
 /**
@@ -141,6 +142,14 @@ export async function financeSummaryHandler(
       p,
     ),
   ]);
+  const online = await query<{ collected: number; refunded: number }>(
+    `SELECT COALESCE(sum(p.amount_npr) FILTER (WHERE p.status = 'PAID'), 0)::int AS collected,
+            COALESCE((SELECT sum(f.amount_npr) FROM refunds f JOIN trip_payments fp ON fp.id = f.payment_id
+                      WHERE f.status = 'COMPLETED' AND fp.method = 'DIGITAL' AND f.completed_at >= $1 AND f.completed_at < $2), 0)::int AS refunded
+     FROM trip_payments p JOIN trips t ON t.id = p.trip_id
+     WHERE p.method = 'DIGITAL' AND t.requested_at >= $1 AND t.requested_at < $2`,
+    p,
+  );
   const status = Object.fromEntries(
     PAYMENT_STATUSES.map((s) => {
       const r = byStatus.rows.find((x) => x.status === s);
@@ -160,7 +169,9 @@ export async function financeSummaryHandler(
       discountsFundedNpr: t.discounts,
       cancellationFeesNpr: t.fees,
       wallets: { supported: false, reason: FINANCE_NOT_SUPPORTED },
-      payouts: { supported: false, reason: FINANCE_NOT_SUPPORTED },
+      payouts: await payoutFigures(),
+      onlineCollectedNpr: online.rows[0]?.collected ?? 0,
+      onlineRefundedNpr: online.rows[0]?.refunded ?? 0,
     },
   });
 }

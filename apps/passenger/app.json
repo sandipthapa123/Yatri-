@@ -30,6 +30,7 @@
       "bundler": "metro"
     },
     "plugins": [
+      "expo-notifications",
       [
         "expo-location",
         {

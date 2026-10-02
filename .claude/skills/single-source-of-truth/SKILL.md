@@ -118,3 +118,10 @@ Yatri-specific reminders:
 - The waiting rule for one ride is `pricingConfigForTrip` (city rule plus extra boarding time); the search radius is `searchRadius`.
   Do not read the city or platform waiting values directly for a ride.
 - A companion is `TripAccessibility.companion`; wording for a driver is `describeAccessibilityForDriver`.
+
+## Refunds, payouts and push (Phase 28)
+
+- What a driver is owed is `driverPayableForRide` over `OWED_SQL`; the balance, the staff totals and payout preparation all use it.
+  A payout step is `PAYOUT_TRANSITIONS` only. A payout account is encrypted with `encryptField`; never log or return a number.
+- An online refund is settled by `settleOnlineRefund` (the one place that asks a provider to refund); the refund state machine is unchanged.
+- Push registration is `registerPush` / `usePushRegistration`; no screen talks to `expo-notifications` directly.

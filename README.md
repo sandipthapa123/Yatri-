@@ -187,6 +187,9 @@ Run from the repository root; each fans out to every workspace package via pnpm.
   loyalty points, vehicle types, cities, limits, validity, stacking, companion rules) that only a verified benefit can use, a fare
   shown as standard fare, disability benefit, loyalty benefit, other discount and amount payable, a companion flag, extra boarding
   time, a wider search for accessible requests, and an accessible admin view with abuse signals.
+- **Online money out, push and a live provider check** (`docs/PHASE_28.md`): refunds of online payments through the provider (or staff
+  in its dashboard) with idempotency, driver payouts for online rides (hold, once-only rides, encrypted accounts, four-eyes, audited),
+  push registration in both apps, and `providers:check` to verify every vendor with real test credentials.
 - Running it for real: [`docs/OPERATIONS.md`](docs/OPERATIONS.md) (architecture, deployment, backups,
   monitoring, incident recovery, release and rollback) and [`docs/SECURITY.md`](docs/SECURITY.md) (the controls,
   what was audited, what is still open). Container images and a full local stack are in [`deploy/`](deploy/).

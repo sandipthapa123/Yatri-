@@ -100,4 +100,6 @@ export async function revokeAllUserSessions(userId: string): Promise<void> {
     `UPDATE auth_sessions SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL`,
     [userId],
   );
+  // A person with no signed-in device is pushed nothing: their phones' addresses go with their sessions.
+  await query('DELETE FROM push_tokens WHERE user_id = $1', [userId]);
 }

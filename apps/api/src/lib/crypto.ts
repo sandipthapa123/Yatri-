@@ -1,4 +1,4 @@
-import { randomBytes, randomInt } from 'node:crypto';
+import { createCipheriv, createDecipheriv, createHmac, randomBytes, randomInt } from 'node:crypto';
 import { createHash } from 'node:crypto';
 
 /**
@@ -29,4 +29,27 @@ export function generateOpaqueToken(): string {
  */
 export function sha256Hex(value: string): string {
   return createHash('sha256').update(value).digest('hex');
+}
+
+/**
+ * Reversible encryption for the few things Yatri must be able to read back (a payout account number) and must not keep in
+ * the clear. AES-256-GCM with a random nonce; the key is derived from a secret the caller passes (never a literal) and a
+ * purpose label, so one leaked secret does not decrypt data from another purpose. Output: "v1.<nonce>.<tag>.<data>", base64url.
+ */
+export function encryptField(plain: string, secret: string, purpose: string): string {
+  const key = createHmac('sha256', secret).update(`yatri:field:${purpose}:v1`).digest();
+  const nonce = randomBytes(12);
+  const cipher = createCipheriv('aes-256-gcm', key, nonce);
+  const data = Buffer.concat([cipher.update(plain, 'utf8'), cipher.final()]);
+  return ['v1', nonce.toString('base64url'), cipher.getAuthTag().toString('base64url'), data.toString('base64url')].join('.');
+}
+
+/** The inverse. Throws if the value was changed, or the secret or purpose is not the one it was encrypted with. */
+export function decryptField(sealed: string, secret: string, purpose: string): string {
+  const [version, nonce, tag, data] = sealed.split('.');
+  if (version !== 'v1' || !nonce || !tag || !data) throw new Error('Unreadable encrypted value');
+  const key = createHmac('sha256', secret).update(`yatri:field:${purpose}:v1`).digest();
+  const decipher = createDecipheriv('aes-256-gcm', key, Buffer.from(nonce, 'base64url'));
+  decipher.setAuthTag(Buffer.from(tag, 'base64url'));
+  return Buffer.concat([decipher.update(Buffer.from(data, 'base64url')), decipher.final()]).toString('utf8');
 }

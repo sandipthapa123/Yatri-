@@ -310,6 +310,16 @@ describe('Push: Expo', () => {
     await api.delete('/api/v1/users/me/push-token').set(auth(me.accessToken)).send({ token });
     expect((await pool.query('SELECT 1 FROM push_tokens WHERE token = $1', [token])).rowCount).toBe(0);
   });
+
+  it("drops a person's phone addresses when their sessions are revoked, so a signed-out phone gets nothing", async () => {
+    const { onboardUser } = await import('./helpers');
+    const { revokeAllUserSessions } = await import('../modules/auth/session.repository');
+    const me = await onboardUser('PASSENGER');
+    const token = `ExponentPushToken[${Math.random().toString(36).slice(2, 14).padEnd(12, 'y')}]`;
+    expect((await api.post('/api/v1/users/me/push-token').set(auth(me.accessToken)).send({ token, platform: 'android' })).status).toBe(200);
+    await revokeAllUserSessions(me.user.id as string);
+    expect((await pool.query('SELECT 1 FROM push_tokens WHERE user_id = $1', [me.user.id])).rowCount).toBe(0);
+  });
 });
 
 describe('Maps: Mapbox', () => {
@@ -482,6 +492,7 @@ describe('digital payments', () => {
     lookupAmount = null;
     setPaymentGatewayForTests({
       name: 'fake',
+      supportsRefund: false,
       async initiate(r) {
         gatewayCalls.initiate += 1;
         return { providerRef: `ref-${r.attemptId}`, paymentUrl: `https://pay.test/${r.attemptId}`, expiresAt: null };
@@ -571,12 +582,12 @@ describe('digital payments', () => {
 
   it('turns a vendor failure into a calm 503, closes the attempt, and lets the rider try again or pay cash', async () => {
     const w = await finishedRide(false);
-    setPaymentGatewayForTests({ name: 'fake', initiate: async () => { throw new ProviderError('PAYMENTS', 'fake', 'TIMEOUT'); }, lookup: async () => ({ state: 'PENDING', amountNpr: null }) });
+    setPaymentGatewayForTests({ name: 'fake', supportsRefund: false, initiate: async () => { throw new ProviderError('PAYMENTS', 'fake', 'TIMEOUT'); }, lookup: async () => ({ state: 'PENDING', amountNpr: null }) });
     const res = await pay(w);
     expect(res.status).toBe(503);
     expect(JSON.stringify(res.body)).not.toContain('TIMEOUT');
     expect((await pool.query(`SELECT status FROM payment_attempts WHERE trip_id = $1`, [w.tripId])).rows[0].status).toBe('FAILED');
-    setPaymentGatewayForTests({ name: 'fake', initiate: async (r) => ({ providerRef: `r-${r.attemptId}`, paymentUrl: 'https://pay.test/x', expiresAt: null }), lookup: async () => ({ state: 'PENDING', amountNpr: null }) });
+    setPaymentGatewayForTests({ name: 'fake', supportsRefund: false, initiate: async (r) => ({ providerRef: `r-${r.attemptId}`, paymentUrl: 'https://pay.test/x', expiresAt: null }), lookup: async () => ({ state: 'PENDING', amountNpr: null }) });
     expect((await pay(w)).status).toBe(200);
     expect((await api.post(`/api/v1/trips/${w.tripId}/payment/confirm`).set(auth(w.driver.accessToken))).status).toBe(200); // cash still works
   });

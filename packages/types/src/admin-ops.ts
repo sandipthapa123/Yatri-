@@ -120,8 +120,8 @@ export interface AnalyticsData {
     outstandingNpr: number;
     cancellationFeesNpr: number;
     driverEarningsNpr: number;
-    /** Wallets and payouts are not part of the platform (cash only): said plainly, not shown as zero. */
-    payouts: { supported: false; reason: string };
+    /** What drivers are owed from online rides, and what has been paid. Cash rides are never part of this. */
+    payouts: PayoutFigures;
   };
   drivers: { active: number; newlyRegistered: number; ridesPerActiveDriver: number | null };
   passengers: { active: number; newlyRegistered: number; ridesPerActivePassenger: number | null };
@@ -218,7 +218,18 @@ export interface FinanceSummary {
   discountsFundedNpr: number;
   cancellationFeesNpr: number;
   wallets: { supported: false; reason: string };
-  payouts: { supported: false; reason: string };
+  payouts: PayoutFigures;
+  /** Online payments collected, and paid back to riders as completed refunds, in the range. */
+  onlineCollectedNpr: number;
+  onlineRefundedNpr: number;
+}
+
+export interface PayoutFigures {
+  /** Owed to drivers for online rides and ready now. */
+  readyNpr: number;
+  /** In a payout that is prepared or being sent. */
+  inPayoutNpr: number;
+  paidNpr: number;
 }
 
 export interface DriverEarningsRow {
@@ -233,7 +244,7 @@ export interface DriverEarningsRow {
 }
 
 export const FINANCE_NOT_SUPPORTED =
-  'Yatri takes payment in cash, paid by the passenger straight to the driver. It holds no money, so there are no wallets or payouts to show.';
+  'Yatri keeps no wallets. Cash is paid by the passenger straight to the driver. Online payments are paid out to drivers (see Payouts).';
 
 // ---------------------------------------------------------------- notifications
 

@@ -13,6 +13,7 @@ import { OtpVerificationScreen } from '../screens/OtpVerificationScreen';
 import { PhoneEntryScreen } from '../screens/PhoneEntryScreen';
 import { VerificationPendingScreen } from '../screens/VerificationPendingScreen';
 import { IncentivesScreen } from '../screens/IncentivesScreen';
+import { PayoutsScreen } from '../screens/PayoutsScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { SupportScreen } from '../screens/SupportScreen';
 import { VehicleAccessibilityScreen } from '../screens/VehicleAccessibilityScreen';
@@ -23,6 +24,7 @@ export type RootStackParamList = {
   Settings: undefined;
   VehicleAccessibility: undefined;
   Incentives: undefined;
+  Payouts: undefined;
   Welcome: undefined;
   PhoneEntry: undefined;
   OtpVerification: { phoneNumber: string };
@@ -74,6 +76,7 @@ export function RootNavigator() {
             <Stack.Screen name="Settings" component={SettingsScreen} />
             <Stack.Screen name="VehicleAccessibility" component={VehicleAccessibilityScreen} />
             <Stack.Screen name="Incentives" component={IncentivesScreen} />
+            <Stack.Screen name="Payouts" component={PayoutsScreen} />
           </>
         ) : (
           <>

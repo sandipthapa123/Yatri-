@@ -36,6 +36,8 @@ const STATE: Record<string, GatewayPaymentState> = {
  */
 export class KhaltiGateway implements PaymentGateway {
   readonly name = 'khalti';
+  /** Khalti's ePayment API has no refund endpoint: a refund is made in the merchant dashboard and staff record its reference. */
+  readonly supportsRefund = false;
   constructor(private readonly c: KhaltiConfig) {}
 
   private headers() {

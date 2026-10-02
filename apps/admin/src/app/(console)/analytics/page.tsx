@@ -116,10 +116,11 @@ export default async function AnalyticsPage({ searchParams }: PageProps) {
               a.money.averageFareNpr === null ? '—' : formatNpr(a.money.averageFareNpr),
             ],
             ['Driver earnings', formatNpr(a.money.driverEarningsNpr)],
-            ['Cash confirmed as received', formatNpr(a.money.collectedNpr)],
+            ['Payments confirmed as received (cash and online)', formatNpr(a.money.collectedNpr)],
             ['Not yet confirmed', formatNpr(a.money.outstandingNpr)],
             ['Cancellation fees recorded', formatNpr(a.money.cancellationFeesNpr)],
-            ['Payouts', a.money.payouts.reason],
+            ['Owed to drivers for online rides, ready now', formatNpr(a.money.payouts.readyNpr)],
+            ['Paid out to drivers', formatNpr(a.money.payouts.paidNpr)],
           ]}
         />
       </section>
@@ -182,7 +183,7 @@ export default async function AnalyticsPage({ searchParams }: PageProps) {
             also what drivers earned.
           </li>
           <li>
-            Cash confirmed is what drivers have confirmed receiving; the rest is not yet confirmed.
+            Payments confirmed is what was received, in cash (confirmed by the driver) or online (confirmed by the payment provider); the rest is not yet confirmed.
           </li>
         </ul>
       </section>

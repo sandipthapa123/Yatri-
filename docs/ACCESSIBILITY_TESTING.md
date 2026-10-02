@@ -449,3 +449,11 @@ and a screen reader:
 - Settings > accessibility: "Who travels with me" (a labelled switch) and the need "I need extra time to get in and out of the
   vehicle" are announced with their help text; saving is announced.
 - Admin > Disability benefits: captioned policy table with row headers, the service options as a list, and review items as sentences.
+
+## AA. Payouts and push (Phase 28)
+
+- Driver app, "Earnings and payouts": the figures are sentences read in order; the account kinds are buttons that say whether they
+  are selected; both fields are labelled; saving is announced politely; a problem is read as "Problem: ...".
+- Admin, Driver payouts: captioned tables with row headers, state in words, filters and paging as links; every step is a two-step
+  confirmation with the consequence read first; the account number appears in a status region only after it is asked for.
+- Push: the permission prompt is the phone's own; declining changes nothing in the app.

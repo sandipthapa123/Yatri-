@@ -1,6 +1,7 @@
 import { AuthProvider, useAuth } from '@yatri/mobile-auth';
 import { ConnectivityBanner } from '@yatri/mobile-ride';
 import { PreferencesProvider } from '@yatri/mobile-preferences';
+import { unregisterPush, usePushRegistration } from '@yatri/mobile-support';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,7 +15,8 @@ import { TripLocationsProvider } from './state/TripLocations';
 import { useTheme } from '@yatri/mobile-ui';
 
 function AppContent() {
-  const { status } = useAuth();
+  const { status, getAccessToken } = useAuth();
+  usePushRegistration({ status, getAccessToken });
   const theme = useTheme();
   const insets = useSafeAreaInsets();
 
@@ -38,7 +40,7 @@ export default function App() {
         <ErrorBoundary
           fallback={(error, reset) => <ErrorScreen message={error.message} onRetry={reset} />}
         >
-          <AuthProvider role="PASSENGER">
+          <AuthProvider role="PASSENGER" onBeforeLogout={unregisterPush}>
             <PreferencesProvider>
               <TripLocationsProvider>
                 <AppContent />

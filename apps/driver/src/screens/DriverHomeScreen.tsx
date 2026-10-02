@@ -291,6 +291,18 @@ export function DriverHomeScreen({ navigation }: Props) {
           <Text style={{ color: theme.colors.textPrimary, fontWeight: '600' }}>Your bonuses</Text>
         </Pressable>
         <Pressable
+          onPress={() => navigation.navigate('Payouts')}
+          accessibilityRole="button"
+          accessibilityLabel="Earnings and payouts"
+          accessibilityHint="What you are owed for rides paid online, and where payouts go"
+          style={[
+            styles.secondary,
+            { minHeight: theme.minTouchTarget, borderColor: theme.colors.border },
+          ]}
+        >
+          <Text style={{ color: theme.colors.textPrimary, fontWeight: '600' }}>Earnings and payouts</Text>
+        </Pressable>
+        <Pressable
           onPress={() => navigation.navigate('Settings')}
           accessibilityRole="button"
           accessibilityLabel="Settings"

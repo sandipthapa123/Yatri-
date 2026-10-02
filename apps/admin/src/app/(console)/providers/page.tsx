@@ -16,6 +16,7 @@ export default async function ProvidersPage() {
   const { data, denied } = await loadOrDenied(() => providersApi(token));
   if (denied || !data) return <NoAccess what="service provider status" />;
   const trouble = data.items.filter((i) => i.state === 'DOWN' || i.state === 'DEGRADED' || i.state === 'NOT_CONFIGURED').length;
+  const unchecked = data.items.filter((i) => i.state === 'SIMULATED' || i.state === 'UNVERIFIED').length;
   return (
     <div style={styles.page}>
       <div style={styles.headerRow}>
@@ -25,12 +26,12 @@ export default async function ProvidersPage() {
         </Link>
       </div>
       <p style={{ margin: 0 }}>
-        Environment: <strong>{data.environment.toLowerCase()}</strong>. Which service does each job is set by the server&apos;s
-        configuration, not here. This page only shows how they are doing.
+        Environment: <strong>{data.environment.toLowerCase()}</strong>. Which service fills each need is set by the server&apos;s configuration,
+        not here. This page only shows how they are doing.
       </p>
       <p role="status" style={{ margin: 0, fontWeight: 600 }}>
         {data.problems.length === 0 && trouble === 0
-          ? 'Every service is set up and none is reporting a problem.'
+          ? `No service is reporting a problem.${unchecked > 0 ? ` ${unchecked} ${unchecked === 1 ? 'is a development stand-in or has' : 'are development stand-ins or have'} not been checked yet.` : ''}`
           : `${data.problems.length + trouble} thing${data.problems.length + trouble === 1 ? ' needs' : 's need'} attention.`}
       </p>
       {data.problems.length > 0 && (

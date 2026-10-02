@@ -76,7 +76,7 @@ function vendorsFor(capability: ProviderCapability): string[] {
 }
 
 /** A function that proves the active vendor for a need works, or null when the vendor has none. */
-function checkerFor(capability: ProviderCapability): (() => Promise<void>) | null {
+export function checkerFor(capability: ProviderCapability): (() => Promise<void>) | null {
   switch (capability) {
     case 'OTP': {
       const p = getSmsProvider();
@@ -227,7 +227,8 @@ export async function providersOverview(): Promise<ProvidersOverview> {
       help: PROVIDER_CAPABILITY_LABELS[capability].help,
       provider: vendor,
       state,
-      stateText: PROVIDER_HEALTH_LABELS[state],
+      // A vendor that HAS a live check but has not been checked yet is not the same as one that has none.
+      stateText: state === 'UNVERIFIED' && checkerFor(capability) !== null ? 'Set up, not checked yet (the provider check runs every 10 minutes)' : PROVIDER_HEALTH_LABELS[state],
       checkedAt: row?.checked_at.toISOString() ?? null,
       latencyMs: row?.latency_ms ?? null,
       callsToday: calls,

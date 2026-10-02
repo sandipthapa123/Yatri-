@@ -308,3 +308,10 @@ the Phase 26 verification (`benefitActiveFor`). The one promotion engine applies
 ledger records any bonus points, and `PromotionQuote.breakdown` gives the five figures shown before booking. Accessible services
 reuse the accessibility and dispatch modules: a companion flag, the need `EXTRA_BOARDING_TIME` (`pricingConfigForTrip`) and a wider
 search for requests that need a vehicle feature (`searchRadius`). See `docs/PHASE_27.md`.
+
+## Online money out: refunds and payouts (Phase 28)
+
+An online payment is refunded by Yatri (through the provider when it has a refund API, with the refund id as the idempotency key;
+otherwise by staff in the provider's dashboard with the reference recorded), never in cash by the driver. What a driver is owed
+for online rides is `driverPayableForRide` over one SQL definition (`payouts.service.ts` `OWED_SQL`); a ride is in at most one
+payout (`driver_payout_items.trip_id` unique); payout accounts are encrypted (`encryptField`). See `docs/PHASE_28.md`.

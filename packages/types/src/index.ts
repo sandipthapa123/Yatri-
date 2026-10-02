@@ -30,6 +30,7 @@ export * from './navigation';
 export * from './growth';
 export * from './providers';
 export * from './disability';
+export * from './payouts';
 export * from './compliance';
 export * from './realtime';
 export * from './format';

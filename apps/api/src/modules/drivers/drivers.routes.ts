@@ -28,6 +28,8 @@ import { driverLocationSampleSchema } from '../availability/availability.validat
 import { updateOnboardingSchema } from './drivers.validators';
 
 import { driverCampaignView } from '../growth/driver';
+import { driverSummary, saveAccount } from '../payouts/payouts.service';
+import { payoutAccountSchema } from '../payouts/payouts.validators';
 
 export const driversRouter: RouterType = Router();
 
@@ -61,6 +63,18 @@ driversRouter.get('/me/incentives', async (req, res) => {
     data: (await driverCampaignView(req.auth?.userId as string)).incentives,
   });
 });
+// What the driver is owed for online rides, the payouts made, and where payouts go (cash rides are never part of this).
+driversRouter.get('/me/payouts', async (req, res) => {
+  res.json({ success: true, data: await driverSummary(req.auth?.userId as string) });
+});
+driversRouter.put(
+  '/me/payout-account',
+  userRateLimit('payout-account', 20, 3600),
+  validateBody(payoutAccountSchema),
+  async (req, res) => {
+    res.json({ success: true, data: await saveAccount(req.auth?.userId as string, req.body) });
+  },
+);
 driversRouter.delete('/me/location', deleteLocationHandler);
 
 // Availability. Eligibility is decided by the server; the client only asks.

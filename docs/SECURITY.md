@@ -109,3 +109,13 @@ only as long as a ride needs it; nothing secret or personal is written to a log 
 - Drivers receive operational instructions (needs, companion, pickup note), never a verification, card or benefit detail.
 - Benefit limits and validity are enforced under campaign row locks; a ride's benefit is settled once; unusual use raises a
   risk signal for a person to review and never stops a benefit by itself.
+
+## Refunds, payouts and push (Phase 28)
+
+- Payout account numbers are encrypted at rest (AES-256-GCM, a key derived from the storage secret for this purpose only);
+  the driver sees the last four characters; staff see the full number only through an audited call that needs `PAYOUTS_MANAGE`.
+- The person who prepared a payout cannot mark it paid; a payout is never prepared twice for the same ride; payout steps follow one
+  table and are audited; paying needs the bank or wallet reference.
+- An online refund is sent to the provider with the refund's id as the idempotency key, so it cannot be paid back twice; a vendor's
+  words never reach a user or an administrator.
+- A phone's push address is removed on sign-out and whenever an account's sessions are revoked.

@@ -25,6 +25,7 @@ export const SETTING_GROUPS = [
   'navigation',
   'growth',
   'disability',
+  'payouts',
 ] as const;
 export type SettingGroup = (typeof SETTING_GROUPS)[number];
 
@@ -42,6 +43,7 @@ export const SETTING_GROUP_LABELS: Record<SettingGroup, string> = {
   navigation: 'Navigation and route guidance',
   growth: 'Rewards and referrals',
   disability: 'Disability benefits and accessible rides',
+  payouts: 'Online payments, refunds and payouts',
 };
 
 export type SettingKind = 'boolean' | 'int' | 'number' | 'intList' | 'text';
@@ -62,6 +64,36 @@ export interface SettingDef {
 }
 
 export const PLATFORM_SETTINGS = [
+  {
+    key: 'PAYOUT_HOLD_HOURS',
+    group: 'payouts',
+    label: 'Hold before a ride can be paid out',
+    help: 'A driver is paid for an online ride only this many hours after it was paid, so a problem or a refund can be raised first.',
+    kind: 'int',
+    min: 0,
+    max: 720,
+    unit: 'hours',
+  },
+  {
+    key: 'PAYOUT_MIN_NPR',
+    group: 'payouts',
+    label: 'Smallest payout',
+    help: 'A payout is prepared only when a driver has at least this much ready.',
+    kind: 'int',
+    min: 1,
+    max: 100000,
+    unit: 'NPR',
+  },
+  {
+    key: 'ONLINE_REFUND_DRIVER_SHARE_PERCENT',
+    group: 'payouts',
+    label: 'Share of an online refund taken from the driver',
+    help: '0 means Yatri bears every refund of an online payment; 100 means the driver\u2019s payout is reduced by the whole refund.',
+    kind: 'int',
+    min: 0,
+    max: 100,
+    unit: 'percent',
+  },
   {
     key: 'EXTRA_BOARDING_SECONDS',
     group: 'disability',

@@ -703,7 +703,7 @@ async function seedDay(): Promise<Seed> {
 }
 
 describe('financial data', () => {
-  it('shows payments, totals and driver earnings that add up, and says there are no wallets or payouts', async () => {
+  it('shows payments, totals and driver earnings that add up, and says there are no wallets, and reports payouts for online rides', async () => {
     await seedDay();
     const fin = await admin(['FINANCE_VIEW']);
     const q = `from=${DAY}&to=${DAY}`;
@@ -716,7 +716,9 @@ describe('financial data', () => {
     expect(s.byStatus.PAID).toEqual({ count: 4, amountNpr: 633 });
     expect(s.byStatus.PENDING).toEqual({ count: 1, amountNpr: 300 });
     expect(s.wallets.supported).toBe(false);
-    expect(s.payouts.reason).toMatch(/cash/i);
+    expect(s.wallets.reason).toMatch(/no wallets/i);
+    expect(s.payouts).toEqual({ readyNpr: 0, inPayoutNpr: 0, paidNpr: 0 }); // only cash rides here: nothing is owed to drivers
+    expect([s.onlineCollectedNpr, s.onlineRefundedNpr]).toEqual([0, 0]);
 
     const pays = (await get(fin.token, `/payments?${q}&pageSize=50`)).body.data;
     expect(pays.total).toBe(5);
@@ -816,7 +818,7 @@ describe('analytics accuracy', () => {
       cancellationFeesNpr: 50,
       driverEarningsNpr: 933,
     });
-    expect(a.money.payouts.supported).toBe(false);
+    expect(a.money.payouts).toEqual({ readyNpr: 0, inPayoutNpr: 0, paidNpr: 0 }); // cash only: nothing owed to drivers
     expect(a.drivers).toMatchObject({ active: 2, newlyRegistered: 2, ridesPerActiveDriver: 2.5 });
     expect(a.passengers).toMatchObject({ active: 3, newlyRegistered: 3 });
     expect(a.passengers.ridesPerActivePassenger).toBe(2.3); // 7 rides / 3 passengers

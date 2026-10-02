@@ -33,6 +33,8 @@ export const ADMIN_PERMISSIONS = [
   'GROWTH_MANAGE',
   'DISABILITY_VERIFICATION_VIEW',
   'DISABILITY_VERIFICATION_REVIEW',
+  'PAYOUTS_VIEW',
+  'PAYOUTS_MANAGE',
   'USERS_VIEW',
   'USERS_MANAGE',
   'FINANCE_VIEW',
@@ -123,6 +125,14 @@ export const ADMIN_PERMISSION_LABELS: Record<AdminPermission, { label: string; h
     label: 'Decide disability benefit applications',
     help: 'Open a card document, approve, reject, ask for a correction or revoke. Every decision and every opening of a document is audited.',
   },
+  PAYOUTS_VIEW: {
+    label: 'Driver payouts overview',
+    help: 'See payouts, their state and who is owed what. Never a driver\u2019s account number.',
+  },
+  PAYOUTS_MANAGE: {
+    label: 'Prepare and send driver payouts',
+    help: 'Prepare payouts, see the account to pay, and record sent, failed or cancelled. Every account opening and every step is audited, and the person who prepared a payout cannot mark it paid.',
+  },
   USERS_VIEW: { label: 'View users', help: 'Search and read user accounts.' },
   USERS_MANAGE: { label: 'Manage users', help: 'Suspend and reactivate accounts.' },
   FINANCE_VIEW: {
@@ -173,6 +183,7 @@ export const PERMISSION_IMPLIES: Partial<Record<AdminPermission, readonly AdminP
   ACCESSIBILITY_VIEW: ['OPERATIONS_VIEW'],
   GROWTH_MANAGE: ['GROWTH_VIEW'],
   DISABILITY_VERIFICATION_REVIEW: ['DISABILITY_VERIFICATION_VIEW'],
+  PAYOUTS_MANAGE: ['PAYOUTS_VIEW'],
 };
 
 /** Whether a set of held permissions grants the one needed. The one rule; the API and the app use it. */

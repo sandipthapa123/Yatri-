@@ -161,6 +161,7 @@ export const RETENTION_RECORD_TYPES = [
   'ACCESSIBILITY_RIDE_DETAILS',
   'REWARD_LEDGER',
   'DISABILITY_VERIFICATION',
+  'DRIVER_PAYOUTS',
 ] as const;
 export type RetentionRecordType = (typeof RETENTION_RECORD_TYPES)[number];
 

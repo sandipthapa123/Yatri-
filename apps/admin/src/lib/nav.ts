@@ -30,6 +30,7 @@ export const NAV: readonly NavItem[] = [
   { href: '/vehicles', label: 'Vehicles', permission: 'DRIVERS_REVIEW' },
   { href: '/users', label: 'Users', permission: 'USERS_VIEW' },
   { href: '/payments', label: 'Payments and earnings', permission: 'FINANCE_VIEW' },
+  { href: '/payouts', label: 'Driver payouts', permission: 'PAYOUTS_VIEW' },
   { href: '/analytics', label: 'Analytics', permission: 'ANALYTICS_VIEW' },
   { href: '/safety', label: 'Safety', permission: 'SAFETY_REVIEW' },
   { href: '/support', label: 'Support and disputes', permission: 'DISPUTES_MANAGE' },

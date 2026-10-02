@@ -13,6 +13,7 @@ import { expireDueShares } from '../sharing/sharing.service';
 import { sweepSupport } from '../support/tickets.service';
 import { sweepTrips } from '../trips/trip-maintenance';
 import { sweepDisabilityExpiry } from '../disability/verification.service';
+import { sweepOnlineRefunds } from '../support/refunds.service';
 import { runProviderChecks } from '../providers/health';
 import { sweepPaymentAttempts } from '../trips/digital-payments.service';
 import { reconcilePayments } from '../trips/payment-reconcile';
@@ -86,6 +87,13 @@ export const JOBS: readonly JobDef[] = [
     help: 'Ends the benefit of riders whose disability identity card has expired and reminds riders whose card is about to.',
     everySeconds: 3600,
     run: () => sweepDisabilityExpiry(),
+  },
+  {
+    name: 'refund-settle',
+    label: 'Online refunds',
+    help: 'Finishes refunds of online payments that were sent to the payment provider but not yet confirmed.',
+    everySeconds: 120,
+    run: () => sweepOnlineRefunds(),
   },
   {
     name: 'payment-attempts',

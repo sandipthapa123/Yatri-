@@ -1,5 +1,7 @@
 import { query } from '../../lib/db';
 import type {
+  GatewayRefundRequest,
+  GatewayRefundResult,
   GatewayPaymentLookup,
   GatewayPaymentOpened,
   GatewayPaymentRequest,
@@ -13,6 +15,7 @@ import type {
  */
 export class SandboxGateway implements PaymentGateway {
   readonly name = 'sandbox';
+  readonly supportsRefund = true;
   constructor(private readonly publicBaseUrl: string) {}
 
   async initiate(r: GatewayPaymentRequest): Promise<GatewayPaymentOpened> {
@@ -22,6 +25,10 @@ export class SandboxGateway implements PaymentGateway {
       paymentUrl: `${this.publicBaseUrl.replace(/\/$/, '')}/sandbox-payment/${providerRef}`,
       expiresAt: null,
     };
+  }
+
+  async refund(r: GatewayRefundRequest): Promise<GatewayRefundResult> {
+    return { refundRef: `sbxr_${r.refundId}`, state: 'COMPLETED' };
   }
 
   async lookup(providerRef: string): Promise<GatewayPaymentLookup> {

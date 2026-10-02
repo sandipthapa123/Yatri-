@@ -51,7 +51,16 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 // a token that's about to die.
 const REFRESH_SKEW_MS = 30_000;
 
-export function AuthProvider({ role, children }: { role: UserRole; children: ReactNode }) {
+export function AuthProvider({
+  role,
+  children,
+  onBeforeLogout,
+}: {
+  role: UserRole;
+  children: ReactNode;
+  /** Called with a valid access token just before signing out, while the person can still be identified (for example, to remove this phone's push address). Best effort. */
+  onBeforeLogout?: (accessToken: string) => Promise<void>;
+}) {
   const [status, setStatus] = useState<AuthStatus>('loading');
   const [user, setUser] = useState<AppUser | null>(null);
   const [isNewUser, setIsNewUser] = useState(false);
@@ -172,12 +181,13 @@ export function AuthProvider({ role, children }: { role: UserRole; children: Rea
   const logout = useCallback(async () => {
     try {
       const token = await getAccessToken();
+      await onBeforeLogout?.(token).catch(() => undefined);
       await api.logout(token);
     } catch {
       // Best-effort: still clear local state even if the network call fails.
     }
     await signOut();
-  }, [getAccessToken, signOut]);
+  }, [getAccessToken, onBeforeLogout, signOut]);
 
   const updateProfile = useCallback(
     async (update: { fullName?: string; profilePictureUrl?: string | null }) => {

@@ -167,8 +167,11 @@ export interface RideWorld {
 }
 
 /** A passenger requests a ride and a nearby online driver accepts it: trip is DRIVER_EN_ROUTE. */
-export async function rideWorld(existingDriver?: OnboardedUser): Promise<RideWorld> {
-  const passenger = await onboardUser('PASSENGER');
+export async function rideWorld(
+  existingDriver?: OnboardedUser,
+  existingPassenger?: OnboardedUser,
+): Promise<RideWorld> {
+  const passenger = existingPassenger ?? (await onboardUser('PASSENGER'));
   const driver = existingDriver ?? (await onboardUser('DRIVER'));
   await forceDriverOnline(driver.user.id as string);
   const req = await requestRide(passenger.accessToken);

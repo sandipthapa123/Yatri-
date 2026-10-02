@@ -1,4 +1,5 @@
 import {
+  DISABILITY_CONSENT_POLICY_KEY,
   GROWTH_NOTIFICATION_TYPES,
   evaluateEligibility,
   describeOffer,
@@ -8,6 +9,8 @@ import {
 import { query } from '../../lib/db';
 import { log } from '../../lib/logger';
 import { notify } from '../../lib/notifications';
+import { benefitActiveSql, featureOn } from '../disability/verification.service';
+import { todayKey } from '../fleet/expiry.service';
 import { CAMPAIGN_COLUMNS, type CampaignRow } from './campaigns.service';
 
 /**
@@ -26,6 +29,7 @@ interface Audience {
   created_days: string;
   rides: string;
   since: string | null;
+  disability: boolean;
 }
 
 async function audience(
@@ -38,7 +42,8 @@ async function audience(
             floor(extract(epoch FROM (now() - u.created_at)) / 86400)::text AS created_days,
             (SELECT count(*) FROM trips t WHERE t.passenger_id = u.id AND t.status = 'COMPLETED')::text AS rides,
             (SELECT floor(extract(epoch FROM (now() - max(t.ended_at))) / 86400)::text
-               FROM trips t WHERE t.passenger_id = u.id AND t.status = 'COMPLETED') AS since
+               FROM trips t WHERE t.passenger_id = u.id AND t.status = 'COMPLETED') AS since,
+            ${benefitActiveSql('u.id', `'${todayKey()}'::date`, `'${DISABILITY_CONSENT_POLICY_KEY}'`)} AS disability
      FROM users u
      WHERE u.role = 'PASSENGER' AND u.status = 'ACTIVE' AND u.id > $1::uuid
        ${rule.inactive ? "AND EXISTS (SELECT 1 FROM trips t WHERE t.passenger_id = u.id AND t.status = 'COMPLETED')" : ''}
@@ -53,6 +58,7 @@ const factsOf = (a: Audience): EligibilityFacts => ({
   completedRides: Number(a.rides),
   accountAgeDays: Number(a.created_days),
   daysSinceLastRide: a.since === null ? null : Number(a.since),
+  disabilityVerified: a.disability && featureOn(),
   ride: null,
 });
 

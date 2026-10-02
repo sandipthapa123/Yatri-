@@ -45,7 +45,7 @@ describe('policy acceptance', () => {
       accepted: boolean;
       required: boolean;
     }>;
-    expect(pol.map((x) => x.key).sort()).toEqual(['LOCATION_CONSENT', 'PRIVACY', 'TERMS']); // no driver agreement
+    expect(pol.map((x) => x.key).sort()).toEqual(['DISABILITY_BENEFIT_CONSENT', 'LOCATION_CONSENT', 'PRIVACY', 'TERMS']); // no driver agreement
     expect(pol.every((x) => !x.accepted)).toBe(true);
     const driverPol = (await me(d.accessToken, '/policies')).body.data as Array<{ key: string }>;
     expect(driverPol.map((x) => x.key)).toContain('DRIVER_AGREEMENT');

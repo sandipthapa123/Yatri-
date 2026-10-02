@@ -24,6 +24,7 @@ export const SETTING_GROUPS = [
   'experience',
   'navigation',
   'growth',
+  'disability',
 ] as const;
 export type SettingGroup = (typeof SETTING_GROUPS)[number];
 
@@ -40,6 +41,7 @@ export const SETTING_GROUP_LABELS: Record<SettingGroup, string> = {
   experience: 'Passenger experience',
   navigation: 'Navigation and route guidance',
   growth: 'Rewards and referrals',
+  disability: 'Disability benefits',
 };
 
 export type SettingKind = 'boolean' | 'int' | 'number' | 'intList' | 'text';
@@ -60,6 +62,20 @@ export interface SettingDef {
 }
 
 export const PLATFORM_SETTINGS = [
+  {
+    key: 'DISABILITY_VERIFICATION_ENABLED',
+    group: 'disability',
+    label: 'Disability benefit verification',
+    help: 'Turn off to stop new applications and to stop every disability benefit from applying (for example while a problem is investigated). Applications already made are kept.',
+    kind: 'boolean',
+  },
+  {
+    key: 'DISABILITY_OFFICIAL_API_ENABLED',
+    group: 'disability',
+    label: 'Offer the official card check',
+    help: 'Only has an effect once an official verification service has been connected to the server. It can confirm a card; anything it cannot confirm goes to a reviewer.',
+    kind: 'boolean',
+  },
   {
     key: 'SERVICE_REQUESTS_ENABLED',
     group: 'availability',

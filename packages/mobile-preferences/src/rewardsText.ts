@@ -83,11 +83,12 @@ export function referralSentences(v: ReferralView): string[] {
  * whether or not an offer applies, so the layout does not change under a screen reader.
  */
 export function quoteLines(q: PromotionQuote): Array<{ label: string; value: string }> {
-  const lines = [{ label: 'Fare', value: formatNpr(q.fareNpr) }];
+  const hasBenefit = q.offers.some((o) => o.disabilityBenefit);
+  const lines = [{ label: hasBenefit ? 'Normal fare' : 'Fare', value: formatNpr(q.fareNpr) }];
   for (const o of q.offers) {
-    if (o.discountNpr > 0)
-      lines.push({ label: `Offer: ${o.name}`, value: `minus ${formatNpr(o.discountNpr)}` });
-    else lines.push({ label: `Offer: ${o.name}`, value: o.description });
+    const label = o.disabilityBenefit ? 'Disability benefit' : `Offer: ${o.name}`;
+    if (o.discountNpr > 0) lines.push({ label, value: `minus ${formatNpr(o.discountNpr)}` });
+    else lines.push({ label, value: o.description });
   }
   if (q.pointsUsed > 0) {
     lines.push({

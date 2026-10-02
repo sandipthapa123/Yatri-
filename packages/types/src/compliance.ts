@@ -41,6 +41,8 @@ export interface ComplianceRecordInfo {
   policyVersion: string;
   acceptedAt: string;
   source: 'APP' | 'ADMIN';
+  /** When the person withdrew a consent (a policy is never withdrawn); null while it stands. */
+  withdrawnAt: string | null;
 }
 
 // ---------------------------------------------------------------- data requests
@@ -158,6 +160,7 @@ export const RETENTION_RECORD_TYPES = [
   'IDEMPOTENCY_KEYS',
   'ACCESSIBILITY_RIDE_DETAILS',
   'REWARD_LEDGER',
+  'DISABILITY_VERIFICATION',
 ] as const;
 export type RetentionRecordType = (typeof RETENTION_RECORD_TYPES)[number];
 

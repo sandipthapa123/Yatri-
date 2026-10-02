@@ -147,6 +147,12 @@ async function choicesOf(userId: string): Promise<PreferenceValues> {
   return r.rows[0]?.choices ?? {};
 }
 
+/** One person's value for one setting: what they chose, else the setting's own default. */
+export async function preferenceValue(userId: string, key: string): Promise<PreferenceValue | null> {
+  const chosen = (await choicesOf(userId))[key];
+  return chosen === undefined ? (preferenceDef(key)?.default ?? null) : chosen;
+}
+
 /**
  * Whether a notification of this type should be pushed to this person. Mandatory categories always are; an
  * optional one is unless the person switched it off. The ONE place that reads notification preferences.

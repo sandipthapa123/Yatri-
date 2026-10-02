@@ -21,6 +21,7 @@ import { query, withTransaction, type Queryable } from '../../lib/db';
 import { log } from '../../lib/logger';
 import { notify } from '../../lib/notifications';
 import { HttpError } from '../../middleware/errorHandler';
+import { benefitActiveFor } from '../disability/verification.service';
 import { toCampaign, CAMPAIGN_COLUMNS, type CampaignRow } from './campaigns.service';
 import { balanceOf, earnPoints, loyaltyRules, spendPoints } from './loyalty';
 import { qualifyReferral } from './referrals';
@@ -69,6 +70,7 @@ async function loadFacts(
     completedRides: Number(row?.rides ?? 0),
     accountAgeDays: Number(row?.age ?? 0),
     daysSinceLastRide: row?.since === null || row?.since === undefined ? null : Number(row.since),
+    disabilityVerified: await benefitActiveFor(userId),
     ride: ride
       ? { categoryCode: ride.categoryCode, cityId: ride.cityId, fareNpr: ride.fareNpr }
       : null,
@@ -138,6 +140,7 @@ async function consider(
         name: row.name,
         offer: row.offer as NonNullable<CampaignRow['offer']>,
         stackable: row.stackable,
+        disabilityBenefit: row.eligibility?.requiresDisabilityVerified === true,
       },
       grantExpiresAt: granted ? row.grant_expires : null,
       usable,

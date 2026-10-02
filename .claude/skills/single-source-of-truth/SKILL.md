@@ -100,3 +100,12 @@ Yatri-specific reminders:
 - Which environment may use which vendor is `providerProblems` only. A new vendor is one adapter, one entry in `providers.ts`,
   one case in that need's factory: no other file changes.
 - An online payment is marked paid only by `markPaidByProvider`, after a server-to-server lookup for the exact amount.
+
+## Disability benefit verification (Phase 26)
+
+- The verification states, who may enter each, the card rules and every word of the flow are `@yatri/types` `disability.ts`;
+  only `modules/disability/verification.service.ts` moves a verification (`applyMove`, under the row lock).
+- "Is this rider's benefit active" is `benefitActiveFor` / `benefitActiveSql` and nothing else. The benefit is a growth campaign
+  (`requiresDisabilityVerified`); never a second discount engine, points ledger or eligibility list.
+- Consent is `compliance_policies`/`compliance_records` (`withdrawConsent`); the driver-sharing choice is the preference
+  `shareDisabilityStatusWithDriver`. Card documents use the storage provider and the shared file checks.

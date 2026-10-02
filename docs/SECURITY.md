@@ -89,3 +89,13 @@ only as long as a ride needs it; nothing secret or personal is written to a log 
 - An online payment is believed only for the exact amount, only after a server-to-server lookup; the unique indexes on
   `payment_attempts` make a repeated request or callback harmless.
 - Push messages carry only the title, body, type and ride id: never an accessibility detail, note, location or document.
+
+## Disability benefit verification (Phase 26)
+
+- The card number is never stored or returned: a keyed hash (to notice one card on two accounts) and the last four characters.
+- The document is private; reviewers get a short-lived signed link, each opening is audited, and only with the review permission.
+- A client cannot set a status: only the server moves a verification, by the one transition table, and `VERIFIED` is reachable only
+  by staff or a confirming official check. One signal (a duplicate card) never rejects anyone.
+- A driver never sees the number, the document, the dates or the history; only, for an accepted live ride and only if the rider
+  allowed it (off by default), that the benefit is verified. Withdrawing consent erases the card and the document at once.
+- Ended applications are erased after the retention period (`DISABILITY_VERIFICATION`, enforced).

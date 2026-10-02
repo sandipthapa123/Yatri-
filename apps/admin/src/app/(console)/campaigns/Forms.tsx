@@ -131,6 +131,15 @@ export function CampaignForm({ campaign }: { campaign?: CampaignInfo }) {
             defaultValue={e.maxCompletedRides}
           />
         )}
+        <Checkbox
+          name="requiresDisabilityVerified"
+          label="Only riders with a verified disability benefit (a disability benefit)"
+          checked={e.requiresDisabilityVerified === true}
+        />
+        <p style={hint}>
+          Eligibility comes only from the verification workspace: nobody can be added here by name. The value, vehicle types, cities,
+          limits, dates and stacking below are ordinary campaign settings.
+        </p>
         <Field
           name="minCompletedRides"
           type="number"

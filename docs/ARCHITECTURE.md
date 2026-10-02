@@ -292,3 +292,11 @@ through `modules/providers/http.ts` (`providerRequest`): deadline, named failure
 breaker and usage counters. Staging and production refuse development stand-ins (`providerProblems`). Digital payments:
 `modules/payments` (gateway) and `modules/trips/digital-payments.service.ts`; the payment record and amount stay the
 server's. See `docs/PHASE_25.md`.
+
+## Disability benefit verification (Phase 26)
+
+`modules/disability` owns the verification of a rider's disability identity card: one state machine (`@yatri/types` `disability.ts`),
+applied only by the server under a row lock, with an append-only history. Consent is the existing consent system
+(`compliance_policies`/`compliance_records`, with `withdrawn_at`). The card number is never stored (keyed hash and last four
+characters); the document is behind the storage provider. The benefit is an ordinary growth campaign whose eligibility is
+`requiresDisabilityVerified`, answered by `benefitActiveFor`: no second discount engine or ledger. See `docs/PHASE_26.md`.

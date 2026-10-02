@@ -1,6 +1,10 @@
 import type {
   AdminAccountRow,
   ProvidersOverview,
+  AdminDisabilityDetail,
+  AdminDisabilityList,
+  AdminDisabilityListFilters,
+  DisabilityAdminAction,
   AdminCityBody,
   AdminCityRow,
   CityAnalytics,
@@ -897,3 +901,25 @@ export const adjustRewardsApi = (t: string, userId: string, body: GrowthAdjustBo
 // ---- service providers (SETTINGS_VIEW): which outside services are in use and whether they work. Status only.
 
 export const providersApi = (t: string) => adminRequest<ProvidersOverview>('/providers', t);
+
+// ---- disability benefit verification (DISABILITY_VERIFICATION_VIEW to read, _REVIEW to decide and open a document)
+
+export const listDisabilityApi = (t: string, f: AdminDisabilityListFilters) => {
+  const qs = new URLSearchParams();
+  if (f.status) qs.set('status', f.status);
+  if (f.method) qs.set('method', f.method);
+  if (f.duplicate) qs.set('duplicate', 'true');
+  if (f.limit) qs.set('limit', String(f.limit));
+  if (f.offset) qs.set('offset', String(f.offset));
+  return adminRequest<AdminDisabilityList>(`/disability-verifications${qs.size ? `?${qs}` : ''}`, t);
+};
+export const getDisabilityApi = (t: string, id: string) =>
+  adminRequest<AdminDisabilityDetail>(`/disability-verifications/${id}`, t);
+export const disabilityActionApi = (
+  t: string,
+  id: string,
+  action: DisabilityAdminAction,
+  body: { note?: string; reason?: string; message?: string; acknowledgeDuplicate?: boolean },
+) => post<{ ok: true }>(`/disability-verifications/${id}/${action}`, t, body);
+export const disabilityDocumentApi = (t: string, id: string) =>
+  adminRequest<{ url: string; expiresInSeconds: number }>(`/disability-verifications/${id}/document`, t);

@@ -137,6 +137,12 @@ export interface CampaignEligibility {
   /** The fare must be at least this much for the offer to apply. */
   minFareNpr?: number;
   userIds?: string[];
+  /**
+   * Only riders whose disability benefit is verified, unexpired and consented to (decided by the verification module, the
+   * only eligibility source). A campaign with this set is a disability benefit: its value, categories, cities, limits,
+   * dates and stacking are ordinary campaign settings.
+   */
+  requiresDisabilityVerified?: boolean;
 }
 
 /** What is known about a person (and, when quoting, the ride) when eligibility is judged. */
@@ -146,6 +152,8 @@ export interface EligibilityFacts {
   accountAgeDays: number;
   /** Days since the last completed ride; null when there has been none. */
   daysSinceLastRide: number | null;
+  /** Whether this person has a verified, unexpired disability benefit with consent in force. */
+  disabilityVerified: boolean;
   /** The ride being priced; null when judging a person with no ride (a push audience, a grant). */
   ride: { categoryCode: string | null; cityId: string | null; fareNpr: number } | null;
 }
@@ -164,6 +172,9 @@ export function evaluateEligibility(
   const no = (reason: string): EligibilityVerdict => ({ eligible: false, reason });
   if (rule.userIds && rule.userIds.length > 0 && !rule.userIds.includes(f.userId)) {
     return no('This offer is for specific riders.');
+  }
+  if (rule.requiresDisabilityVerified && !f.disabilityVerified) {
+    return no('This offer is for riders with a verified disability benefit.');
   }
   if (rule.maxCompletedRides !== undefined && f.completedRides > rule.maxCompletedRides) {
     return no(
@@ -365,6 +376,7 @@ export function describeConditions(
   if (e.vehicleCategoryCodes && e.vehicleCategoryCodes.length > 0)
     out.push(`Vehicle types: ${e.vehicleCategoryCodes.join(', ')}.`);
   if (e.minFareNpr !== undefined) out.push(`For fares of at least NPR ${e.minFareNpr}.`);
+  if (e.requiresDisabilityVerified) out.push('For riders with a verified disability benefit.');
   if (limits.perUser !== null)
     out.push(limits.perUser === 1 ? 'Can be used once.' : `Can be used ${limits.perUser} times.`);
   return out;
@@ -503,6 +515,8 @@ export interface OfferCandidate {
   name: string;
   offer: CampaignOffer;
   stackable: boolean;
+  /** The campaign is a disability benefit (its eligibility requires a verified benefit): shown under its own name on the fare. */
+  disabilityBenefit?: boolean;
 }
 
 export interface AppliedOffer {
@@ -514,6 +528,8 @@ export interface AppliedOffer {
   pointsMultiplier: number;
   /** One sentence for the fare breakdown. */
   description: string;
+  /** True when this is the rider's disability benefit (the fare screen labels it so). */
+  disabilityBenefit: boolean;
 }
 
 /**
@@ -547,6 +563,7 @@ export function combineOffers(
       bonusPoints: 0,
       pointsMultiplier: 1,
       description: describeOffer(s.c.offer),
+      disabilityBenefit: !!s.c.disabilityBenefit,
     });
   }
   for (const s of scored) {
@@ -559,6 +576,7 @@ export function combineOffers(
       bonusPoints: s.c.offer.type === 'BONUS_POINTS' ? (s.c.offer.points ?? 0) : 0,
       pointsMultiplier: s.c.offer.type === 'POINTS_MULTIPLIER' ? (s.c.offer.multiplier ?? 1) : 1,
       description: describeOffer(s.c.offer),
+      disabilityBenefit: !!s.c.disabilityBenefit,
     });
   }
   return out;

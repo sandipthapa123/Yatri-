@@ -12,6 +12,7 @@ import { runRiskSweep } from '../risk/sweep';
 import { expireDueShares } from '../sharing/sharing.service';
 import { sweepSupport } from '../support/tickets.service';
 import { sweepTrips } from '../trips/trip-maintenance';
+import { sweepDisabilityExpiry } from '../disability/verification.service';
 import { runProviderChecks } from '../providers/health';
 import { sweepPaymentAttempts } from '../trips/digital-payments.service';
 import { reconcilePayments } from '../trips/payment-reconcile';
@@ -78,6 +79,13 @@ export const JOBS: readonly JobDef[] = [
     help: 'Writes off reward points that have expired and warns riders whose points are about to.',
     everySeconds: 3600,
     run: () => expirePoints(),
+  },
+  {
+    name: 'disability-expiry',
+    label: 'Disability benefit expiry',
+    help: 'Ends the benefit of riders whose disability identity card has expired and reminds riders whose card is about to.',
+    everySeconds: 3600,
+    run: () => sweepDisabilityExpiry(),
   },
   {
     name: 'payment-attempts',

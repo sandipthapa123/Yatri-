@@ -322,6 +322,16 @@ export const PREFERENCE_DEFS: readonly PreferenceDef[] = [
   },
   ...notificationDefs,
   {
+    key: 'shareDisabilityStatusWithDriver',
+    group: 'privacy',
+    label: 'Let my driver see that my disability benefit is verified',
+    help: 'If you have a verified disability benefit, the driver of an accepted ride sees only that it is verified, and the accessibility needs you chose to share. They never see your card number, your document or your history. Off by default.',
+    kind: 'boolean',
+    default: false,
+    roles: PASSENGER,
+    server: true,
+  },
+  {
     key: 'nameShownToDrivers',
     group: 'privacy',
     label: 'Name shown to your driver',

@@ -7,7 +7,7 @@ import type {
 } from '@yatri/types';
 
 import { recordAudit } from '../../lib/audit';
-import { query, withTransaction } from '../../lib/db';
+import { query, withTransaction, type Queryable } from '../../lib/db';
 import { HttpError } from '../../middleware/errorHandler';
 
 /**
@@ -60,11 +60,11 @@ export async function myPolicyStatus(userId: string, role: TripRole): Promise<My
       .map((c) => `p.${c}`)
       .join(', ')},
             (SELECT policy_version FROM compliance_records c WHERE c.user_id = $1 AND c.policy_key = p.key
-             ORDER BY accepted_at DESC LIMIT 1) AS accepted_version,
+               AND c.withdrawn_at IS NULL ORDER BY accepted_at DESC LIMIT 1) AS accepted_version,
             (SELECT accepted_at FROM compliance_records c WHERE c.user_id = $1 AND c.policy_key = p.key
-             ORDER BY accepted_at DESC LIMIT 1) AS accepted_at,
+               AND c.withdrawn_at IS NULL ORDER BY accepted_at DESC LIMIT 1) AS accepted_at,
             EXISTS (SELECT 1 FROM compliance_records c WHERE c.user_id = $1 AND c.policy_key = p.key
-                    AND c.policy_version = p.version) AS accepted_current
+                    AND c.policy_version = p.version AND c.withdrawn_at IS NULL) AS accepted_current
      FROM compliance_policies p WHERE $2 = ANY(p.applies_to) ORDER BY p.key`,
     [userId, role],
   );
@@ -107,7 +107,9 @@ export async function acceptPolicy(
   const r = await query<{ id: string; accepted_at: Date }>(
     `INSERT INTO compliance_records (user_id, policy_key, policy_version, source)
      VALUES ($1, $2, $3, $4)
-     ON CONFLICT (user_id, policy_key, policy_version) DO UPDATE SET user_id = EXCLUDED.user_id
+     ON CONFLICT (user_id, policy_key, policy_version) DO UPDATE SET
+       accepted_at = CASE WHEN compliance_records.withdrawn_at IS NULL THEN compliance_records.accepted_at ELSE now() END,
+       withdrawn_at = NULL
      RETURNING id, accepted_at`,
     [userId, key, version, source],
   );
@@ -118,7 +120,31 @@ export async function acceptPolicy(
     policyVersion: version,
     acceptedAt: row.accepted_at.toISOString(),
     source,
+    withdrawnAt: null,
   };
+}
+
+/**
+ * A person withdraws a CONSENT (never a policy, which is the terms of using the service). The record of what they agreed
+ * to stays; it is marked withdrawn, once, so everything that acts on the consent stops. Idempotent. The caller audits it
+ * and erases whatever the consent was for.
+ */
+export async function withdrawConsent(
+  userId: string,
+  key: string,
+  client?: Queryable,
+): Promise<number> {
+  const run = client ?? { query };
+  const policy = await run.query<{ kind: string }>('SELECT kind FROM compliance_policies WHERE key = $1', [key]);
+  if (policy.rows[0]?.kind !== 'CONSENT') {
+    throw new HttpError(400, 'NOT_A_CONSENT', 'Only a consent can be withdrawn.');
+  }
+  const r = await run.query(
+    `UPDATE compliance_records SET withdrawn_at = now()
+     WHERE user_id = $1 AND policy_key = $2 AND withdrawn_at IS NULL`,
+    [userId, key],
+  );
+  return r.rowCount ?? 0;
 }
 
 export async function myComplianceRecords(userId: string): Promise<ComplianceRecordInfo[]> {
@@ -128,8 +154,9 @@ export async function myComplianceRecords(userId: string): Promise<ComplianceRec
     policy_version: string;
     accepted_at: Date;
     source: 'APP' | 'ADMIN';
+    withdrawn_at: Date | null;
   }>(
-    `SELECT id, policy_key, policy_version, accepted_at, source FROM compliance_records
+    `SELECT id, policy_key, policy_version, accepted_at, source, withdrawn_at FROM compliance_records
      WHERE user_id = $1 ORDER BY accepted_at DESC, id`,
     [userId],
   );
@@ -139,6 +166,7 @@ export async function myComplianceRecords(userId: string): Promise<ComplianceRec
     policyVersion: x.policy_version,
     acceptedAt: x.accepted_at.toISOString(),
     source: x.source,
+    withdrawnAt: x.withdrawn_at?.toISOString() ?? null,
   }));
 }
 

@@ -260,6 +260,14 @@ import {
 } from './admin-jobs';
 import { providersHandler } from './admin-providers';
 import {
+  disabilityActionBodySchema,
+  disabilityActionHandler,
+  disabilityDocumentHandler,
+  disabilityListQuerySchema,
+  getDisabilityHandler,
+  listDisabilityHandler,
+} from './admin-disability';
+import {
   accessibilityStatsHandler,
   accessibilityStatsQuerySchema,
   decideCapabilityHandler,
@@ -995,6 +1003,36 @@ adminRouter.post(
   validateBody(adjustSchema),
   adjustRewardsHandler,
 );
+
+// Disability benefit verification. Reading cases needs DISABILITY_VERIFICATION_VIEW; deciding one and opening its document need
+// DISABILITY_VERIFICATION_REVIEW. The card number is never in any answer, and every decision and document opening is audited.
+adminRouter.get(
+  '/disability-verifications',
+  requirePermission('DISABILITY_VERIFICATION_VIEW'),
+  validateQuery(disabilityListQuerySchema),
+  listDisabilityHandler,
+);
+adminRouter.get(
+  '/disability-verifications/:id',
+  requirePermission('DISABILITY_VERIFICATION_VIEW'),
+  validateUuidParam('id'),
+  getDisabilityHandler,
+);
+adminRouter.get(
+  '/disability-verifications/:id/document',
+  requirePermission('DISABILITY_VERIFICATION_REVIEW'),
+  validateUuidParam('id'),
+  disabilityDocumentHandler,
+);
+for (const action of ['start-review', 'approve', 'reject', 'request-correction', 'revoke'] as const) {
+  adminRouter.post(
+    `/disability-verifications/:id/${action}`,
+    requirePermission('DISABILITY_VERIFICATION_REVIEW'),
+    validateUuidParam('id'),
+    validateBody(disabilityActionBodySchema),
+    disabilityActionHandler(action),
+  );
+}
 
 // Navigation: route and arrival-time figures (counts and percentages, never a place or a track).
 adminRouter.get(

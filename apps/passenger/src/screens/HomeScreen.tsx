@@ -225,6 +225,17 @@ export function HomeScreen({ navigation }: Props) {
             </Text>
           </Pressable>
           <Pressable
+            onPress={() => navigation.navigate('DisabilityBenefit')}
+            accessibilityRole="button"
+            accessibilityLabel="Disability benefit"
+            accessibilityHint="Optional. Apply for disability benefits with your disability identity card"
+            style={[styles.profileLink, { minHeight: theme.minTouchTarget }]}
+          >
+            <Text style={[styles.profileLinkText, { color: theme.colors.primary }]}>
+              Disability benefit
+            </Text>
+          </Pressable>
+          <Pressable
             onPress={() => navigation.navigate('Settings')}
             accessibilityRole="button"
             accessibilityLabel="Settings"

@@ -432,3 +432,12 @@ and a screen reader:
   is announced politely and is text, not colour. Cash still works if the provider is down.
 - Admin **Service providers**: a table with a caption, row headers, and a state written as words ("OK: Working", "Needs
   attention: Not working"), never colour alone.
+
+## Y. Disability benefit verification (Phase 26)
+
+- Passenger: from Home, "Disability benefit". The screen says first that it is optional. Each part is a heading; every field has a
+  label; the consent is a button that says whether it is selected; status changes are announced politely as one sentence
+  ("Disability benefit verification submitted. Status: Under review. ..."); a problem is read as "Problem: ..."; erasing asks
+  twice with the consequence in words.
+- Admin: the applications list and a case are captioned tables and lists with row headers; state is written as words; filters and
+  paging are links; each decision is a two-step confirmation with the consequence read first and a result announced.

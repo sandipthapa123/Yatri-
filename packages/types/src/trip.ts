@@ -113,6 +113,7 @@ export interface TripBusinessInfo {
 
 import type { TripAccessibility } from './accessibility';
 import type { NavigationGuidance } from './navigation';
+import type { TripDisabilityNote } from './disability';
 import type { PaymentMethod } from './trip-commerce';
 
 export interface TripSummary {
@@ -154,6 +155,11 @@ export interface TripSummary {
    * assigned driver, null for everyone else and for a ride with none.
    */
   accessibility: TripAccessibility | null;
+  /**
+   * For the driver of an accepted, live ride, and only when the rider allowed it: that the rider has a verified disability
+   * benefit. Never an identity, a card number, a document or a history. Null for everyone else, always.
+   */
+  disability: TripDisabilityNote | null;
 }
 
 /** live: fresh fix. stale: fix is old but recent enough to show with a warning. lost: treat as GPS lost. */

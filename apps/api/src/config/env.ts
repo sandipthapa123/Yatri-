@@ -213,6 +213,15 @@ const envSchema = z
     LOYALTY_MIN_REDEEM_POINTS: z.coerce.number().int().min(1).max(100000).default(50),
     LOYALTY_MAX_REDEEM_PERCENT: z.coerce.number().int().min(1).max(100).default(50),
     REFERRAL_MAX_INVITES_30D: z.coerce.number().int().min(1).max(1000).default(20),
+    // Disability benefit verification (platform settings; see PHASE_26). The official card check also needs a connected service.
+    DISABILITY_VERIFICATION_ENABLED: z
+      .enum(['true', 'false'])
+      .default('true')
+      .transform((v) => v === 'true'),
+    DISABILITY_OFFICIAL_API_ENABLED: z
+      .enum(['true', 'false'])
+      .default('false')
+      .transform((v) => v === 'true'),
 
     // --- Dispatch (matching) ---
     DISPATCH_RADIUS_METERS: z.coerce.number().int().positive().default(5000),

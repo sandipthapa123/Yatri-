@@ -12,6 +12,19 @@ export {
 export { SettingsCenter } from './components/SettingsCenter';
 export type { SettingsLinks } from './components/SettingsCenter';
 export { RewardsCenter } from './components/RewardsCenter';
+export { DisabilityBenefitCenter } from './components/DisabilityBenefitCenter';
+export { disabilityApi } from './disabilityApi';
+export type { DisabilityApi } from './disabilityApi';
+export {
+  CONSENT_SENTENCE,
+  OPTIONAL_TEXT,
+  cardLines,
+  driverSharingLine,
+  expiryLine,
+  nextStepLine,
+  statusAnnouncement,
+  submitHint,
+} from './disabilityText';
 export { rewardsApi } from './rewardsApi';
 export type { RewardsApi } from './rewardsApi';
 export {

@@ -14,6 +14,7 @@ import { RequestRideScreen } from '../screens/RequestRideScreen';
 import { RideHistoryScreen } from '../screens/RideHistoryScreen';
 import { SavedPlacesScreen } from '../screens/SavedPlacesScreen';
 import { TripTrackingScreen } from '../screens/TripTrackingScreen';
+import { DisabilityBenefitScreen } from '../screens/DisabilityBenefitScreen';
 import { RewardsScreen } from '../screens/RewardsScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { SupportScreen } from '../screens/SupportScreen';
@@ -24,6 +25,7 @@ export type RootStackParamList = {
   Business: undefined;
   Settings: undefined;
   Rewards: undefined;
+  DisabilityBenefit: undefined;
   Welcome: undefined;
   PhoneEntry: undefined;
   OtpVerification: { phoneNumber: string };
@@ -72,6 +74,7 @@ export function RootNavigator() {
             <Stack.Screen name="Business" component={BusinessScreen} />
             <Stack.Screen name="Settings" component={SettingsScreen} />
             <Stack.Screen name="Rewards" component={RewardsScreen} />
+            <Stack.Screen name="DisabilityBenefit" component={DisabilityBenefitScreen} />
           </>
         ) : (
           <>

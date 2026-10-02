@@ -31,6 +31,8 @@ export const ADMIN_PERMISSIONS = [
   'ACCESSIBILITY_MANAGE',
   'GROWTH_VIEW',
   'GROWTH_MANAGE',
+  'DISABILITY_VERIFICATION_VIEW',
+  'DISABILITY_VERIFICATION_REVIEW',
   'USERS_VIEW',
   'USERS_MANAGE',
   'FINANCE_VIEW',
@@ -113,6 +115,14 @@ export const ADMIN_PERMISSION_LABELS: Record<AdminPermission, { label: string; h
     label: 'Run campaigns',
     help: 'Create, schedule, start, pause and end campaigns, and correct a rider\u2019s reward points with a reason.',
   },
+  DISABILITY_VERIFICATION_VIEW: {
+    label: 'Disability benefit applications',
+    help: 'See applications, their state and history, and the last four characters of a card. Never the full card number or the document.',
+  },
+  DISABILITY_VERIFICATION_REVIEW: {
+    label: 'Decide disability benefit applications',
+    help: 'Open a card document, approve, reject, ask for a correction or revoke. Every decision and every opening of a document is audited.',
+  },
   USERS_VIEW: { label: 'View users', help: 'Search and read user accounts.' },
   USERS_MANAGE: { label: 'Manage users', help: 'Suspend and reactivate accounts.' },
   FINANCE_VIEW: {
@@ -162,6 +172,7 @@ export const PERMISSION_IMPLIES: Partial<Record<AdminPermission, readonly AdminP
   ACCESSIBILITY_MANAGE: ['ACCESSIBILITY_VIEW', 'OPERATIONS_VIEW'],
   ACCESSIBILITY_VIEW: ['OPERATIONS_VIEW'],
   GROWTH_MANAGE: ['GROWTH_VIEW'],
+  DISABILITY_VERIFICATION_REVIEW: ['DISABILITY_VERIFICATION_VIEW'],
 };
 
 /** Whether a set of held permissions grants the one needed. The one rule; the API and the app use it. */

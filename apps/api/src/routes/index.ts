@@ -3,6 +3,7 @@ import { Router, type Router as RouterType } from 'express';
 import { adminRouter } from '../modules/admin/admin.routes';
 import { configRouter } from '../modules/settings/settings.routes';
 import { authRouter } from '../modules/auth/auth.routes';
+import { disabilityRouter } from '../modules/disability/disability.routes';
 import { documentsRouter } from '../modules/documents/documents.routes';
 import { driversRouter } from '../modules/drivers/drivers.routes';
 import { growthRouter } from '../modules/growth/growth.routes';
@@ -38,3 +39,5 @@ apiRouter.use('/support', supportRouter);
 apiRouter.use('/compliance', complianceRouter);
 apiRouter.use('/organizations', organizationsRouter);
 apiRouter.use('/growth', growthRouter);
+// A rider's own disability benefit verification: /api/v1/me/disability-verification (passengers only).
+apiRouter.use('/me/disability-verification', disabilityRouter);

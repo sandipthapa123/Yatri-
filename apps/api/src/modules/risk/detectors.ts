@@ -103,6 +103,21 @@ export const DETECTORS: Record<RiskRuleCode, Detector> = {
           WHERE l.action = 'REFERRAL_BLOCKED' AND l.actor_id IS NOT NULL AND ${WINDOW('l.created_at')}
           GROUP BY l.actor_id HAVING count(*) >= $1`,
   },
+  DISABILITY_DUPLICATE_CARD: {
+    sql: `SELECT v.user_id, count(o.id)::int AS count
+          FROM disability_verifications v
+          JOIN disability_verifications o ON o.card_hash = v.card_hash AND o.id <> v.id
+            AND o.status IN ('SUBMITTED', 'UNDER_REVIEW', 'VERIFIED', 'NEEDS_CORRECTION')
+          WHERE v.card_hash IS NOT NULL AND v.status IN ('SUBMITTED', 'UNDER_REVIEW', 'VERIFIED', 'NEEDS_CORRECTION')
+            AND ${WINDOW('v.updated_at')}
+          GROUP BY v.user_id HAVING count(o.id) >= $1`,
+  },
+  DISABILITY_REPEATED_SUBMISSIONS: {
+    sql: `SELECT v.user_id, count(*)::int AS count
+          FROM disability_verification_events e JOIN disability_verifications v ON v.id = e.verification_id
+          WHERE e.to_status = 'SUBMITTED' AND e.actor_kind = 'PASSENGER' AND ${WINDOW('e.created_at')}
+          GROUP BY v.user_id HAVING count(*) >= $1`,
+  },
   ROUTE_DEVIATION_PATTERN: {
     sql: `SELECT t.driver_id AS user_id, count(*)::int AS count, ${IDS('t.id', 't.ended_at DESC')} AS trips
           FROM trips t

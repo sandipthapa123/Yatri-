@@ -69,6 +69,7 @@ function bodyOf(fd: FormData, kind: CampaignKind): AdminCampaignBody {
   e('inactiveForDays', num(fd, 'inactiveForDays'));
   e('vehicleCategoryCodes', list(fd, 'vehicleCategoryCodes'));
   e('minFareNpr', num(fd, 'minFareNpr'));
+  e('requiresDisabilityVerified', fd.get('requiresDisabilityVerified') === 'on' ? true : undefined);
 
   const offerType = text(fd, 'offerType') as OfferType | '';
   let offer: CampaignOffer | null = null;

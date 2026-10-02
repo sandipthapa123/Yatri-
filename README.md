@@ -179,6 +179,10 @@ Run from the repository root; each fans out to every workspace package via pnpm.
   environment (development, staging, production), one vendor-call function (deadline, named failures, safe retries, circuit
   breaker, usage counters), stand-ins refused outside development, online payment with database-enforced idempotency and an exact
   amount check, and a status-only admin screen. No vendor is called by business logic.
+- **Disability benefit verification** (`docs/PHASE_26.md`): voluntary, consented and private verification of a disability identity
+  card (manual review, with an official check only if one is ever connected), a server-owned state machine a client can never
+  set, duplicate and expiry handling, an accessible reviewer workspace with every decision audited, and a benefit that is an
+  ordinary promotion-engine campaign. Drivers never see card details.
 - Running it for real: [`docs/OPERATIONS.md`](docs/OPERATIONS.md) (architecture, deployment, backups,
   monitoring, incident recovery, release and rollback) and [`docs/SECURITY.md`](docs/SECURITY.md) (the controls,
   what was audited, what is still open). Container images and a full local stack are in [`deploy/`](deploy/).

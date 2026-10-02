@@ -16,6 +16,7 @@ import {
 } from '@yatri/types';
 
 import { env } from '../../config/env';
+import { driverNoteFor } from '../disability/verification.service';
 import { getPaymentGateway } from '../payments/gateway';
 import { query } from '../../lib/db';
 import { sqlIn } from '../../lib/sql';
@@ -203,6 +204,7 @@ export async function buildTripSummary(t: TripRow, viewerId: string): Promise<Tr
     rated: !!rated.rowCount,
     business,
     accessibility: await visibleToViewer(t, viewerId),
+    disability: await driverNoteFor(t, viewerId, !TERMINAL_TRIP_STATUSES.includes(t.status)),
   };
 }
 

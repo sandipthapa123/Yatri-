@@ -19,7 +19,7 @@ import {
   createOrganizationHandler,
   createOrganizationSchema,
   decideHandler,
-  decisionSchema,
+  approvalDecisionSchema,
   getOrgHandler,
   getPolicyHandler,
   inviteHandler,
@@ -152,7 +152,7 @@ organizationsRouter.post(
   `${org}/approvals/:approvalId/decision`,
   requireOrgPermission('RIDES_APPROVE'),
   validateUuidParam('approvalId'),
-  validateBody(decisionSchema),
+  validateBody(approvalDecisionSchema),
   decideHandler,
 );
 organizationsRouter.post(

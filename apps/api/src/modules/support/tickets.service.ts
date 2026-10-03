@@ -1,3 +1,4 @@
+import { isoOrNull } from '../../lib/dates';
 import {
   AWAITING_SUPPORT_STATES,
   REQUESTER_CAN_CLOSE_FROM,
@@ -28,7 +29,7 @@ import { env } from '../../config/env';
 import { recordAudit, auditTrail } from '../../lib/audit';
 import { detectFileType } from '../../lib/file-signature';
 import { log } from '../../lib/logger';
-import { query, withTransaction } from '../../lib/db';
+import { query, withTransaction, isUniqueViolation } from '../../lib/db';
 import { generateStorageKey, sanitizeDisplayFilename } from '../../lib/safe-filename';
 import { getStorageProvider } from '../../lib/storage';
 import { HttpError } from '../../middleware/errorHandler';
@@ -98,7 +99,7 @@ const toInfo = (r: TicketRow): TicketInfo => ({
   tripId: r.trip_id,
   createdAt: r.created_at.toISOString(),
   updatedAt: r.updated_at.toISOString(),
-  resolvedAt: r.resolved_at?.toISOString() ?? null,
+  resolvedAt: isoOrNull(r.resolved_at),
   // A reopened ticket has no decision until it is decided again.
   outcome: r.resolved_at ? r.outcome : null,
   resolution: r.resolved_at ? r.resolution_note : null,
@@ -297,7 +298,7 @@ export async function createTicket(
       );
       row = r.rows[0] as { id: string; number: string };
     } catch (err) {
-      if ((err as { code?: string }).code === '23505') {
+      if (isUniqueViolation(err)) {
         throw new HttpError(
           409,
           'DISPUTE_ALREADY_OPEN',
@@ -556,7 +557,7 @@ const toAdminRow = (r: AdminRow): AdminTicketRow => ({
   createdAt: r.created_at.toISOString(),
   updatedAt: r.updated_at.toISOString(),
   escalationLevel: r.escalation_level,
-  responseDueAt: r.due_at?.toISOString() ?? null,
+  responseDueAt: isoOrNull(r.due_at),
   overdue: !!r.due_at && r.due_at.getTime() < Date.now(),
 });
 

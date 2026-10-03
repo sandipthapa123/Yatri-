@@ -6,17 +6,9 @@ import { IDEMPOTENCY_HEADER_NAME, withIdempotentRetry } from './idempotency';
 import { serverClock } from './serverClock';
 import type { DriverProfile, RequestOtpResponse, UserRole, VerifyOtpResponse } from './types';
 
-export class ApiError extends Error {
-  constructor(
-    public readonly status: number,
-    public readonly code: string,
-    message: string,
-    public readonly details?: Record<string, unknown>,
-  ) {
-    super(message);
-    this.name = 'ApiError';
-  }
-}
+// The one API error type, shared with the admin site.
+import { ApiError } from '@yatri/shared';
+export { ApiError };
 
 /** The words for "the request never reached the server". The same text everywhere, spoken by screen readers. */
 export const NETWORK_ERROR_MESSAGE =

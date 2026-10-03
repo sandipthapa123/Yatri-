@@ -1,3 +1,5 @@
+import { isoOrNull } from '../../lib/dates';
+import { pageSizeParam } from '../../lib/pagination';
 import {
   DISABILITY_ADMIN_ACTION_LABELS,
   DISABILITY_ADMIN_ACTION_TARGET,
@@ -99,7 +101,7 @@ export const disabilityListQuerySchema = z.object({
   status: z.enum(DISABILITY_VERIFICATION_STATUSES).optional(),
   method: z.enum(DISABILITY_METHODS).optional(),
   duplicate: z.enum(['true', 'false']).optional(),
-  limit: z.coerce.number().int().min(1).max(100).default(25),
+  limit: pageSizeParam(100, 25),
   offset: z.coerce.number().int().min(0).default(0),
 });
 
@@ -128,7 +130,7 @@ const toRow = (r: ListRow): AdminDisabilityRow => ({
   cardLast4: r.card_last4,
   issuingAuthority: r.issuing_authority,
   expiryDate: r.expiry_date,
-  submittedAt: r.submitted_at?.toISOString() ?? null,
+  submittedAt: isoOrNull(r.submitted_at),
   updatedAt: r.updated_at.toISOString(),
   duplicateCount: r.duplicates,
   hasDocument: !!r.document_key,
@@ -207,9 +209,9 @@ export async function getDisabilityHandler(req: Request, res: Res<AdminDisabilit
       issueDate: row.issue_date,
       message: row.message,
       consentActive: consent.active,
-      consentGivenAt: consent.givenAt?.toISOString() ?? null,
-      decidedAt: row.decided_at?.toISOString() ?? null,
-      verifiedAt: row.verified_at?.toISOString() ?? null,
+      consentGivenAt: isoOrNull(consent.givenAt),
+      decidedAt: isoOrNull(row.decided_at),
+      verifiedAt: isoOrNull(row.verified_at),
       validUntil: row.valid_until,
       duplicates: dupes.rows.map((d) => ({ verificationId: d.id, status: d.status })),
       document: row.document_key

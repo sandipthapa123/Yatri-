@@ -1,3 +1,4 @@
+import { isoOrNull } from '../../lib/dates';
 import {
   RISK_LEVELS,
   RISK_LEVEL_HELP,
@@ -66,7 +67,7 @@ async function riskUsers(): Promise<RiskUserRow[]> {
     }),
     score: u.score,
     openEvents: u.open_events,
-    lastEventAt: u.last_event_at?.toISOString() ?? null,
+    lastEventAt: isoOrNull(u.last_event_at),
   }));
 }
 

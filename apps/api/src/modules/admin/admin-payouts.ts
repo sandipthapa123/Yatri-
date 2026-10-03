@@ -1,3 +1,4 @@
+import { pageSizeParam } from '../../lib/pagination';
 import {
   PAYOUT_STATUSES,
   type AdminPayoutAccountReveal,
@@ -26,7 +27,7 @@ const adminId = (req: Request): string => {
 
 export const payoutListQuerySchema = z.object({
   status: z.enum(PAYOUT_STATUSES).optional(),
-  limit: z.coerce.number().int().min(1).max(100).default(25),
+  limit: pageSizeParam(100, 25),
   offset: z.coerce.number().int().min(0).default(0),
 });
 export const payoutPrepareSchema = z.object({ driverId: z.string().uuid().optional() }).strict();

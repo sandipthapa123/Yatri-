@@ -1,3 +1,4 @@
+import { isoOrNull } from '../../lib/dates';
 import {
   ORG_NOTIFICATION_TYPES,
   ORG_STATEMENT_TRANSITIONS,
@@ -12,7 +13,7 @@ import {
 } from '@yatri/types';
 
 import { recordAudit } from '../../lib/audit';
-import { query, withTransaction } from '../../lib/db';
+import { query, Rollback, withTransaction } from '../../lib/db';
 import { log } from '../../lib/logger';
 import { HttpError } from '../../middleware/errorHandler';
 import { settingNumber } from '../settings/settings.service';
@@ -65,7 +66,7 @@ const toInfo = (r: InfoRow): OrgStatementInfo => ({
   totalNpr: r.total,
   issuedAt: r.issued_at.toISOString(),
   dueOn: r.due_on,
-  paidAt: r.paid_at?.toISOString() ?? null,
+  paidAt: isoOrNull(r.paid_at),
   paidReference: r.paid_reference,
 });
 
@@ -188,15 +189,10 @@ async function issueOne(
       [id, orgId, periodEnd],
     );
     // Nothing to bill after all (another run took the lines): undo the empty statement and its number.
-    if (!lines.rowCount) throw new NothingToBill();
+    if (!lines.rowCount) throw new Rollback(null);
     return { id, number: Number(s.rows[0]?.number), rides: lines.rowCount };
-  }).catch((err) => {
-    if (err instanceof NothingToBill) return null;
-    throw err;
   });
 }
-
-class NothingToBill extends Error {}
 
 export async function listStatements(orgId: string): Promise<OrgStatementInfo[]> {
   const r = await query<InfoRow>(
@@ -243,7 +239,7 @@ export async function statementDetail(
   );
   const lines: OrgStatementLine[] = l.rows.map((x) => ({
     tripId: x.trip_id,
-    endedAt: x.ended_at?.toISOString() ?? null,
+    endedAt: isoOrNull(x.ended_at),
     passengerName: x.passenger_name,
     bookedByName: x.booked_by_name,
     costCenterCode: x.cost_center_code,

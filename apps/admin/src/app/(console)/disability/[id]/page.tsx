@@ -2,6 +2,7 @@ import {
   DISABILITY_ADMIN_ACTION_LABELS,
   DISABILITY_METHOD_LABELS,
   maskedCard,
+  formatWhen,
 } from '@yatri/types';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -13,7 +14,7 @@ import { styles } from '../../drivers/styles';
 import { NoAccess } from '../../ui/NoAccess';
 import { DecisionForm, OpenDocumentForm } from '../Forms';
 
-const when = (iso: string | null) => (iso ? new Date(iso).toLocaleString() : 'not yet');
+const when = (iso: string | null) => formatWhen(iso, { empty: 'not yet' });
 
 /**
  * One application: what the rider submitted (never the full card number), how it is being checked, the document, the

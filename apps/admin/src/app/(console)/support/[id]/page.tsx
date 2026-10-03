@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { REFUND_STATUS_LABELS, TICKET_STATUS_LABELS, formatNpr } from '@yatri/types';
+import { REFUND_STATUS_LABELS, TICKET_STATUS_LABELS, formatNpr, formatWhen } from '@yatri/types';
 
 import {
   ApiError,
@@ -27,7 +27,7 @@ interface PageProps {
   searchParams: Promise<{ fileError?: string }>;
 }
 
-const at = (iso: string) => new Date(iso).toLocaleString();
+const at = (iso: string) => formatWhen(iso);
 const WHO = { REQUESTER: 'The person', ADMIN: 'Support', SYSTEM: 'System' } as const;
 const KIND = {
   MESSAGE: 'Message',

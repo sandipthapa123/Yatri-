@@ -5,6 +5,7 @@ import {
   settingDef,
   type AdminVehicleCategory,
   type PlatformSettingInfo,
+  formatWhen,
 } from '@yatri/types';
 import { useActionState, useEffect, useId, useRef, useState } from 'react';
 
@@ -68,7 +69,7 @@ export function SettingEditor({
         <strong>{shownNow}</strong>
         {setting.overridden ? '' : ' (default)'}
         {setting.updatedAt
-          ? `. Last changed ${new Date(setting.updatedAt).toLocaleString()}${
+          ? `. Last changed ${formatWhen(setting.updatedAt)}${
               setting.updatedByName ? ` by ${setting.updatedByName}` : ''
             }.`
           : '.'}

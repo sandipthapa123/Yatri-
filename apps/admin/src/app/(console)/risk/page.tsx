@@ -4,6 +4,7 @@ import {
   RISK_LEVELS,
   RISK_LEVEL_HELP,
   RISK_LEVEL_LABELS,
+  formatWhen,
 } from '@yatri/types';
 
 import { getRiskOverview, listRiskUsersApi } from '../../../lib/apiClient';
@@ -168,7 +169,7 @@ export default async function RiskPage({ searchParams }: PageProps) {
                   <td style={styles.td}>{u.score}</td>
                   <td style={styles.td}>{u.openEvents}</td>
                   <td style={styles.td}>
-                    {u.lastEventAt ? new Date(u.lastEventAt).toLocaleString() : '—'}
+                    {u.lastEventAt ? formatWhen(u.lastEventAt) : '—'}
                   </td>
                 </tr>
               ))}

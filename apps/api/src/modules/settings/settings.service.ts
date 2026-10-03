@@ -10,9 +10,8 @@ import {
 } from '@yatri/types';
 
 import { env } from '../../config/env';
-import { pool } from '../../config/database';
 import { recordAudit } from '../../lib/audit';
-import { query } from '../../lib/db';
+import { query, withTransaction } from '../../lib/db';
 import { HttpError } from '../../middleware/errorHandler';
 import { log } from '../../lib/logger';
 
@@ -139,10 +138,8 @@ export async function updateSetting(
     next = check.value;
   }
 
-  const client = await pool.connect();
-  let before: SettingValue;
-  try {
-    await client.query('BEGIN');
+  let before!: SettingValue;
+  await withTransaction(async (client) => {
     const cur = await client.query<{ value: SettingValue | null; version: number }>(
       'SELECT value, version FROM platform_settings WHERE key = $1 FOR UPDATE',
       [key],
@@ -150,7 +147,6 @@ export async function updateSetting(
     const row = cur.rows[0];
     const currentVersion = row?.version ?? 0;
     if (currentVersion !== input.expectedVersion) {
-      await client.query('ROLLBACK');
       throw new HttpError(
         409,
         'SETTING_CHANGED',
@@ -166,13 +162,7 @@ export async function updateSetting(
              updated_by = EXCLUDED.updated_by, updated_at = now()`,
       [key, JSON.stringify(next), actorId],
     );
-    await client.query('COMMIT');
-  } catch (err) {
-    await client.query('ROLLBACK').catch(() => undefined);
-    throw err;
-  } finally {
-    client.release();
-  }
+  });
 
   const after = next ?? settingDefault(def.key as SettingKey);
   await recordAudit({

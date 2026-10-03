@@ -7,10 +7,10 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { APP_TAGLINE } from '@yatri/shared';
 
-import { Logo } from '../components/Logo';
+import { BRAND } from '../brand';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import { useTripLocations } from '../state/TripLocations';
-import { useTheme } from '@yatri/mobile-ui';
+import { useTheme, Wordmark } from '@yatri/mobile-ui';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
@@ -90,7 +90,7 @@ export function HomeScreen({ navigation }: Props) {
         </View>
 
         <View style={styles.header}>
-          <Logo size="lg" />
+          <Wordmark {...BRAND} size="lg" />
           <Text
             style={[styles.greeting, { color: theme.colors.textPrimary }]}
             accessibilityRole="text"

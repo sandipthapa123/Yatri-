@@ -9,9 +9,8 @@ import {
 import type { Request, Response } from 'express';
 import { z } from 'zod';
 
-import { pool } from '../../config/database';
 import { recordAudit } from '../../lib/audit';
-import { query } from '../../lib/db';
+import { query, withTransaction } from '../../lib/db';
 import { requireParam } from '../../lib/params';
 import { HttpError } from '../../middleware/errorHandler';
 import { findUserById } from '../users/users.repository';
@@ -97,16 +96,13 @@ export async function setPermissionsHandler(
   const mine = await adminPermissions(req.auth.userId);
   const notHeld = wanted.filter((p) => !mine.includes(p));
 
-  const client = await pool.connect();
   let before: AdminPermission[] = [];
-  try {
-    await client.query('BEGIN');
+  await withTransaction(async (client) => {
     const cur = await client.query<{ admin_permissions: string[] }>(
       "SELECT admin_permissions FROM users WHERE id = $1 AND role = 'ADMIN' FOR UPDATE",
       [targetId],
     );
     if (!cur.rows[0]) {
-      await client.query('ROLLBACK');
       throw new HttpError(404, 'NOT_FOUND', 'Administrator not found.');
     }
     before = cur.rows[0].admin_permissions.filter((p): p is AdminPermission =>
@@ -116,7 +112,6 @@ export async function setPermissionsHandler(
     const granting = wanted.filter((p) => !before.includes(p));
     const overreach = granting.filter((p) => notHeld.includes(p));
     if (overreach.length > 0) {
-      await client.query('ROLLBACK');
       throw new HttpError(
         403,
         'CANNOT_GRANT',
@@ -127,13 +122,7 @@ export async function setPermissionsHandler(
       'UPDATE users SET admin_permissions = $2::text[], updated_at = now() WHERE id = $1',
       [targetId, wanted],
     );
-    await client.query('COMMIT');
-  } catch (err) {
-    await client.query('ROLLBACK').catch(() => undefined);
-    throw err;
-  } finally {
-    client.release();
-  }
+  });
 
   await recordAudit({
     actorId: req.auth.userId,

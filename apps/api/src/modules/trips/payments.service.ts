@@ -1,3 +1,4 @@
+import { isoOrNull } from '../../lib/dates';
 import {
   ORG_PAYMENT_MODE_METHOD,
   type OrgPaymentMode,
@@ -90,7 +91,7 @@ const toInfo = (r: PaymentRow): PaymentInfo => ({
   amountNpr: r.amount_npr,
   method: r.method,
   status: r.status,
-  paidAt: r.paid_at?.toISOString() ?? null,
+  paidAt: isoOrNull(r.paid_at),
 });
 
 /** Created once, when the trip completes, for exactly the server-calculated final fare. */
@@ -190,7 +191,11 @@ export async function markPaidByProvider(input: {
     if (!row) throw new HttpError(404, 'NOT_FOUND', 'No payment is due for this trip.');
     if (row.status === 'PAID') return false;
     if (row.method === 'ORGANIZATION') {
-      throw new HttpError(409, 'BILLED_TO_ORGANIZATION', "This ride is billed to the rider's organization.");
+      throw new HttpError(
+        409,
+        'BILLED_TO_ORGANIZATION',
+        "This ride is billed to the rider's organization.",
+      );
     }
     if (row.status !== 'PENDING' || row.amount_npr !== input.amountNpr) {
       throw new HttpError(409, 'PAYMENT_NOT_PENDING', 'This payment can no longer be settled.');

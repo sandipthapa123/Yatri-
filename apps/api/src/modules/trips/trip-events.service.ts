@@ -6,9 +6,8 @@ import {
   type TripEventType,
 } from '@yatri/types';
 
-import { pool } from '../../config/database';
 import { getRedisClient } from '../../config/redis';
-import { query } from '../../lib/db';
+import { query, Rollback, withTransaction } from '../../lib/db';
 import { notify } from '../../lib/notifications';
 import { publishToUser } from '../realtime/bus';
 
@@ -48,12 +47,7 @@ const toRecord = (tripId: string, r: EventRow): TripEventRecord => ({
 });
 
 export async function recordTripEvent(input: RecordEventInput): Promise<TripEventRecord | null> {
-  const client = await pool.connect();
-  let record: TripEventRecord | null = null;
-  let passengerId = '';
-  let driverId: string | null = null;
-  try {
-    await client.query('BEGIN');
+  const done = await withTransaction(async (client) => {
     // The UPDATE takes the trip row lock: concurrent events for one trip serialize here.
     const t = await client.query<{
       event_seq: number;
@@ -64,21 +58,13 @@ export async function recordTripEvent(input: RecordEventInput): Promise<TripEven
       [input.tripId],
     );
     const trip = t.rows[0];
-    if (!trip) {
-      await client.query('ROLLBACK');
-      return null;
-    }
-    passengerId = trip.passenger_id;
-    driverId = trip.driver_id;
+    if (!trip) return null;
     if (input.dedupeKey) {
       const dup = await client.query(
         'SELECT 1 FROM trip_events WHERE trip_id = $1 AND dedupe_key = $2',
         [input.tripId, input.dedupeKey],
       );
-      if (dup.rowCount) {
-        await client.query('ROLLBACK'); // the seq is not consumed
-        return null;
-      }
+      if (dup.rowCount) throw new Rollback(null); // a duplicate: the seq is not consumed
     }
     const ins = await client.query<EventRow>(
       // created_at is taken now, under the row lock that handed out the sequence number (the column
@@ -95,14 +81,14 @@ export async function recordTripEvent(input: RecordEventInput): Promise<TripEven
         input.dedupeKey ?? null,
       ],
     );
-    await client.query('COMMIT');
-    record = toRecord(input.tripId, ins.rows[0] as EventRow);
-  } catch (err) {
-    await client.query('ROLLBACK').catch(() => undefined);
-    throw err;
-  } finally {
-    client.release();
-  }
+    return {
+      record: toRecord(input.tripId, ins.rows[0] as EventRow),
+      passengerId: trip.passenger_id,
+      driverId: trip.driver_id,
+    };
+  });
+  if (!done) return null;
+  const { record, passengerId, driverId } = done;
 
   await getRedisClient().set(lastSeqKey(input.tripId), String(record.seq), 'EX', 6 * 60 * 60);
 

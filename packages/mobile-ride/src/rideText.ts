@@ -21,18 +21,3 @@ export function mapsUrl(
     : `geo:0,0?q=${latitude},${longitude}(${encodeURIComponent(label)})`;
 }
 
-/** "10:32 AM", or '' for a value that is not a date. The one time-of-day format. */
-export function formatClockTime(iso: string): string {
-  const d = new Date(iso);
-  return Number.isNaN(d.getTime())
-    ? ''
-    : d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-}
-
-/** "Sep 29, 2026, 10:32 AM", or '' for a value that is not a date. The one date-and-time format. */
-export function formatDateTime(iso: string): string {
-  const d = new Date(iso);
-  return Number.isNaN(d.getTime())
-    ? ''
-    : d.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
-}

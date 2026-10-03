@@ -1,3 +1,4 @@
+import { isoOrNull } from '../../lib/dates';
 import {
   RETENTION_RECORD_TYPES,
   type RetentionPolicyInfo,
@@ -40,7 +41,7 @@ const toInfo = (r: Row): RetentionPolicyInfo => ({
   action: r.action,
   legalBasis: r.legal_basis,
   enforced: r.enforced,
-  lastRunAt: r.last_run_at?.toISOString() ?? null,
+  lastRunAt: isoOrNull(r.last_run_at),
   lastRunCount: r.last_run_count,
 });
 const COLS =

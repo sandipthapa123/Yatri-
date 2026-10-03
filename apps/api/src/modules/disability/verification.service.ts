@@ -1,3 +1,4 @@
+import { isoOrNull } from '../../lib/dates';
 import { createHmac } from 'node:crypto';
 
 import {
@@ -295,7 +296,7 @@ async function consentInfo(userId: string) {
     version: policy?.version ?? '1',
     contentUrl: policy?.contentUrl ?? null,
     given: state.active,
-    givenAt: state.givenAt?.toISOString() ?? null,
+    givenAt: isoOrNull(state.givenAt),
   };
 }
 
@@ -367,8 +368,8 @@ export async function viewFor(userId: string): Promise<DisabilityVerificationVie
       documentName: row?.document_name ?? null,
     },
     message: row?.message ?? null,
-    submittedAt: row?.submitted_at?.toISOString() ?? null,
-    verifiedAt: row?.verified_at?.toISOString() ?? null,
+    submittedAt: isoOrNull(row?.submitted_at),
+    verifiedAt: isoOrNull(row?.verified_at),
     validUntil: row?.valid_until ?? null,
     expiry: {
       daysLeft,

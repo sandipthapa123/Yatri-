@@ -1,3 +1,5 @@
+import { isoOrNull } from '../../lib/dates';
+import { pageParam, pageSizeParam } from '../../lib/pagination';
 import {
   FINANCE_NOT_SUPPORTED,
   PAYMENT_STATUSES,
@@ -24,8 +26,8 @@ import { likeContains, rangeFields, resolveRange, type RangeQuery } from './admi
  * Every read is written to the audit log (who looked at money, and over what range).
  */
 const page = {
-  page: z.coerce.number().int().min(1).default(1),
-  pageSize: z.coerce.number().int().min(1).max(50).default(20),
+  page: pageParam,
+  pageSize: pageSizeParam(50, 20),
 };
 
 export const adminPaymentsQuerySchema = z.object({
@@ -110,7 +112,7 @@ export async function paymentsHandler(
         passengerName: r.passenger,
         driverName: r.driver,
         createdAt: r.created_at.toISOString(),
-        paidAt: r.paid_at?.toISOString() ?? null,
+        paidAt: isoOrNull(r.paid_at),
       })),
       total: count.rows[0]?.n ?? 0,
       page: q.page,

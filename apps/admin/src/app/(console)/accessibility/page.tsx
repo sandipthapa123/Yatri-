@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { VEHICLE_CAPABILITY_LABELS } from '@yatri/types';
+import { VEHICLE_CAPABILITY_LABELS, formatWhen } from '@yatri/types';
 
 import {
   getAccessibilityStatsApi,
@@ -105,7 +105,7 @@ export default async function AccessibilityPage() {
                 </h3>
                 <p style={{ margin: '4px 0' }}>
                   Driver: {r.driverName ?? 'not named'}. Status: {VEHICLE_CAPABILITY_LABELS.PENDING}
-                  . Declared {new Date(r.declaredAt).toLocaleString()}.
+                  . Declared {formatWhen(r.declaredAt)}.
                 </p>
                 <DecideForm
                   vehicleId={r.vehicleId}

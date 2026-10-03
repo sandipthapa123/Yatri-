@@ -1,9 +1,8 @@
 import type { EmergencyContact, EmergencyContactsResponse } from '@yatri/types';
 
 import { env } from '../../config/env';
-import { pool } from '../../config/database';
 import { recordAudit } from '../../lib/audit';
-import { query } from '../../lib/db';
+import { isUniqueViolation, query, withTransaction } from '../../lib/db';
 import { HttpError } from '../../middleware/errorHandler';
 
 /**
@@ -39,9 +38,7 @@ export async function addContact(
   role: 'PASSENGER' | 'DRIVER',
   input: { name: string; phoneNumber: string },
 ): Promise<EmergencyContact> {
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
+  const contact = await withTransaction(async (client) => {
     // Serialise this person's additions so the limit cannot be raced past.
     await client.query('SELECT 1 FROM users WHERE id = $1 FOR UPDATE', [userId]);
     const own = await client.query<{ phone_number: string; n: string }>(
@@ -50,7 +47,6 @@ export async function addContact(
       [userId],
     );
     if (Number(own.rows[0]?.n ?? 0) >= env.EMERGENCY_CONTACTS_MAX) {
-      await client.query('ROLLBACK');
       throw new HttpError(
         409,
         'EMERGENCY_CONTACT_LIMIT',
@@ -58,7 +54,6 @@ export async function addContact(
       );
     }
     if (own.rows[0]?.phone_number === input.phoneNumber) {
-      await client.query('ROLLBACK');
       throw new HttpError(422, 'VALIDATION_ERROR', 'That is your own phone number.');
     }
     const ins = await client.query<Row>(
@@ -66,26 +61,22 @@ export async function addContact(
        RETURNING id, name, phone_number`,
       [userId, input.name, input.phoneNumber],
     );
-    await client.query('COMMIT');
-    const contact = toContact(ins.rows[0] as Row);
-    // The audit entry says a contact was added — never the number itself.
-    await recordAudit({
-      actorId: userId,
-      actorRole: role,
-      action: 'EMERGENCY_CONTACT_ADDED',
-      subjectType: 'user',
-      subjectIds: [userId],
-    });
-    return contact;
-  } catch (err) {
-    await client.query('ROLLBACK').catch(() => undefined);
-    if ((err as { code?: string }).code === '23505') {
+    return toContact(ins.rows[0] as Row);
+  }).catch((err) => {
+    if (isUniqueViolation(err)) {
       throw new HttpError(409, 'DUPLICATE_CONTACT', 'You already have that contact.');
     }
     throw err;
-  } finally {
-    client.release();
-  }
+  });
+  // The audit entry says a contact was added — never the number itself.
+  await recordAudit({
+    actorId: userId,
+    actorRole: role,
+    action: 'EMERGENCY_CONTACT_ADDED',
+    subjectType: 'user',
+    subjectIds: [userId],
+  });
+  return contact;
 }
 
 export async function removeContact(

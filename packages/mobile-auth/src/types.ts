@@ -1,25 +1,12 @@
-import type { AppUser, DriverStatus, UserRole } from '@yatri/shared';
+import type { AppUser, DriverStatus } from '@yatri/types';
 
-export type { UserRole, DriverStatus };
-
-export interface SessionTokens {
-  accessToken: string;
-  accessTokenExpiresInSeconds: number;
-  refreshToken: string;
-  refreshTokenExpiresAt: string;
-}
-
-export interface RequestOtpResponse {
-  expiresAt: string;
-  resendAvailableInSeconds: number;
-  /** Only present when the API's OTP_DEV_MODE is on (never in production). */
-  devOtp?: string;
-}
-
-export interface VerifyOtpResponse extends SessionTokens {
-  user: AppUser;
-  isNewUser: boolean;
-  driverStatus?: DriverStatus;
-}
+// The sign-in contracts live once, in @yatri/types; this package uses them as they are.
+export type {
+  DriverStatus,
+  RequestOtpResponse,
+  SessionTokens,
+  UserRole,
+  VerifyOtpResponse,
+} from '@yatri/types';
 
 export type DriverProfile = AppUser & { driverStatus: DriverStatus };

@@ -1,3 +1,4 @@
+import { isoOrNull } from '../../lib/dates';
 import {
   PLATFORM_DEFAULTED,
   checkPreferenceValue,
@@ -63,7 +64,7 @@ async function toResponse(
     defaults,
     vehicleOptions: await vehicleOptionsFor(role),
     version: row?.version ?? 0,
-    updatedAt: row?.updated_at.toISOString() ?? null,
+    updatedAt: isoOrNull(row?.updated_at),
   };
 }
 
@@ -148,7 +149,10 @@ async function choicesOf(userId: string): Promise<PreferenceValues> {
 }
 
 /** One person's value for one setting: what they chose, else the setting's own default. */
-export async function personalPreference(userId: string, key: string): Promise<PreferenceValue | null> {
+export async function personalPreference(
+  userId: string,
+  key: string,
+): Promise<PreferenceValue | null> {
   const chosen = (await choicesOf(userId))[key];
   return chosen === undefined ? (preferenceDef(key)?.default ?? null) : chosen;
 }

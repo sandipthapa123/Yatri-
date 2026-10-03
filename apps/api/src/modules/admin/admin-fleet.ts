@@ -1,3 +1,4 @@
+import { pageParam, pageSizeParam } from '../../lib/pagination';
 import {
   EXPIRY_KINDS,
   EXPIRY_STATES,
@@ -74,8 +75,8 @@ type Res<T> = Response<ApiResponse<T>>;
 
 const reason = z.string().trim().min(3).max(300);
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use a date like 2026-10-31.');
-const page = z.coerce.number().int().min(1).default(1);
-const pageSize = z.coerce.number().int().min(1).max(100).default(20);
+const page = pageParam;
+const pageSize = pageSizeParam(100, 20);
 const uuid = z.string().uuid();
 
 export const fleetVehiclesQuerySchema = z.object({

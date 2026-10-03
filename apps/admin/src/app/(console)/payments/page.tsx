@@ -5,6 +5,7 @@ import {
   PAYMENT_STATUS_LABELS,
   PAYMENT_STATUSES,
   type PaymentMethod,
+  formatWhen,
 } from '@yatri/types';
 
 import { getFinanceSummary, listAdminPayments, listDriverEarnings } from '../../../lib/apiClient';
@@ -246,7 +247,7 @@ export default async function PaymentsPage({ searchParams }: PageProps) {
               <tbody>
                 {payments.items.map((p) => (
                   <tr key={p.id}>
-                    <td style={styles.td}>{new Date(p.createdAt).toLocaleString()}</td>
+                    <td style={styles.td}>{formatWhen(p.createdAt)}</td>
                     <td style={styles.td}>
                       <Link href={`/rides/${p.tripId}`} style={styles.rowLink}>
                         Open the ride
@@ -259,7 +260,7 @@ export default async function PaymentsPage({ searchParams }: PageProps) {
                       {describePayment(p.method as PaymentMethod, p.status)}
                     </td>
                     <td style={styles.td}>
-                      {p.paidAt ? new Date(p.paidAt).toLocaleString() : '—'}
+                      {p.paidAt ? formatWhen(p.paidAt) : '—'}
                     </td>
                   </tr>
                 ))}

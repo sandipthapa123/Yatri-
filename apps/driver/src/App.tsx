@@ -7,10 +7,9 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { View } from 'react-native';
 
-import { ErrorBoundary } from '@yatri/mobile-ui';
-import { ErrorScreen } from './screens/ErrorScreen';
+import { ErrorBoundary, LoadingView, StartupErrorView } from '@yatri/mobile-ui';
 import { RootNavigator } from './navigation/RootNavigator';
-import { LoadingScreen } from './screens/LoadingScreen';
+import { BRAND } from './brand';
 import { useTheme } from '@yatri/mobile-ui';
 
 function AppContent() {
@@ -19,7 +18,7 @@ function AppContent() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
 
-  if (status === 'loading') return <LoadingScreen />;
+  if (status === 'loading') return <LoadingView {...BRAND} />;
 
   return (
     <>
@@ -37,7 +36,7 @@ export default function App() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <ErrorBoundary
-          fallback={(error, reset) => <ErrorScreen message={error.message} onRetry={reset} />}
+          fallback={(error, reset) => <StartupErrorView {...BRAND} message={error.message} onRetry={reset} />}
         >
           <AuthProvider role="DRIVER" onBeforeLogout={unregisterPush}>
             <PreferencesProvider>

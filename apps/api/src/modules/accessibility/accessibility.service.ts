@@ -28,10 +28,11 @@ import {
   PASSENGER_NEED_CODES,
   PICKUP_INSTRUCTION_CODES,
   TERMINAL_TRIP_STATUSES,
+  PRE_PICKUP_TRIP_STATUSES,
 } from '@yatri/types';
 
 import { recordAudit } from '../../lib/audit';
-import { query, withTransaction } from '../../lib/db';
+import { query, withTransaction, isUniqueViolation } from '../../lib/db';
 import { notify } from '../../lib/notifications';
 import { HttpError } from '../../middleware/errorHandler';
 import { bumpTripVersion } from '../tracking/tracking.service';
@@ -120,7 +121,7 @@ export async function saveAttribute(
         );
         row = ins.rows[0] as AttributeRow;
       } catch (err) {
-        if ((err as { code?: string }).code === '23505') {
+        if (isUniqueViolation(err)) {
           throw new HttpError(409, 'ATTRIBUTE_EXISTS', 'A feature with that name already exists.');
         }
         throw err;
@@ -429,8 +430,6 @@ export async function driverMayCall(tripId: string): Promise<boolean> {
   return !a || COMMUNICATION_ALLOWED_TO_CALL[a.communication];
 }
 
-const CHANGEABLE = ['SEARCHING', 'DRIVER_EN_ROUTE', 'DRIVER_ARRIVED'];
-
 /**
  * The passenger changes how to reach them and where to meet while the ride is waiting for the pickup. The driver is
  * told with an event (polite announcement) that carries no words of the instructions; they read them in the ride.
@@ -452,7 +451,7 @@ export async function updatePickup(
       'SELECT status FROM trips WHERE id = $1 FOR UPDATE',
       [tripId],
     );
-    if (!CHANGEABLE.includes(locked.rows[0]?.status ?? '')) {
+    if (!(PRE_PICKUP_TRIP_STATUSES as readonly string[]).includes(locked.rows[0]?.status ?? '')) {
       throw new HttpError(
         409,
         'ACCESSIBILITY_LOCKED',

@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { OPERATIONAL_LABELS, VEHICLE_LIFECYCLE_LABELS } from '@yatri/types';
+import { OPERATIONAL_LABELS, VEHICLE_LIFECYCLE_LABELS, formatWhen } from '@yatri/types';
 
 import { ApiError, getFleetDriver, getFleetOptions } from '../../../../../lib/apiClient';
 import { requireAdminAccessToken } from '../../../../../lib/session';
@@ -85,7 +85,7 @@ export default async function FleetDriverPage({ params }: PageProps) {
           <p style={{ margin: 0 }}>
             {OPERATIONAL_LABELS[d.operationalStatus]}
             {d.operationalReason ? `: ${d.operationalReason}` : ''}
-            {d.operationalUntil ? `. Until ${new Date(d.operationalUntil).toLocaleString()}.` : '.'}
+            {d.operationalUntil ? `. Until ${formatWhen(d.operationalUntil)}.` : '.'}
           </p>
         ) : null}
         {d.eligibility.eligible ? (

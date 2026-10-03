@@ -8,7 +8,6 @@ export {
   offeredCategories,
   refundReasonLabel,
   statusNews,
-  whenText,
 } from './supportText';
 export type { FieldErrors, NewTicketFields } from './supportText';
 export { useNews, usePolled } from './hooks';
@@ -18,6 +17,8 @@ export { TicketThread } from './components/TicketThread';
 export { RefundSection } from './components/RefundSection';
 export { PrivacyPanel } from './components/PrivacyPanel';
 export { SupportCenter } from './components/SupportCenter';
+export { SupportScreen } from './components/SupportScreen';
+export type { SupportRoute } from './components/SupportScreen';
 export { pickEvidenceFile } from './pickEvidenceFile';
 export { registerPush, unregisterPush, usePushRegistration } from './pushRegistration';
 export type { PermissionState, PushDeps, PushOutcome } from './pushRegistration';

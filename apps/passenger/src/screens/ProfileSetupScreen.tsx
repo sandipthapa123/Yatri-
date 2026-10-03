@@ -4,9 +4,9 @@ import { useState } from 'react';
 import { AccessibilityInfo, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Logo } from '../components/Logo';
+import { BRAND } from '../brand';
 import type { RootStackParamList } from '../navigation/RootNavigator';
-import { useTheme } from '@yatri/mobile-ui';
+import { useTheme, Wordmark } from '@yatri/mobile-ui';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ProfileSetup'>;
 
@@ -41,7 +41,7 @@ export function ProfileSetupScreen({ navigation }: Props) {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <View style={styles.header}>
-        <Logo />
+        <Wordmark {...BRAND} />
         <Text style={[styles.title, { color: theme.colors.textPrimary }]}>Welcome to Yatri</Text>
         <Text
           style={[styles.subtitle, { color: theme.colors.textSecondary }]}

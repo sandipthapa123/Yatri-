@@ -7,6 +7,7 @@ import {
   type OrgStatementDetail,
   type OrgStatementInfo,
   type OrgUsageReport,
+  formatWhen,
 } from '@yatri/types';
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -61,7 +62,7 @@ export function StatementsSection(props: Section) {
         </Text>
         {open.lines.map((l) => (
           <Text key={l.tripId} style={{ color: colors.textPrimary }} accessibilityRole="text">
-            {`${l.endedAt ? new Date(l.endedAt).toLocaleDateString() : ''} ${l.passengerName ?? 'A member'}${l.bookedByName && l.bookedByName !== l.passengerName ? `, booked by ${l.bookedByName}` : ''}, ${l.pickupAddress} to ${l.destinationAddress}${l.costCenterCode ? `, ${l.costCenterCode}` : ''}${l.purpose ? `, ${l.purpose}` : ''}: ${formatNpr(l.amountNpr)}`}
+            {`${l.endedAt ? formatWhen(l.endedAt, { style: 'date' }) : ''} ${l.passengerName ?? 'A member'}${l.bookedByName && l.bookedByName !== l.passengerName ? `, booked by ${l.bookedByName}` : ''}, ${l.pickupAddress} to ${l.destinationAddress}${l.costCenterCode ? `, ${l.costCenterCode}` : ''}${l.purpose ? `, ${l.purpose}` : ''}: ${formatNpr(l.amountNpr)}`}
           </Text>
         ))}
         <ActionButton {...ui} label="Back to statements" onPress={() => setOpen(null)} />

@@ -1,3 +1,4 @@
+import { isoOrNull } from '../../lib/dates';
 import {
   orgRoleHolds,
   type OrgApprovalInfo,
@@ -58,7 +59,7 @@ const toInfo = (r: Row, ctx: OrgContext): OrgApprovalInfo => {
     expiresAt: r.expires_at.toISOString(),
     createdAt: r.created_at.toISOString(),
     decidedByName: r.decided_by_name,
-    decidedAt: r.decided_at?.toISOString() ?? null,
+    decidedAt: isoOrNull(r.decided_at),
     decisionNote: r.decision_note,
     tripId: r.trip_id,
     canDecide: pending && orgRoleHolds(ctx.role, 'RIDES_APPROVE') && r.requested_by !== ctx.userId,

@@ -10,7 +10,7 @@ import {
 } from '@yatri/types';
 
 import { recordAudit } from '../../lib/audit';
-import { query, withTransaction } from '../../lib/db';
+import { query, withTransaction, isUniqueViolation } from '../../lib/db';
 import { notify } from '../../lib/notifications';
 import { HttpError } from '../../middleware/errorHandler';
 import { activeRestriction } from '../risk/restriction.service';
@@ -185,7 +185,7 @@ export async function applyReferral(userId: string, rawCode: string): Promise<{ 
       }
     });
   } catch (err) {
-    if ((err as { code?: string }).code === '23505') {
+    if (isUniqueViolation(err)) {
       throw new HttpError(409, 'ALREADY_REFERRED', 'You have already used an invite code.');
     }
     throw err;

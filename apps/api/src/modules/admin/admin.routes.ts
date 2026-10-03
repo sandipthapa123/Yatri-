@@ -303,7 +303,7 @@ import {
   userRewardsHandler,
 } from './admin-growth';
 import { campaignBodySchema, statusBodySchema } from '../growth/campaigns.service';
-import { attributeBodySchema, decisionSchema } from '../accessibility/accessibility.validators';
+import { attributeBodySchema, featureDecisionSchema } from '../accessibility/accessibility.validators';
 import {
   cityBodySchema,
   cityCategoriesSchema,
@@ -1106,7 +1106,7 @@ adminRouter.post(
   '/accessibility/reviews/:vehicleId/:code',
   requirePermission('ACCESSIBILITY_MANAGE'),
   validateUuidParam('vehicleId'),
-  validateBody(decisionSchema),
+  validateBody(featureDecisionSchema),
   decideCapabilityHandler,
 );
 adminRouter.get(

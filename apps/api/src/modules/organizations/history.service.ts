@@ -1,3 +1,4 @@
+import { isoOrNull } from '../../lib/dates';
 import {
   describePayment,
   orgRoleHolds,
@@ -90,7 +91,7 @@ export async function listOrgRides(
       tripId: r.id,
       status: r.status,
       requestedAt: r.requested_at.toISOString(),
-      endedAt: r.ended_at?.toISOString() ?? null,
+      endedAt: isoOrNull(r.ended_at),
       bookedByName: r.booked_by_name,
       passengerName: r.passenger_name,
       pickupAddress: r.pickup_address,

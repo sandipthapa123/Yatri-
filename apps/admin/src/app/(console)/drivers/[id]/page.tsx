@@ -1,3 +1,4 @@
+import { formatWhen } from '@yatri/types';
 import Link from 'next/link';
 
 import {
@@ -26,7 +27,7 @@ interface PageProps {
 }
 
 function fmtDate(value: string | null): string {
-  return value ? new Date(value).toLocaleString() : '—';
+  return formatWhen(value, { empty: 'not recorded' });
 }
 
 export default async function DriverDetailPage({ params }: PageProps) {

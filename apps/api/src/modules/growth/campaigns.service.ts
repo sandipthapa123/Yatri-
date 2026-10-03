@@ -1,3 +1,4 @@
+import { isoOrNull } from '../../lib/dates';
 import {
   CAMPAIGN_KINDS,
   CAMPAIGN_KIND_HAS_OFFER,
@@ -18,7 +19,7 @@ import {
 import { z } from 'zod';
 
 import { recordAudit } from '../../lib/audit';
-import { query, withTransaction } from '../../lib/db';
+import { query, withTransaction, isUniqueViolation } from '../../lib/db';
 import { HttpError } from '../../middleware/errorHandler';
 
 /**
@@ -59,8 +60,8 @@ export const CAMPAIGN_COLUMNS = `c.id, c.kind, c.name, c.description, c.code, c.
 export const toCampaign = (r: CampaignRow, now = new Date()): CampaignInfo => {
   const base = {
     status: r.status,
-    startsAt: r.starts_at?.toISOString() ?? null,
-    endsAt: r.ends_at?.toISOString() ?? null,
+    startsAt: isoOrNull(r.starts_at),
+    endsAt: isoOrNull(r.ends_at),
   };
   return {
     id: r.id,
@@ -80,7 +81,7 @@ export const toCampaign = (r: CampaignRow, now = new Date()): CampaignInfo => {
       validDaysAfterGrant: r.valid_days_after_grant,
     },
     message: r.message,
-    sentAt: r.sent_at?.toISOString() ?? null,
+    sentAt: isoOrNull(r.sent_at),
     redemptions: Number(r.redemptions ?? 0),
     version: r.version,
     createdAt: r.created_at.toISOString(),
@@ -210,7 +211,7 @@ const params = (b: AdminCampaignBody) => [
 ];
 
 const uniqueCode = (err: unknown) => {
-  if ((err as { code?: string }).code === '23505') {
+  if (isUniqueViolation(err)) {
     return new HttpError(409, 'CODE_IN_USE', 'Another campaign already uses that code.');
   }
   return err;
@@ -333,8 +334,8 @@ export async function transitionCampaign(
         name: row.name,
         description: row.description,
         code: row.code,
-        startsAt: row.starts_at?.toISOString() ?? null,
-        endsAt: row.ends_at?.toISOString() ?? null,
+        startsAt: isoOrNull(row.starts_at),
+        endsAt: isoOrNull(row.ends_at),
         eligibility: row.eligibility,
         offer: row.offer,
         referrerPoints: row.referrer_points,

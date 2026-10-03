@@ -1,3 +1,5 @@
+import { isoOrNull } from '../../lib/dates';
+import { pageParam, pageSizeParam } from '../../lib/pagination';
 import type { Request, Response } from 'express';
 import {
   ACTIVE_TRIP_STATUSES,
@@ -35,8 +37,8 @@ export const adminTripsQuerySchema = z.object({
   group: z.enum(['active', 'ended']).optional(),
   sort: z.enum(['live', 'newest', 'oldest', 'fare']).default('live'),
   search: z.string().trim().max(100).optional(),
-  page: z.coerce.number().int().min(1).default(1),
-  pageSize: z.coerce.number().int().min(1).max(50).default(20),
+  page: pageParam,
+  pageSize: pageSizeParam(50, 20),
 });
 export const adminCancelSchema = z.object({ reason: z.string().trim().min(3).max(300) }).strict();
 function adminId(req: Request): string {
@@ -126,7 +128,7 @@ export async function listTripsHandler(
         pickupName: r.pickup_name ?? r.pickup_address,
         destinationName: r.dest_name ?? r.dest_address,
         requestedAt: r.requested_at.toISOString(),
-        endedAt: r.ended_at?.toISOString() ?? null,
+        endedAt: isoOrNull(r.ended_at),
         fareNpr: r.fare,
         paymentStatus: r.payment_status ?? 'NONE',
         paymentMethod: r.payment_method,
@@ -223,10 +225,10 @@ export async function tripDetailHandler(req: Request, res: Response<ApiResponse<
       id: trip.id,
       status: trip.status,
       requestedAt: trip.requested_at.toISOString(),
-      matchedAt: trip.matched_at?.toISOString() ?? null,
-      arrivedAt: trip.arrived_at?.toISOString() ?? null,
-      startedAt: trip.started_at?.toISOString() ?? null,
-      endedAt: trip.ended_at?.toISOString() ?? null,
+      matchedAt: isoOrNull(trip.matched_at),
+      arrivedAt: isoOrNull(trip.arrived_at),
+      startedAt: isoOrNull(trip.started_at),
+      endedAt: isoOrNull(trip.ended_at),
       cancelledBy: trip.cancelled_by,
       cancelledFromStatus: trip.cancelled_from_status,
       cancellationFeeNpr: trip.cancellation_fee_npr,
@@ -269,7 +271,7 @@ export async function tripDetailHandler(req: Request, res: Response<ApiResponse<
         status: o.status,
         pickupDistanceMeters: o.pickup_distance_meters,
         offeredAt: o.offered_at.toISOString(),
-        respondedAt: o.responded_at?.toISOString() ?? null,
+        respondedAt: isoOrNull(o.responded_at),
       })),
       calls,
       chat: { messageCount: Number(chatCount.rows[0]?.n ?? 0), canViewContent: canViewChat },

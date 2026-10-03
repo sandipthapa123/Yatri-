@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { describeTripEvent } from '@yatri/types';
+import { describeTripEvent, formatWhen } from '@yatri/types';
 
 import { ApiError, getAdminTripChat } from '../../../../../lib/apiClient';
 import { requireAdminAccessToken } from '../../../../../lib/session';
@@ -63,13 +63,13 @@ export default async function RideChatPage({ params }: PageProps) {
               key={`e${item.event.seq}`}
               style={{ color: 'var(--color-text-secondary)', fontSize: 14 }}
             >
-              {new Date(item.at).toLocaleTimeString()}, ride update:{' '}
+              {formatWhen(item.at, { style: 'time' })}, ride update:{' '}
               {describeTripEvent(item.event, 'ADMIN')}
             </li>
           ) : (
             <li key={item.message.id} style={{ fontSize: 15 }}>
               <strong>{item.message.senderRole === 'PASSENGER' ? 'Passenger' : 'Driver'}</strong>,{' '}
-              {new Date(item.at).toLocaleTimeString()}
+              {formatWhen(item.at, { style: 'time' })}
               {item.message.readAt ? ', read' : item.message.deliveredAt ? ', delivered' : ''}:{' '}
               {item.message.body}
             </li>

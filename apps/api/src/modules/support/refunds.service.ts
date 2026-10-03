@@ -1,3 +1,4 @@
+import { isoOrNull } from '../../lib/dates';
 import {
   ACTIVE_REFUND_STATES,
   REFUND_STATUS_LABELS,
@@ -20,7 +21,7 @@ import {
 import type { PoolClient } from 'pg';
 
 import { recordAudit } from '../../lib/audit';
-import { query, withTransaction } from '../../lib/db';
+import { query, withTransaction, isUniqueViolation } from '../../lib/db';
 import { sqlIn } from '../../lib/sql';
 import { HttpError } from '../../middleware/errorHandler';
 import { log } from '../../lib/logger';
@@ -69,7 +70,7 @@ const toInfo = (r: RefundRow): RefundInfo => ({
   method: r.method,
   createdAt: r.created_at.toISOString(),
   updatedAt: r.updated_at.toISOString(),
-  completedAt: r.completed_at?.toISOString() ?? null,
+  completedAt: isoOrNull(r.completed_at),
 });
 
 interface PaymentBasisRow {
@@ -109,7 +110,7 @@ export async function paymentContext(tripId: string): Promise<TicketPaymentConte
     amountNpr: p.amount_npr,
     status: p.status,
     method: p.method,
-    paidAt: p.paid_at?.toISOString() ?? null,
+    paidAt: isoOrNull(p.paid_at),
     refundedNpr: p.refunded,
     quote: p.status === 'PAID' ? quoteFrom(p) : null,
   };
@@ -235,7 +236,7 @@ async function createRefund(
     );
     return r.rows[0] as RefundRow;
   } catch (err) {
-    if ((err as { code?: string }).code === '23505') {
+    if (isUniqueViolation(err)) {
       throw new HttpError(
         409,
         'REFUND_ALREADY_ACTIVE',

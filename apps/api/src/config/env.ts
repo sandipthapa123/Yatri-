@@ -7,6 +7,7 @@ import {
   environmentProfileOf,
   providerProblems,
   type ProviderSelection,
+  PLATFORM_TIME_ZONE as DEFAULT_PLATFORM_TIME_ZONE,
 } from '@yatri/types';
 
 import { log } from '../lib/logger';
@@ -300,7 +301,7 @@ const envSchema = z
     // How long a process trusts its copy of the settings before re-reading them (0 = every request).
     SETTINGS_CACHE_SECONDS: z.coerce.number().int().min(0).default(10),
     // The time zone that days and "today" mean in dashboards and reports.
-    PLATFORM_TIME_ZONE: z.string().trim().min(1).default('Asia/Kathmandu'),
+    PLATFORM_TIME_ZONE: z.string().trim().min(1).default(DEFAULT_PLATFORM_TIME_ZONE),
     DISPATCH_MAX_OFFERS: z.coerce.number().int().positive().default(6),
     // An assigned driver silent for this long (still en route) is replaced by re-matching.
     TRIP_DRIVER_LOST_SECONDS: z.coerce.number().int().positive().default(120),

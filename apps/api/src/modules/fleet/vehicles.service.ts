@@ -11,7 +11,7 @@ import {
 import type { PoolClient } from 'pg';
 
 import { recordAudit, auditTrail } from '../../lib/audit';
-import { query, withTransaction } from '../../lib/db';
+import { query, withTransaction, isUniqueViolation, isForeignKeyViolation } from '../../lib/db';
 import { HttpError } from '../../middleware/errorHandler';
 import { listRequiredDocumentTypes } from '../documents/document-types.repository';
 import { documentSatisfies, isPastDate } from '../drivers/onboarding.service';
@@ -389,11 +389,9 @@ export async function createFleetVehicle(
     });
     return fleetVehicleDetail(row.id);
   } catch (err) {
-    const code = (err as { code?: string }).code;
-    if (code === '23505') {
-      throw registrationTaken();
-    }
-    if (code === '23503') throw new HttpError(400, 'VALIDATION_ERROR', 'Unknown vehicle category.');
+    if (isUniqueViolation(err)) throw registrationTaken();
+    if (isForeignKeyViolation(err))
+      throw new HttpError(400, 'VALIDATION_ERROR', 'Unknown vehicle category.');
     throw err;
   }
 }

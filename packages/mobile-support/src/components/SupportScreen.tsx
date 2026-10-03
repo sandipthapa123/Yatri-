@@ -1,18 +1,23 @@
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useAuth } from '@yatri/mobile-auth';
 import { useTheme } from '@yatri/mobile-ui';
-import { SupportCenter } from '@yatri/mobile-support';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import type { RootStackParamList } from '../navigation/RootNavigator';
+import { SupportCenter } from './SupportCenter';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'Support'>;
+/** The route both apps give the support screen: optionally opened from a ride or a request. */
+export type SupportRoute = { Support: { tripId?: string; ticketId?: string } | undefined };
 
 /**
- * Help and support: requests, a problem with a ride (when opened from one), conversations, refunds
- * and privacy. It is the shared SupportCenter, the same one the driver app shows.
+ * Help and support as a screen: requests, a problem with a ride (when opened from one), conversations, refunds and privacy.
+ * The same screen in both apps; register it with the app's stack navigator under the name "Support".
  */
-export function SupportScreen({ navigation, route }: Props) {
+export function SupportScreen({
+  navigation,
+  route,
+}: {
+  navigation: { goBack(): void };
+  route: { params?: SupportRoute['Support'] };
+}) {
   const theme = useTheme();
   const { getAccessToken } = useAuth();
   return (

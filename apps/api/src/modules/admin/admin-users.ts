@@ -1,3 +1,4 @@
+import { pageParam, pageSizeParam } from '../../lib/pagination';
 import {
   ACCOUNT_ADMIN_MOVES,
   ADMIN_SORTS,
@@ -30,8 +31,8 @@ export const adminUsersQuerySchema = z.object({
   status: z.enum(['ACTIVE', 'SUSPENDED', 'DEACTIVATED']).optional(),
   search: z.string().trim().max(100).optional(),
   sort: z.enum(ADMIN_SORTS as [string, ...string[]]).default('newest'),
-  page: z.coerce.number().int().min(1).default(1),
-  pageSize: z.coerce.number().int().min(1).max(50).default(20),
+  page: pageParam,
+  pageSize: pageSizeParam(50, 20),
 });
 export const userStatusChangeSchema = z
   .object({ reason: z.string().trim().min(3).max(300) })

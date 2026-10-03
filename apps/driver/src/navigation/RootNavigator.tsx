@@ -1,6 +1,6 @@
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { useAuth } from '@yatri/mobile-auth';
+import { createSignInScreens, useAuth, type SignInRoutes } from '@yatri/mobile-auth';
 
 import { DriverHomeScreen } from '../screens/DriverHomeScreen';
 import { DriverLocationScreen } from '../screens/DriverLocationScreen';
@@ -9,25 +9,20 @@ import { DriverRideHistoryScreen } from '../screens/DriverRideHistoryScreen';
 import { DriverTripScreen } from '../screens/DriverTripScreen';
 import { DriverProfileSetupScreen } from '../screens/DriverProfileSetupScreen';
 import { OnboardingScreen } from '../screens/onboarding/OnboardingScreen';
-import { OtpVerificationScreen } from '../screens/OtpVerificationScreen';
-import { PhoneEntryScreen } from '../screens/PhoneEntryScreen';
 import { VerificationPendingScreen } from '../screens/VerificationPendingScreen';
 import { IncentivesScreen } from '../screens/IncentivesScreen';
 import { PayoutsScreen } from '../screens/PayoutsScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
-import { SupportScreen } from '../screens/SupportScreen';
+import { SupportScreen, type SupportRoute } from '@yatri/mobile-support';
 import { VehicleAccessibilityScreen } from '../screens/VehicleAccessibilityScreen';
-import { WelcomeScreen } from '../screens/WelcomeScreen';
+import { SIGN_IN } from '../brand';
 
-export type RootStackParamList = {
-  Support: { tripId?: string; ticketId?: string } | undefined;
+// The sign-in steps are the shared ones (@yatri/mobile-auth), with their shared routes.
+export type RootStackParamList = SignInRoutes & SupportRoute & {
   Settings: undefined;
   VehicleAccessibility: undefined;
   Incentives: undefined;
   Payouts: undefined;
-  Welcome: undefined;
-  PhoneEntry: undefined;
-  OtpVerification: { phoneNumber: string };
   DriverProfileSetup: undefined;
   Onboarding: undefined;
   VerificationPending: undefined;
@@ -39,6 +34,7 @@ export type RootStackParamList = {
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
+const { WelcomeScreen, PhoneEntryScreen, OtpVerificationScreen } = createSignInScreens(SIGN_IN);
 
 /**
  * Same "swap the screen list on auth status" pattern as the passenger app.

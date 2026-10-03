@@ -1,3 +1,4 @@
+import { isoOrNull } from '../../lib/dates';
 import { windowProblem, type TimeWindow } from '@yatri/types';
 import { z } from 'zod';
 
@@ -17,8 +18,8 @@ export const windowFromRow = (r: WindowRow): TimeWindow => ({
   daysOfWeek: r.days_of_week && r.days_of_week.length > 0 ? r.days_of_week : null,
   startMinute: r.start_minute,
   endMinute: r.end_minute,
-  startsAt: r.starts_at?.toISOString() ?? null,
-  endsAt: r.ends_at?.toISOString() ?? null,
+  startsAt: isoOrNull(r.starts_at),
+  endsAt: isoOrNull(r.ends_at),
 });
 
 export const windowSchema = z

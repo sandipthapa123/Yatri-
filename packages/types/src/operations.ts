@@ -1,3 +1,4 @@
+import { formatWhen } from './format';
 import { pointInPolygon, polygonProblem, type PolygonPoints } from './geo';
 import type { LatLng } from './index';
 
@@ -88,7 +89,7 @@ export function describeWindow(w: TimeWindow): string {
   }
   if (w.startsAt || w.endsAt) {
     parts.push(
-      `${w.startsAt ? `from ${new Date(w.startsAt).toLocaleString()}` : ''}${w.startsAt && w.endsAt ? ' ' : ''}${w.endsAt ? `until ${new Date(w.endsAt).toLocaleString()}` : ''}`,
+      `${w.startsAt ? `from ${formatWhen(w.startsAt)}` : ''}${w.startsAt && w.endsAt ? ' ' : ''}${w.endsAt ? `until ${formatWhen(w.endsAt)}` : ''}`,
     );
   }
   return parts.join(', ');

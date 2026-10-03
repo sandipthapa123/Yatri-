@@ -1,8 +1,6 @@
 import type { SavedPlace, SavedPlaceKind } from '@yatri/types';
-import type { PoolClient } from 'pg';
 
-import { pool } from '../../config/database';
-import { query } from '../../lib/db';
+import { query, withTransaction } from '../../lib/db';
 import { insertLocation } from '../location/locations.repository';
 
 interface Row {
@@ -77,21 +75,6 @@ export async function countSavedPlaces(userId: string): Promise<number> {
   return Number(res.rows[0]?.n ?? 0);
 }
 
-async function inTransaction<T>(fn: (c: PoolClient) => Promise<T>): Promise<T> {
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
-    const out = await fn(client);
-    await client.query('COMMIT');
-    return out;
-  } catch (err) {
-    await client.query('ROLLBACK').catch(() => undefined);
-    throw err;
-  } finally {
-    client.release();
-  }
-}
-
 export async function createSavedPlace(
   userId: string,
   input: {
@@ -101,7 +84,7 @@ export async function createSavedPlace(
     provider: string;
   } & PlaceFields,
 ): Promise<SavedPlace> {
-  return inTransaction(async (c) => {
+  return withTransaction(async (c) => {
     const locationId = await insertLocation(c, {
       latitude: input.latitude,
       longitude: input.longitude,
@@ -133,7 +116,7 @@ export async function updateSavedPlace(
     place?: PlaceFields;
   },
 ): Promise<SavedPlace | null> {
-  return inTransaction(async (c) => {
+  return withTransaction(async (c) => {
     const existing = await c.query<{ location_id: string }>(
       'SELECT location_id FROM saved_places WHERE id = $1 AND user_id = $2 FOR UPDATE',
       [id, userId],
@@ -181,7 +164,7 @@ export async function updateSavedPlace(
 }
 
 export async function deleteSavedPlace(userId: string, id: string): Promise<boolean> {
-  return inTransaction(async (c) => {
+  return withTransaction(async (c) => {
     const del = await c.query<{ location_id: string }>(
       'DELETE FROM saved_places WHERE id = $1 AND user_id = $2 RETURNING location_id',
       [id, userId],

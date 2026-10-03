@@ -62,6 +62,6 @@ export const attributeBodySchema = z
   })
   .strict();
 
-export const decisionSchema = z
+export const featureDecisionSchema = z
   .object({ decision: z.enum(['APPROVED', 'REJECTED']), reason })
   .strict();

@@ -1,4 +1,4 @@
-import { CAMPAIGN_STATUS_LABELS } from '@yatri/types';
+import { CAMPAIGN_STATUS_LABELS, formatWhen } from '@yatri/types';
 import Link from 'next/link';
 
 import { loadOrDenied } from '../../../../lib/access';
@@ -7,7 +7,7 @@ import { requireAdminAccessToken } from '../../../../lib/session';
 import { styles } from '../../drivers/styles';
 import { NoAccess } from '../../ui/NoAccess';
 
-const when = (iso: string) => new Date(iso).toLocaleString();
+const when = (iso: string) => formatWhen(iso);
 const RULE_WORDS: Record<string, string> = {
   DISABILITY_BENEFIT_BURST: 'The benefit was used on many rides in one day',
   DISABILITY_DUPLICATE_CARD: 'The card number is also on another account',

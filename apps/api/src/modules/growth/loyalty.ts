@@ -1,3 +1,4 @@
+import { isoOrNull } from '../../lib/dates';
 import {
   REWARD_EXPIRY_WARNING_DAYS,
   GROWTH_NOTIFICATION_TYPES,
@@ -271,10 +272,9 @@ export async function rewardsHistory(
       points: x.points,
       source: x.source,
       description: x.description,
-      expiresAt: x.expires_at?.toISOString() ?? null,
+      expiresAt: isoOrNull(x.expires_at),
       createdAt: x.created_at.toISOString(),
     })),
-    nextBefore:
-      r.rows.length > limit ? (rows[rows.length - 1]?.created_at.toISOString() ?? null) : null,
+    nextBefore: r.rows.length > limit ? isoOrNull(rows[rows.length - 1]?.created_at) : null,
   };
 }

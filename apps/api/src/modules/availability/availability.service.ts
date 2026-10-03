@@ -1,3 +1,4 @@
+import { isoOrNull } from '../../lib/dates';
 import type {
   DriverAvailabilityState,
   DriverAvailabilityStatus,
@@ -86,7 +87,7 @@ export async function getStatus(
   return {
     state: row.state,
     reason: row.offline_reason,
-    onlineSince: row.online_since?.toISOString() ?? null,
+    onlineSince: isoOrNull(row.online_since),
     locationFreshness: freshness,
     lastLocationAt: last ? new Date(last).toISOString() : null,
     lastLocationAgeSeconds: last ? Math.max(0, Math.round((nowMs - last) / 1000)) : null,

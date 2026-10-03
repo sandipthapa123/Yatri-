@@ -5,6 +5,7 @@ import {
   describeRatingSummary,
   ROLE_LABELS,
   TRIP_STATUS_LABELS,
+  formatWhen,
 } from '@yatri/types';
 
 import { ApiError, getAdminUser } from '../../../../lib/apiClient';
@@ -38,7 +39,7 @@ export default async function UserDetailPage({ params }: PageProps) {
     ['Account status', ACCOUNT_STATUS_LABELS[u.status]],
     ['Phone', u.phoneNumber ?? '—'],
     ['Email', u.email ?? '—'],
-    ['Joined', new Date(u.createdAt).toLocaleString()],
+    ['Joined', formatWhen(u.createdAt)],
     ['Driver verification', u.driverStatus ?? '—'],
     ['Rides requested or driven', String(u.ridesRequested)],
     ['Rides completed', String(u.ridesCompleted)],

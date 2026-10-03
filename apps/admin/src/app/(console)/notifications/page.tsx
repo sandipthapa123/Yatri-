@@ -1,4 +1,4 @@
-import { ROLE_LABELS } from '@yatri/types';
+import { ROLE_LABELS, formatWhen } from '@yatri/types';
 import Link from 'next/link';
 
 import { getNotificationSummary, listAdminNotifications } from '../../../lib/apiClient';
@@ -171,7 +171,7 @@ export default async function NotificationsPage({ searchParams }: PageProps) {
               <tbody>
                 {list.items.map((n) => (
                   <tr key={n.id}>
-                    <td style={styles.td}>{new Date(n.createdAt).toLocaleString()}</td>
+                    <td style={styles.td}>{formatWhen(n.createdAt)}</td>
                     <td style={styles.td}>{n.type}</td>
                     <td style={styles.td}>{n.title}</td>
                     <td style={styles.td}>

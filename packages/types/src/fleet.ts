@@ -1,3 +1,4 @@
+import { formatWhen } from './format';
 import type { AuditEntry } from './safety';
 
 /**
@@ -97,7 +98,7 @@ export function describeOperationalStatus(
   until: string | null,
 ): string {
   const why = reason ? ` Reason: ${reason}.` : '';
-  const when = until ? ` This lasts until ${new Date(until).toLocaleDateString()}.` : '';
+  const when = until ? ` This lasts until ${formatWhen(until, { style: 'date' })}.` : '';
   if (to === 'ACTIVE') {
     return from === 'ACTIVE'
       ? 'Your driver status is active.'

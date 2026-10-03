@@ -1,7 +1,7 @@
 import { ApiError } from '@yatri/mobile-auth';
 import { ActionButton, Announcer, Card, type UiProps } from '@yatri/mobile-ride';
 import { useNews, usePolled } from '@yatri/mobile-support';
-import { formatNpr, type OrgApprovalInfo, type OrgRideRow } from '@yatri/types';
+import { formatNpr, type OrgApprovalInfo, type OrgRideRow, formatWhen } from '@yatri/types';
 import { useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 
@@ -11,7 +11,7 @@ import { Problem } from './Field';
 
 type Section = UiProps & { orgId: string; getAccessToken: () => Promise<string> };
 
-const when = (iso: string) => new Date(iso).toLocaleString();
+const when = (iso: string) => formatWhen(iso);
 
 /** The organization's rides, newest first: who booked, who rode, where, what it cost and how it is paid. */
 export function RidesSection(props: Section) {

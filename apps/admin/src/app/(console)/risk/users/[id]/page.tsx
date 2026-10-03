@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { RISK_LEVEL_LABELS } from '@yatri/types';
+import { RISK_LEVEL_LABELS, formatWhen } from '@yatri/types';
 
 import { ApiError, getRiskUser } from '../../../../../lib/apiClient';
 import { requireAdminAccessToken } from '../../../../../lib/session';
@@ -54,7 +54,7 @@ export default async function RiskUserPage({ params }: PageProps) {
         </p>
         {u.restriction ? (
           <p style={{ margin: 0 }}>
-            Restricted until {new Date(u.restriction.until).toLocaleString()} (
+            Restricted until {formatWhen(u.restriction.until)} (
             {u.restriction.source === 'AUTOMATIC' ? 'set automatically' : 'set by a person'}
             ): {u.restriction.reason}
           </p>

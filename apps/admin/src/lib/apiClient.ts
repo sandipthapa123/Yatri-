@@ -140,17 +140,9 @@ import type {
 
 import { env } from './env';
 
-export class ApiError extends Error {
-  constructor(
-    public readonly status: number,
-    public readonly code: string,
-    message: string,
-    public readonly details?: Record<string, unknown>,
-  ) {
-    super(message);
-    this.name = 'ApiError';
-  }
-}
+// The one API error type, shared with the apps.
+import { ApiError } from '@yatri/shared';
+export { ApiError };
 
 /** How long the admin site waits for the API before giving up, so a stuck API shows an error instead of a page that never loads. */
 export const API_TIMEOUT_MS = 15_000;

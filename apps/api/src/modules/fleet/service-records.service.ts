@@ -1,3 +1,4 @@
+import { isoOrNull } from '../../lib/dates';
 import {
   FLEET_NOTIFICATION_TYPES,
   type AdminInspectionBody,
@@ -11,7 +12,7 @@ import {
 } from '@yatri/types';
 
 import { recordAudit } from '../../lib/audit';
-import { query, withTransaction } from '../../lib/db';
+import { query, withTransaction, isUniqueViolation } from '../../lib/db';
 import { HttpError } from '../../middleware/errorHandler';
 import { notifyDriver } from './fleet-notify';
 import { afterLifecycle, setLifecycle } from './vehicle-lifecycle';
@@ -55,7 +56,7 @@ const toInfo = (r: Row): ServiceRecordInfo => ({
   notes: r.notes,
   recordedByName: r.recorder,
   createdAt: r.created_at.toISOString(),
-  completedAt: r.completed_at?.toISOString() ?? null,
+  completedAt: isoOrNull(r.completed_at),
 });
 
 export async function listServiceRecords(vehicleId: string): Promise<ServiceRecordInfo[]> {
@@ -121,7 +122,7 @@ export async function startMaintenance(
       );
       return { id: (ins.rows[0] as { id: string }).id, moved };
     } catch (err) {
-      if ((err as { code?: string }).code === '23505') {
+      if (isUniqueViolation(err)) {
         throw new HttpError(
           409,
           'MAINTENANCE_OPEN',

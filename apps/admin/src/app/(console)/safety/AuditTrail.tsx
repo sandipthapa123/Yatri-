@@ -1,3 +1,4 @@
+import { formatWhen } from '@yatri/types';
 import type { AuditEntry } from '@yatri/types';
 
 import { styles } from '../drivers/styles';
@@ -15,7 +16,7 @@ export function AuditTrail({ entries }: { entries: AuditEntry[] }) {
         <ol style={{ margin: 0, paddingLeft: 20, display: 'grid', gap: 4 }}>
           {entries.map((e) => (
             <li key={e.id}>
-              {new Date(e.createdAt).toLocaleString()}:{' '}
+              {formatWhen(e.createdAt)}:{' '}
               {e.action.replaceAll('_', ' ').toLowerCase()} by{' '}
               {e.actorName ?? (e.actorRole ? e.actorRole.toLowerCase() : 'the system')}
             </li>

@@ -1,3 +1,4 @@
+import { formatWhen } from '@yatri/types';
 import { ApiError, useAuth } from '@yatri/mobile-auth';
 import {
   AccessibilityProfilePanel,
@@ -292,7 +293,7 @@ function DevicesCard(props: UiProps & { say: (t: string | null) => void }) {
       {list.data?.map((d) => (
         <View key={d.id} style={styles.group}>
           <Text style={{ color: colors.textPrimary }} accessibilityRole="text">
-            {`${d.deviceLabel ?? 'A device'}${d.current ? ', this phone' : ''}. Signed in ${new Date(d.signedInAt).toLocaleDateString()}${d.lastUsedAt ? `, last used ${new Date(d.lastUsedAt).toLocaleString()}` : ''}.`}
+            {`${d.deviceLabel ?? 'A device'}${d.current ? ', this phone' : ''}. Signed in ${formatWhen(d.signedInAt, { style: 'date' })}${d.lastUsedAt ? `, last used ${formatWhen(d.lastUsedAt)}` : ''}.`}
           </Text>
           {!d.current ? (
             <ActionButton

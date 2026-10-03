@@ -1,3 +1,4 @@
+import { pageParam, pageSizeParam } from '../../lib/pagination';
 import {
   ORG_REASON_MAX,
   ORG_STATEMENT_STATUSES,
@@ -37,8 +38,8 @@ const adminId = (req: Request) => {
 type Res<T> = Response<ApiResponse<T>>;
 
 const reason = z.string().trim().min(3).max(ORG_REASON_MAX);
-const page = z.coerce.number().int().min(1).default(1);
-const pageSize = z.coerce.number().int().min(1).max(100).default(20);
+const page = pageParam;
+const pageSize = pageSizeParam(100, 20);
 
 export const adminOrganizationsQuerySchema = z.object({
   status: z.enum(ORG_STATUSES).optional(),

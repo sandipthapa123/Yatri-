@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { LEDGER_KIND_LABELS } from '@yatri/types';
+import { LEDGER_KIND_LABELS, formatWhen } from '@yatri/types';
 
 import { getUserRewardsApi } from '../../../../lib/apiClient';
 import { loadOrDenied } from '../../../../lib/access';
@@ -73,7 +73,7 @@ export default async function RewardsLookupPage({
                     </th>
                     <td style={styles.td}>{i.points > 0 ? `+${i.points}` : i.points}</td>
                     <td style={styles.td}>{i.description}</td>
-                    <td style={styles.td}>{new Date(i.createdAt).toLocaleString()}</td>
+                    <td style={styles.td}>{formatWhen(i.createdAt)}</td>
                   </tr>
                 ))}
               </tbody>

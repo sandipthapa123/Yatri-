@@ -1,3 +1,4 @@
+import { formatWhen } from '@yatri/types';
 import Link from 'next/link';
 
 import { getRiskHistory } from '../../../../lib/apiClient';
@@ -43,7 +44,7 @@ export default async function RiskHistoryPage({ searchParams }: PageProps) {
         <ol style={{ margin: 0, paddingLeft: 20, display: 'grid', gap: 6 }}>
           {data.items.map((e) => (
             <li key={e.id}>
-              {new Date(e.createdAt).toLocaleString()}: {WHAT[e.subjectType] ?? e.subjectType}{' '}
+              {formatWhen(e.createdAt)}: {WHAT[e.subjectType] ?? e.subjectType}{' '}
               {e.action.replaceAll('_', ' ').toLowerCase()} by{' '}
               {e.actorName ?? (e.actorRole ? e.actorRole.toLowerCase() : 'the system')}
               {typeof e.detail.reason === 'string' ? `. Reason: ${e.detail.reason}` : ''}

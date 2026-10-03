@@ -4,6 +4,7 @@ import {
   PAYMENT_STATUSES,
   TRIP_STATUS_LABELS,
   type TripStatus,
+  formatWhen,
 } from '@yatri/types';
 
 import { getDashboard } from '../../lib/apiClient';
@@ -83,7 +84,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
         <AutoRefresh seconds={15} />
       </div>
       <p style={{ margin: 0, color: 'var(--color-text-secondary)' }}>
-        Counted from the live records at {new Date(data.generatedAt).toLocaleTimeString()}. Driver
+        Counted from the live records at {formatWhen(data.generatedAt, { style: 'time' })}. Driver
         figures use each driver&apos;s last saved location.
       </p>
       <RangeFilter {...period} defaultPreset="today" resolved={data.range} />

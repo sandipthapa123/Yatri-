@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { describeHeatCell, ZONE_KIND_LABELS, type HeatmapData } from '@yatri/types';
+import { describeHeatCell, ZONE_KIND_LABELS, type HeatmapData, formatWhen } from '@yatri/types';
 
 import { getHeatmap } from '../../../lib/apiClient';
 import { loadOrDenied } from '../../../lib/access';
@@ -157,7 +157,7 @@ export default async function OperationsPage() {
           </ol>
         )}
         <p style={{ margin: 0, fontSize: 13, color: 'var(--color-text-secondary)' }}>
-          Generated {new Date(map.generatedAt).toLocaleTimeString()}.
+          Generated {formatWhen(map.generatedAt, { style: 'time' })}.
         </p>
       </section>
     </div>

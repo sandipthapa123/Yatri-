@@ -2,8 +2,7 @@ import { ACTIVE_TRIP_STATUSES, type TripPlace, type TripStatus } from '@yatri/ty
 
 import type { PoolClient } from 'pg';
 
-import { pool } from '../../config/database';
-import { query } from '../../lib/db';
+import { query, withTransaction } from '../../lib/db';
 import { sqlIn } from '../../lib/sql';
 import { insertLocation, type LocationFields } from '../location/locations.repository';
 
@@ -125,9 +124,7 @@ export async function createTripRequest(input: {
   /** Runs inside the same transaction once the ride exists (the growth engine holds the ride's offers here). */
   onCreated?: (client: PoolClient, tripId: string) => Promise<void>;
 }): Promise<TripRow> {
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
+  const tripId = await withTransaction(async (client) => {
     const pickupId = await insertLocation(client, input.pickup);
     const destId = await insertLocation(client, input.destination);
     if (input.business) await input.business.guard(client);
@@ -159,14 +156,9 @@ export async function createTripRequest(input: {
       ],
     );
     if (input.onCreated) await input.onCreated(client, ins.rows[0]?.id as string);
-    await client.query('COMMIT');
-    return (await getTrip(ins.rows[0]?.id as string)) as TripRow;
-  } catch (err) {
-    await client.query('ROLLBACK').catch(() => undefined);
-    throw err;
-  } finally {
-    client.release();
-  }
+    return ins.rows[0]?.id as string;
+  });
+  return (await getTrip(tripId)) as TripRow;
 }
 
 /** Columns a transition may set. A whitelist: the SQL below is assembled from these names only. */

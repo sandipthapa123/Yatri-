@@ -1,3 +1,4 @@
+import { pageParam, pageSizeParam } from '../../lib/pagination';
 import {
   EMERGENCY_CONTACT_NAME_MAX,
   INCIDENT_CATEGORIES,
@@ -35,8 +36,8 @@ export const incidentSchema = z
   .strict();
 
 const page = {
-  page: z.coerce.number().int().min(1).default(1),
-  pageSize: z.coerce.number().int().min(1).max(50).default(20),
+  page: pageParam,
+  pageSize: pageSizeParam(50, 20),
 };
 
 export const adminSosQuerySchema = z.object({ status: z.enum(SOS_STATES).optional(), ...page });

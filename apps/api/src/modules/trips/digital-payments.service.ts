@@ -1,3 +1,4 @@
+import { isoOrNull } from '../../lib/dates';
 import type { DigitalPaymentInfo, PaymentAttemptStatus } from '@yatri/types';
 
 import { recordAudit } from '../../lib/audit';
@@ -37,7 +38,7 @@ const toInfo = (a: AttemptRow): DigitalPaymentInfo => ({
   status: a.status,
   amountNpr: a.amount_npr,
   paymentUrl: a.status === 'INITIATED' ? a.payment_url : null,
-  expiresAt: a.status === 'INITIATED' ? (a.expires_at?.toISOString() ?? null) : null,
+  expiresAt: a.status === 'INITIATED' ? (isoOrNull(a.expires_at)) : null,
 });
 
 const unavailable = () =>

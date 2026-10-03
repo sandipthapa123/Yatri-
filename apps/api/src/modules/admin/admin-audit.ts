@@ -1,3 +1,4 @@
+import { pageParam, pageSizeParam } from '../../lib/pagination';
 import type { AdminAuditRow, AdminListResponse, ApiResponse } from '@yatri/types';
 import type { Request, Response } from 'express';
 import { z } from 'zod';
@@ -13,8 +14,8 @@ export const adminAuditQuerySchema = z.object({
   action: z.string().trim().max(60).optional(),
   subjectType: z.string().trim().max(40).optional(),
   search: z.string().trim().max(100).optional(),
-  page: z.coerce.number().int().min(1).default(1),
-  pageSize: z.coerce.number().int().min(1).max(50).default(30),
+  page: pageParam,
+  pageSize: pageSizeParam(50, 30),
 });
 
 export async function listAuditHandler(

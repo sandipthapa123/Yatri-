@@ -1,3 +1,4 @@
+import { pageParam, pageSizeParam } from '../../lib/pagination';
 import { RATING_COMMENT_MAX, RATING_MAX, RATING_MIN } from '@yatri/types';
 import { z } from 'zod';
 
@@ -63,8 +64,8 @@ export const ratingSchema = z
   .strict();
 
 export const historyQuerySchema = z.object({
-  page: z.coerce.number().int().min(1).default(1),
-  pageSize: z.coerce.number().int().min(1).max(50).default(20),
+  page: pageParam,
+  pageSize: pageSizeParam(50, 20),
 });
 
 /** The version of the route the app already holds, so an unchanged route is not sent again. */

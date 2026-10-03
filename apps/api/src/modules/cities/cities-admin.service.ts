@@ -28,7 +28,7 @@ import type { PoolClient } from 'pg';
 import { z } from 'zod';
 
 import { auditTrail, recordAudit } from '../../lib/audit';
-import { query, withTransaction } from '../../lib/db';
+import { query, withTransaction, isUniqueViolation } from '../../lib/db';
 import { HttpError } from '../../middleware/errorHandler';
 import { allZones, dropZoneCache } from '../operations/zones.service';
 import { settingNumber } from '../settings/settings.service';
@@ -194,7 +194,7 @@ export async function createCity(body: AdminCityBody, adminId: string): Promise<
     });
     return cityDetail(id);
   } catch (err) {
-    if ((err as { code?: string }).code === '23505') {
+    if (isUniqueViolation(err)) {
       throw new HttpError(409, 'CITY_CODE_TAKEN', 'A city with that code already exists.');
     }
     throw err;
@@ -226,7 +226,7 @@ export async function updateCity(
       return { detail: { code: body.code, name: body.name }, result: undefined };
     });
   } catch (err) {
-    if ((err as { code?: string }).code === '23505') {
+    if (isUniqueViolation(err)) {
       throw new HttpError(409, 'CITY_CODE_TAKEN', 'A city with that code already exists.');
     }
     throw err;

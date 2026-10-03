@@ -15,7 +15,7 @@ import {
 import { z } from 'zod';
 
 import { recordAudit } from '../../lib/audit';
-import { query } from '../../lib/db';
+import { query, isUniqueViolation } from '../../lib/db';
 import { HttpError } from '../../middleware/errorHandler';
 
 /**
@@ -142,7 +142,7 @@ export async function createZone(body: AdminZoneBody, adminId: string): Promise<
     });
     return zone;
   } catch (err) {
-    if ((err as { code?: string }).code === '23505') {
+    if (isUniqueViolation(err)) {
       throw new HttpError(409, 'ZONE_CODE_TAKEN', 'A zone with that code already exists.');
     }
     throw err;
@@ -188,7 +188,7 @@ export async function updateZone(
     });
     return toZone(r.rows[0]);
   } catch (err) {
-    if ((err as { code?: string }).code === '23505') {
+    if (isUniqueViolation(err)) {
       throw new HttpError(409, 'ZONE_CODE_TAKEN', 'A zone with that code already exists.');
     }
     throw err;

@@ -1,3 +1,4 @@
+import { formatWhen } from '@yatri/types';
 import Link from 'next/link';
 
 import { loadOrDenied } from '../../../lib/access';
@@ -70,7 +71,7 @@ export default async function ProvidersPage() {
                 {i.stateText}
               </td>
               <td style={styles.td}>
-                {i.checkedAt ? new Date(i.checkedAt).toLocaleString() : 'Not checked'}
+                {i.checkedAt ? formatWhen(i.checkedAt) : 'Not checked'}
                 {i.latencyMs !== null ? ` (${i.latencyMs} ms)` : ''}
               </td>
               <td style={styles.td}>{i.callsToday}</td>

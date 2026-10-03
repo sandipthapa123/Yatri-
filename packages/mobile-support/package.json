@@ -12,6 +12,7 @@
   "dependencies": {
     "@yatri/mobile-auth": "workspace:*",
     "@yatri/mobile-ride": "workspace:*",
+    "@yatri/mobile-ui": "workspace:*",
     "@yatri/types": "workspace:*",
     "expo-constants": "~57.0.19",
     "expo-document-picker": "~57.0.2",
@@ -20,11 +21,13 @@
   "peerDependencies": {
     "expo": "~57.0.25",
     "react": "19.2.3",
-    "react-native": "0.86.3"
+    "react-native": "0.86.3",
+    "react-native-safe-area-context": "^5.10.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
     "@types/react": "~19.2.2",
+    "react-native-safe-area-context": "^5.10.0",
     "typescript": "~5.7.2",
     "vitest": "^5.0.2"
   }

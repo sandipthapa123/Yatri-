@@ -1,3 +1,4 @@
+import { isoOrNull } from '../../lib/dates';
 import {
   GROWTH_NOTIFICATION_TYPES,
   combineOffers,
@@ -457,7 +458,7 @@ const viewOf = (row: CampaignRow, usableUntil: Date | null): OfferView => {
     summary: row.offer ? describeCampaignOffer(row.offer) : row.name,
     code: row.code,
     endsAt: info.endsAt,
-    usableUntil: usableUntil?.toISOString() ?? null,
+    usableUntil: isoOrNull(usableUntil),
     automatic: row.code === null && !usableUntil,
     conditions: describeConditions(row.eligibility ?? {}, {
       perUser: row.per_user_limit,

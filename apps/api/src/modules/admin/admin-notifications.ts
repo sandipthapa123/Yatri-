@@ -1,3 +1,4 @@
+import { pageParam, pageSizeParam } from '../../lib/pagination';
 import type {
   AdminListResponse,
   AdminNotificationRow,
@@ -21,8 +22,8 @@ export const adminNotificationsQuerySchema = z.object({
   type: z.string().trim().max(60).optional(),
   read: z.enum(['true', 'false']).optional(),
   search: z.string().trim().max(100).optional(),
-  page: z.coerce.number().int().min(1).default(1),
-  pageSize: z.coerce.number().int().min(1).max(50).default(20),
+  page: pageParam,
+  pageSize: pageSizeParam(50, 20),
 });
 export const adminNotificationSummarySchema = z.object(rangeFields);
 

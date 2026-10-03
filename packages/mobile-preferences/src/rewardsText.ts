@@ -6,6 +6,7 @@ import {
   type PromotionQuote,
   type ReferralView,
   type RewardsSummary,
+  formatWhen,
 } from '@yatri/types';
 
 /**
@@ -19,7 +20,7 @@ const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one :
 export function balanceSentence(s: RewardsSummary): string {
   const base = `You have ${plural(s.balance, 'reward point', 'reward points')}, worth ${formatNpr(s.valueNpr)} off a ride.`;
   if (!s.expiringSoon) return base;
-  return `${base} ${plural(s.expiringSoon.points, 'point', 'points')} expire on ${new Date(s.expiringSoon.at).toLocaleDateString()}.`;
+  return `${base} ${plural(s.expiringSoon.points, 'point', 'points')} expire on ${formatWhen(s.expiringSoon.at, { style: 'date' })}.`;
 }
 
 export function howPointsWork(s: RewardsSummary): string {
@@ -29,9 +30,9 @@ export function howPointsWork(s: RewardsSummary): string {
 
 export function offerLine(o: OfferView): string {
   const when = o.usableUntil
-    ? ` Use it by ${new Date(o.usableUntil).toLocaleDateString()}.`
+    ? ` Use it by ${formatWhen(o.usableUntil, { style: 'date' })}.`
     : o.endsAt
-      ? ` Until ${new Date(o.endsAt).toLocaleDateString()}.`
+      ? ` Until ${formatWhen(o.endsAt, { style: 'date' })}.`
       : '';
   const how = o.automatic
     ? ' Applied automatically when you book.'
@@ -57,7 +58,7 @@ export function codeResultSentence(r: {
 
 export function historyLine(e: LedgerEntryInfo): string {
   const sign = e.points > 0 ? `+${e.points}` : `${e.points}`;
-  return `${LEDGER_KIND_LABELS[e.kind]}: ${sign} ${Math.abs(e.points) === 1 ? 'point' : 'points'}. ${e.description}. ${new Date(e.createdAt).toLocaleDateString()}.`;
+  return `${LEDGER_KIND_LABELS[e.kind]}: ${sign} ${Math.abs(e.points) === 1 ? 'point' : 'points'}. ${e.description}. ${formatWhen(e.createdAt, { style: 'date' })}.`;
 }
 
 export const NO_HISTORY_TEXT = 'No reward points yet. You earn points on every completed ride.';

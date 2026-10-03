@@ -1,4 +1,4 @@
-import { PAYOUT_STATUSES, PAYOUT_STATUS_LABELS, type PayoutStatus } from '@yatri/types';
+import { PAYOUT_STATUSES, PAYOUT_STATUS_LABELS, type PayoutStatus, formatWhen } from '@yatri/types';
 import Link from 'next/link';
 
 import { loadOrDenied } from '../../../lib/access';
@@ -8,7 +8,7 @@ import { styles } from '../drivers/styles';
 import { NoAccess } from '../ui/NoAccess';
 import { PrepareForm } from './Forms';
 
-const when = (iso: string | null) => (iso ? new Date(iso).toLocaleString() : 'not yet');
+const when = (iso: string | null) => formatWhen(iso, { empty: 'not yet' });
 const PAGE = 25;
 
 /**

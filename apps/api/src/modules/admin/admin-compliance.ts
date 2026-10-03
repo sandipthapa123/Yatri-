@@ -1,3 +1,4 @@
+import { pageParam, pageSizeParam } from '../../lib/pagination';
 import {
   DATA_REQUEST_KINDS,
   DATA_REQUEST_STATES,
@@ -42,8 +43,8 @@ export const dataRequestsQuerySchema = z.object({
     .enum(['true', 'false'])
     .transform((v) => v === 'true')
     .optional(),
-  page: z.coerce.number().int().min(1).default(1),
-  pageSize: z.coerce.number().int().min(1).max(50).default(20),
+  page: pageParam,
+  pageSize: pageSizeParam(50, 20),
 });
 export const dataRequestActionSchema = z
   .object({

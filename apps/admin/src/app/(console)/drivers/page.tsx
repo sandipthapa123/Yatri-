@@ -1,3 +1,4 @@
+import { formatWhen } from '@yatri/types';
 import Link from 'next/link';
 import type { DriverStatus } from '@yatri/shared';
 
@@ -139,7 +140,7 @@ export default async function DriversPage({ searchParams }: PageProps) {
                   <StatusBadge status={driver.driverStatus} />
                 </td>
                 <td style={styles.td}>
-                  {driver.submittedAt ? new Date(driver.submittedAt).toLocaleDateString() : '—'}
+                  {driver.submittedAt ? formatWhen(driver.submittedAt, { style: 'date' }) : '—'}
                 </td>
               </tr>
             ))}

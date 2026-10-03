@@ -6,6 +6,7 @@ import {
   CAMPAIGN_TRANSITIONS,
   describeConditions,
   describeCampaignOffer,
+  formatWhen,
 } from '@yatri/types';
 import { notFound } from 'next/navigation';
 
@@ -16,7 +17,7 @@ import { styles } from '../../drivers/styles';
 import { NoAccess } from '../../ui/NoAccess';
 import { CampaignForm, CampaignStatusForm } from '../Forms';
 
-const when = (iso: string | null) => (iso ? new Date(iso).toLocaleString() : 'not set');
+const when = (iso: string | null) => formatWhen(iso, { empty: 'not set' });
 
 /** One campaign: what it does, its state, the moves allowed now, how it has been used, and (when not running) its editor. */
 export default async function CampaignPage({ params }: { params: Promise<{ id: string }> }) {

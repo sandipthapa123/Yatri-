@@ -1,3 +1,4 @@
+import { pageParam, pageSizeParam } from '../../lib/pagination';
 import type { AdminListResponse, AdminVehicleRow, ApiResponse } from '@yatri/types';
 import type { Request, Response } from 'express';
 import { z } from 'zod';
@@ -12,8 +13,8 @@ export const adminVehiclesQuerySchema = z.object({
   expiring: z.enum(['true']).optional(),
   search: z.string().trim().max(100).optional(),
   sort: z.enum(['newest', 'oldest', 'registration']).default('newest'),
-  page: z.coerce.number().int().min(1).default(1),
-  pageSize: z.coerce.number().int().min(1).max(50).default(20),
+  page: pageParam,
+  pageSize: pageSizeParam(50, 20),
 });
 
 const ORDER = {

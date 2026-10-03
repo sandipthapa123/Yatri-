@@ -1,3 +1,4 @@
+import { formatWhen } from '@yatri/types';
 import Link from 'next/link';
 
 import { listDriverAvailability } from '../../../lib/apiClient';
@@ -203,7 +204,7 @@ export default async function AvailabilityPage({ searchParams }: PageProps) {
                 </td>
                 <td style={styles.td}>{STATE_TEXT[d.availabilityState] ?? d.availabilityState}</td>
                 <td style={styles.td}>
-                  {d.lastLocationAt ? new Date(d.lastLocationAt).toLocaleString() : '—'}
+                  {d.lastLocationAt ? formatWhen(d.lastLocationAt) : '—'}
                 </td>
                 <td style={styles.td}>
                   {d.online || d.lastLocationAt ? FRESHNESS_TEXT[d.locationFreshness] : '—'}

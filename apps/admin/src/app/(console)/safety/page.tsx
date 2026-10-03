@@ -8,6 +8,7 @@ import {
   type IncidentStatus,
   SOS_STATES,
   SOS_STATUS_LABELS,
+  formatWhen,
 } from '@yatri/types';
 
 import { listAdminIncidents, listAdminSos } from '../../../lib/apiClient';
@@ -20,7 +21,7 @@ interface PageProps {
   searchParams: Promise<{ sos?: string; status?: string; category?: string; page?: string }>;
 }
 
-const at = (iso: string) => new Date(iso).toLocaleString();
+const at = (iso: string) => formatWhen(iso);
 
 /** SOS alerts (newest open first) and incident reports, for people holding SAFETY_REVIEW. */
 export default async function SafetyPage({ searchParams }: PageProps) {

@@ -6,6 +6,7 @@ import {
   maskedCard,
   type DisabilityMethod,
   type DisabilityVerificationStatus,
+  formatWhen,
 } from '@yatri/types';
 import Link from 'next/link';
 
@@ -15,7 +16,7 @@ import { requireAdminAccessToken } from '../../../lib/session';
 import { styles } from '../drivers/styles';
 import { NoAccess } from '../ui/NoAccess';
 
-const when = (iso: string | null) => (iso ? new Date(iso).toLocaleString() : 'not yet');
+const when = (iso: string | null) => formatWhen(iso, { empty: 'not yet' });
 const PAGE = 25;
 
 /**

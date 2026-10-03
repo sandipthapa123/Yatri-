@@ -1,5 +1,7 @@
 'use client';
 
+import { formatNpr } from '@yatri/types';
+
 import type { AdminPayoutDetail, PayoutStatus } from '@yatri/types';
 import { useActionState } from 'react';
 
@@ -38,7 +40,7 @@ export function StepForm({ detail, to }: { detail: AdminPayoutDetail; to: Payout
   const words = STEP_WORDS[to];
   const extra = to === 'PAID' ? ' What you write below is the bank or wallet reference of the payment you sent.' : to === 'FAILED' ? ' What you write below is the reason.' : '';
   return (
-    <form action={run} style={column} aria-label={`${words.label}: payout of NPR ${detail.amountNpr}`}>
+    <form action={run} style={column} aria-label={`${words.label}: payout of ${formatNpr(detail.amountNpr)}`}>
       <input type="hidden" name="id" value={detail.id} />
       <input type="hidden" name="to" value={to} />
       <Confirmed pending={pending} label={words.label} consequence={`${words.consequence}${extra}`} />

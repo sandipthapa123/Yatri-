@@ -1,4 +1,4 @@
-import { query } from '../../lib/db';
+import { query, isUniqueViolation } from '../../lib/db';
 
 export type OfferStatus = 'OFFERED' | 'ACCEPTED' | 'DECLINED' | 'EXPIRED' | 'CANCELLED';
 
@@ -33,7 +33,7 @@ export async function insertOffer(input: {
     return r.rows[0] ?? null;
   } catch (err) {
     // trip_offers_trip_driver_unique, trip_offers_one_open_per_driver or trip_offers_one_open_per_trip: someone else got there first.
-    if ((err as { code?: string }).code === '23505') return null;
+    if (isUniqueViolation(err)) return null;
     throw err;
   }
 }

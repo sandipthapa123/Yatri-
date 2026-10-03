@@ -8,6 +8,7 @@ import {
   describeCampaignOffer,
   type CampaignKind,
   type CampaignStatus,
+  formatWhen,
 } from '@yatri/types';
 
 import { getGrowthAnalyticsApi, listCampaignsApi } from '../../../lib/apiClient';
@@ -16,7 +17,7 @@ import { requireAdminAccessToken } from '../../../lib/session';
 import { styles } from '../drivers/styles';
 import { NoAccess } from '../ui/NoAccess';
 
-const when = (iso: string | null) => (iso ? new Date(iso).toLocaleString() : 'not set');
+const when = (iso: string | null) => formatWhen(iso, { empty: 'not set' });
 
 /**
  * Campaigns: every promotion, coupon, first-ride offer, referral, win-back offer and message campaign in one list,

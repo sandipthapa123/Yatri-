@@ -125,3 +125,21 @@ Yatri-specific reminders:
   A payout step is `PAYOUT_TRANSITIONS` only. A payout account is encrypted with `encryptField`; never log or return a number.
 - An online refund is settled by `settleOnlineRefund` (the one place that asks a provider to refund); the refund state machine is unchanged.
 - Push registration is `registerPush` / `usePushRegistration`; no screen talks to `expo-notifications` directly.
+
+## Shared building blocks (deduplication pass)
+
+- A database transaction is `withTransaction` (`apps/api/src/lib/db.ts`); "undo it all but answer normally" is `throw new Rollback(value)`.
+  Never `pool.connect()` + `BEGIN`/`COMMIT` in a module. A unique or foreign-key collision is `isUniqueViolation(err, constraint?)` /
+  `isForeignKeyViolation(err)`, never `code === '23505'`.
+- A list's paging is `pageParam` / `pageSizeParam(max, default)` (`lib/pagination.ts`). A database time in a response is `isoOrNull`
+  (`lib/dates.ts`).
+- A moment shown to a person is `formatWhen` (`@yatri/types` `format.ts`), in `PLATFORM_TIME_ZONE`, in the API, the admin site and both
+  apps; money is `formatNpr`. Never `toLocaleString` (it uses whatever zone and locale the machine has).
+- Groups of trip statuses include `PRE_PICKUP_TRIP_STATUSES` (searching, en route, arrived); never list them by hand.
+- The sign-in contracts (`SessionTokens`, `RequestOtpResponse`, `VerifyOtpResponse`) are `@yatri/types` `auth.ts`. The code length is
+  the server's (`codeLength`); an app never assumes one.
+- The sign-in screens are `createSignInScreens(identity)` (`@yatri/mobile-auth`); the wordmark, loading and start-up error screens are
+  `Wordmark`, `LoadingView`, `StartupErrorView` (`@yatri/mobile-ui`); the support screen is `SupportScreen` (`@yatri/mobile-support`).
+  An app supplies only its identity (`brand.ts`) and its navigation; it writes no copy of a shared screen.
+- A failed API call is the one `ApiError` (`@yatri/shared`) in the admin site and both apps. A duplicate vehicle registration is
+  `registrationTaken()` (`vehicles.repository.ts`).

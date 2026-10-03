@@ -15,6 +15,8 @@ import {
   type RefundStatus,
   type SupportPriority,
   type TicketStatus,
+  formatWhen,
+  formatNpr,
 } from '@yatri/types';
 import { useActionState, useId, useState } from 'react';
 
@@ -330,7 +332,7 @@ export function RaiseRefundForm({ ticketId, quote }: { ticketId: string; quote: 
         {reasons.map((r) => (
           <option key={r} value={r}>
             {REFUND_REASON_LABELS[r]}
-            {r !== 'PARTIAL' ? ` (NPR ${quote.amounts[r]})` : ''}
+            {r !== 'PARTIAL' && quote.amounts[r] !== null ? ` (${formatNpr(quote.amounts[r])})` : ''}
           </option>
         ))}
       </select>
@@ -386,7 +388,7 @@ export function RefundCard({ ticketId, refund }: { ticketId: string; refund: Adm
           NPR {refund.amountNpr}: {REFUND_STATUS_LABELS[refund.status]}.
         </strong>{' '}
         {REFUND_REASON_LABELS[refund.reason]}. Raised by {refund.requestedByName ?? 'someone'} (
-        {refund.requestedByRole.toLowerCase()}) on {new Date(refund.createdAt).toLocaleString()}.
+        {refund.requestedByRole.toLowerCase()}) on {formatWhen(refund.createdAt)}.
         {refund.method ? ` Paid back by: ${REFUND_METHOD_LABELS[refund.method]}.` : ''}
         {refund.reference ? ` Reference: ${refund.reference}.` : ''}
         {refund.decisionNote ? ` Note: ${refund.decisionNote}.` : ''}
@@ -481,10 +483,10 @@ export function RefundCard({ ticketId, refund }: { ticketId: string; refund: Adm
             <div role="group" aria-label="Confirm this refund step" style={column}>
               <p style={{ margin: 0 }}>
                 {to === 'APPROVED'
-                  ? `Approving agrees that NPR ${refund.amountNpr} is owed back to the passenger. Someone else must have raised it.`
+                  ? `Approving agrees that ${formatNpr(refund.amountNpr)} is owed back to the passenger. Someone else must have raised it.`
                   : to === 'PROCESSING'
-                    ? `This records that NPR ${refund.amountNpr} is now being paid back. Nothing is sent by this system.`
-                    : `This records that NPR ${refund.amountNpr} reached the passenger and counts it as refunded for this ride. It cannot be undone.`}
+                    ? `This records that ${formatNpr(refund.amountNpr)} is now being paid back. Nothing is sent by this system.`
+                    : `This records that ${formatNpr(refund.amountNpr)} reached the passenger and counts it as refunded for this ride. It cannot be undone.`}
               </p>
               <div style={styles.buttonRow}>
                 <button type="submit" disabled={pending} style={styles.buttonDanger}>

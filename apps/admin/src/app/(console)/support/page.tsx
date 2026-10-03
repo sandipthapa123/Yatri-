@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { TICKET_STATUSES, TICKET_STATUS_LABELS } from '@yatri/types';
+import { TICKET_STATUSES, TICKET_STATUS_LABELS, formatWhen } from '@yatri/types';
 
 import { getSupportConfig, listAdminTickets } from '../../../lib/apiClient';
 import { loadOrDenied } from '../../../lib/access';
@@ -14,7 +14,7 @@ interface PageProps {
   searchParams: Promise<Record<string, string | undefined>>;
 }
 
-const at = (iso: string) => new Date(iso).toLocaleString();
+const at = (iso: string) => formatWhen(iso);
 
 /**
  * The support queue: every ticket and ride problem, the most urgent and oldest unresolved first. Filters

@@ -1,3 +1,4 @@
+import { formatWhen } from '@yatri/types';
 import { ApiError, useAuth } from '@yatri/mobile-auth';
 import { ActionButton, Announcer, Card, type UiProps } from '@yatri/mobile-ride';
 import { pickEvidenceFile, useNews, usePolled } from '@yatri/mobile-support';
@@ -234,7 +235,7 @@ export function DisabilityBenefitCenter(props: UiProps & { onExit: () => void })
         <Card {...ui} title="History">
           {v.history.map((h) => (
             <Text key={`${h.at}-${h.toStatus}`} style={{ color: colors.textPrimary }}>
-              {`${new Date(h.at).toLocaleDateString()}: ${h.text}`}
+              {`${formatWhen(h.at, { style: 'date' })}: ${h.text}`}
             </Text>
           ))}
         </Card>

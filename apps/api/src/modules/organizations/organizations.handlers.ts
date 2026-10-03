@@ -1,3 +1,4 @@
+import { pageParam, pageSizeParam } from '../../lib/pagination';
 import {
   ORG_APPROVAL_STATUSES,
   ORG_NAME_MAX,
@@ -89,14 +90,14 @@ export const orgBookingSchema = tripRequestSchema.extend({
   costCenterId: uuid.nullish(),
   purpose: z.string().trim().max(ORG_PURPOSE_MAX).nullish(),
 });
-export const decisionSchema = z
+export const approvalDecisionSchema = z
   .object({
     decision: z.enum(['APPROVE', 'DECLINE']),
     note: z.string().trim().max(ORG_REASON_MAX).nullish(),
   })
   .strict();
-const page = z.coerce.number().int().min(1).default(1);
-const pageSize = z.coerce.number().int().min(1).max(100).default(20);
+const page = pageParam;
+const pageSize = pageSizeParam(100, 20);
 export const ridesQuerySchema = z.object({
   status: z.string().trim().max(30).optional(),
   costCenterId: uuid.optional(),

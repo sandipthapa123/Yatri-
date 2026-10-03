@@ -1,6 +1,13 @@
 import type { Request, Response } from 'express';
-import type { ApiResponse } from '@yatri/types';
+import type {
+  ApiResponse,
+  DriverStatus,
+  RequestOtpResponse,
+  SessionTokens,
+  VerifyOtpResponse,
+} from '@yatri/types';
 
+import { env } from '../../config/env';
 import { createDriverProfile, findDriverProfileByUserId } from '../drivers/drivers.repository';
 import {
   createPassengerOrDriver,
@@ -33,7 +40,7 @@ function requestContext(req: Request) {
   return { ipAddress: req.ip ?? null, userAgent: req.header('user-agent') ?? null };
 }
 
-function sessionPayload(session: IssuedSession) {
+function sessionPayload(session: IssuedSession): SessionTokens {
   return {
     accessToken: session.accessToken,
     accessTokenExpiresInSeconds: session.accessTokenExpiresInSeconds,
@@ -49,9 +56,7 @@ const DUMMY_PASSWORD_HASH = hashSecret('not-a-real-password-used-for-timing', PA
 
 export async function requestOtpHandler(
   req: Request,
-  res: Response<
-    ApiResponse<{ expiresAt: string; resendAvailableInSeconds: number; devOtp?: string }>
-  >,
+  res: Response<ApiResponse<RequestOtpResponse>>,
 ) {
   const { phoneNumber, role } = req.body as { phoneNumber: string; role: 'PASSENGER' | 'DRIVER' };
 
@@ -62,6 +67,7 @@ export async function requestOtpHandler(
       data: {
         expiresAt: result.expiresAt.toISOString(),
         resendAvailableInSeconds: result.resendAvailableInSeconds,
+        codeLength: env.OTP_LENGTH,
         ...(result.devOtp ? { devOtp: result.devOtp } : {}),
       },
     });
@@ -78,15 +84,7 @@ export async function requestOtpHandler(
 
 export async function verifyOtpHandler(
   req: Request,
-  res: Response<
-    ApiResponse<
-      {
-        user: PublicProfile;
-        isNewUser: boolean;
-        driverStatus?: string;
-      } & ReturnType<typeof sessionPayload>
-    >
-  >,
+  res: Response<ApiResponse<VerifyOtpResponse>>,
 ) {
   const { phoneNumber, role, code } = req.body as {
     phoneNumber: string;
@@ -140,7 +138,7 @@ export async function verifyOtpHandler(
     metadata: { role, isNewUser },
   });
 
-  let driverStatus: string | undefined;
+  let driverStatus: DriverStatus | undefined;
   if (role === 'DRIVER') {
     const profile = await findDriverProfileByUserId(user.id);
     driverStatus = profile?.status;
@@ -157,10 +155,7 @@ export async function verifyOtpHandler(
   });
 }
 
-export async function refreshHandler(
-  req: Request,
-  res: Response<ApiResponse<ReturnType<typeof sessionPayload>>>,
-) {
+export async function refreshHandler(req: Request, res: Response<ApiResponse<SessionTokens>>) {
   const { refreshToken } = req.body as { refreshToken: string };
   const ctx = requestContext(req);
 
@@ -195,7 +190,7 @@ export async function logoutHandler(req: Request, res: Response<ApiResponse<{ lo
 
 export async function adminLoginHandler(
   req: Request,
-  res: Response<ApiResponse<{ user: PublicProfile } & ReturnType<typeof sessionPayload>>>,
+  res: Response<ApiResponse<{ user: PublicProfile } & SessionTokens>>,
 ) {
   const { email, password } = req.body as { email: string; password: string };
   const ctx = requestContext(req);

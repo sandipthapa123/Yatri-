@@ -1,3 +1,4 @@
+import { isoOrNull } from '../../lib/dates';
 import {
   FLEET_NOTIFICATION_TYPES,
   OPERATIONAL_LABELS,
@@ -116,7 +117,7 @@ export async function fleetDriverDetail(id: string): Promise<FleetDriverDetail> 
   return {
     ...toRow(row),
     operationalReason: row.operational_reason,
-    operationalUntil: row.operational_until?.toISOString() ?? null,
+    operationalUntil: isoOrNull(row.operational_until),
     allowedNext: [...OPERATIONAL_TRANSITIONS[row.operational_status]],
     axes: {
       account: row.account_status,

@@ -1,3 +1,4 @@
+import { pageSizeParam } from '../../lib/pagination';
 import { z } from 'zod';
 
 import { coordinateSchema, latitudeSchema, longitudeSchema } from './coordinates';
@@ -13,7 +14,7 @@ export const searchQuerySchema = z
       .refine((s) => [...s].length >= 2, { message: 'Enter at least 2 characters' })
       .refine((s) => [...s].length <= 100, { message: 'Search text is too long' })
       .refine((s) => !CONTROL_CHARS.test(s), { message: 'Search text has invalid characters' }),
-    limit: z.coerce.number().int().min(1).max(10).default(5),
+    limit: pageSizeParam(10, 5),
     // Optional coarse bias point. Both or neither.
     nearLatitude: latitudeSchema.optional(),
     nearLongitude: longitudeSchema.optional(),

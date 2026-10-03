@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ORG_STATEMENT_STATUS_LABELS, formatNpr } from '@yatri/types';
+import { ORG_STATEMENT_STATUS_LABELS, formatNpr, formatWhen } from '@yatri/types';
 
 import { ApiError, getOrgStatementApi } from '../../../../../lib/apiClient';
 import { requireAdminAccessToken } from '../../../../../lib/session';
@@ -41,10 +41,10 @@ export default async function StatementPage({ params }: PageProps) {
         </h2>
         <p style={{ margin: 0 }}>
           <strong>{ORG_STATEMENT_STATUS_LABELS[s.status]}.</strong> Month {s.periodKey}. {s.rides}{' '}
-          rides, total {formatNpr(s.totalNpr)}. Issued {new Date(s.issuedAt).toLocaleDateString()},
+          rides, total {formatNpr(s.totalNpr)}. Issued {formatWhen(s.issuedAt, { style: 'date' })},
           due {s.dueOn}.
           {s.paidAt
-            ? ` Paid ${new Date(s.paidAt).toLocaleDateString()}, reference ${s.paidReference ?? 'none'}.`
+            ? ` Paid ${formatWhen(s.paidAt, { style: 'date' })}, reference ${s.paidReference ?? 'none'}.`
             : ''}
         </p>
         <Link href={`/organizations/${s.organizationId}`}>Open the organization</Link>
@@ -102,7 +102,7 @@ export default async function StatementPage({ params }: PageProps) {
                 <th scope="row" style={{ ...styles.td, textAlign: 'left' }}>
                   <Link href={`/rides/${l.tripId}`}>{l.tripId.slice(0, 8)}</Link>
                 </th>
-                <td style={styles.td}>{l.endedAt ? new Date(l.endedAt).toLocaleString() : '—'}</td>
+                <td style={styles.td}>{l.endedAt ? formatWhen(l.endedAt) : '—'}</td>
                 <td style={styles.td}>{l.passengerName ?? 'Unnamed'}</td>
                 <td style={styles.td}>{l.bookedByName ?? '—'}</td>
                 <td style={styles.td}>{l.costCenterCode ?? '—'}</td>

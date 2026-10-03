@@ -1,3 +1,4 @@
+import { pageParam, pageSizeParam } from '../../lib/pagination';
 import { z } from 'zod';
 
 export const listDriversQuerySchema = z.object({
@@ -13,8 +14,8 @@ export const listDriversQuerySchema = z.object({
       'SUSPENDED',
     ])
     .optional(),
-  page: z.coerce.number().int().min(1).default(1),
-  pageSize: z.coerce.number().int().min(1).max(100).default(20),
+  page: pageParam,
+  pageSize: pageSizeParam(100, 20),
 });
 
 export const rejectDriverSchema = z.object({

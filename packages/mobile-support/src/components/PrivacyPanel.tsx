@@ -4,6 +4,7 @@ import {
   type DataRequestInfo,
   type DataRequestKind,
   type MyPolicyStatus,
+  formatWhen,
 } from '@yatri/types';
 import { ApiError } from '@yatri/mobile-auth';
 import { ActionButton, Announcer, Card, Fact, type UiProps } from '@yatri/mobile-ride';
@@ -12,7 +13,6 @@ import { Linking, Share, StyleSheet, Text, View } from 'react-native';
 
 import { useNews, usePolled } from '../hooks';
 import { supportApi } from '../supportApi';
-import { whenText } from '../supportText';
 
 /**
  * Privacy and my data: which policies the person has accepted (and which are waiting), a copy of their
@@ -87,7 +87,7 @@ export function PrivacyPanel(
               label={`${p.title} (version ${p.version})`}
               value={
                 p.accepted
-                  ? `Accepted on ${whenText(p.acceptedAt as string)}`
+                  ? `Accepted on ${formatWhen(p.acceptedAt as string)}`
                   : p.acceptedVersion
                     ? `A newer version needs your answer (you accepted version ${p.acceptedVersion})`
                     : p.required
@@ -142,7 +142,7 @@ export function PrivacyPanel(
             />
             <Text
               style={{ color: colors.textSecondary }}
-            >{`Asked on ${whenText(r.createdAt)}. Answer due by ${whenText(r.dueAt)}.`}</Text>
+            >{`Asked on ${formatWhen(r.createdAt)}. Answer due by ${formatWhen(r.dueAt)}.`}</Text>
             {r.decisionNote ? (
               <Text style={{ color: colors.textPrimary }}>{`Note from us: ${r.decisionNote}`}</Text>
             ) : null}

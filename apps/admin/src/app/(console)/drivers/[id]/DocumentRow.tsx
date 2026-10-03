@@ -1,5 +1,7 @@
 'use client';
 
+import { formatWhen } from '@yatri/types';
+
 import type { DocumentSummary } from '@yatri/types';
 
 import { styles } from '../styles';
@@ -24,7 +26,7 @@ export function DocumentRow({
         </p>
         <p style={{ margin: '2px 0 0', fontSize: 13, color: 'var(--color-text-secondary)' }}>
           {document.originalFilename} · Uploaded{' '}
-          {new Date(document.uploadedAt).toLocaleDateString()}
+          {formatWhen(document.uploadedAt, { style: 'date' })}
         </p>
         {document.status === 'REJECTED' && document.rejectionReason ? (
           <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--color-error)' }}>

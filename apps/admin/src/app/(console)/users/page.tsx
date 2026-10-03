@@ -1,4 +1,4 @@
-import { ROLE_LABELS, ACCOUNT_STATUS_LABELS } from '@yatri/types';
+import { ROLE_LABELS, ACCOUNT_STATUS_LABELS, formatWhen } from '@yatri/types';
 import Link from 'next/link';
 
 import { listAdminUsers } from '../../../lib/apiClient';
@@ -151,7 +151,7 @@ export default async function UsersPage({ searchParams }: PageProps) {
                   <td style={styles.td}>{ACCOUNT_STATUS_LABELS[u.status]}</td>
                   <td style={styles.td}>{u.phoneNumber ?? u.email ?? '—'}</td>
                   <td style={styles.td}>{u.ridesCompleted}</td>
-                  <td style={styles.td}>{new Date(u.createdAt).toLocaleDateString()}</td>
+                  <td style={styles.td}>{formatWhen(u.createdAt, { style: 'date' })}</td>
                 </tr>
               ))}
             </tbody>

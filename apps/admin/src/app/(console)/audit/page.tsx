@@ -1,3 +1,4 @@
+import { formatWhen } from '@yatri/types';
 import Link from 'next/link';
 
 import { listAdminAudit } from '../../../lib/apiClient';
@@ -107,7 +108,7 @@ export default async function AuditPage({ searchParams }: PageProps) {
             <tbody>
               {data.items.map((e) => (
                 <tr key={e.id}>
-                  <td style={styles.td}>{new Date(e.createdAt).toLocaleString()}</td>
+                  <td style={styles.td}>{formatWhen(e.createdAt)}</td>
                   <td style={styles.td}>
                     {e.actorName ?? (e.actorRole ? words(e.actorRole) : 'the system')}
                   </td>

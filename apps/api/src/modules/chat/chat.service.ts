@@ -1,3 +1,4 @@
+import { isoOrNull } from '../../lib/dates';
 import {
   ASSIGNED_TRIP_STATUSES,
   CHAT_MAX_LENGTH,
@@ -9,8 +10,7 @@ import {
 } from '@yatri/types';
 
 import { env } from '../../config/env';
-import { pool } from '../../config/database';
-import { query } from '../../lib/db';
+import { isUniqueViolation, query, withTransaction } from '../../lib/db';
 import { checkWindowLimit } from '../../lib/rate-limit';
 import { HttpError } from '../../middleware/errorHandler';
 import { notifyThrottled } from '../../lib/notifications';
@@ -50,8 +50,8 @@ function toMessage(trip: TripRow, r: Row): ChatMessage {
     body: r.body,
     clientMessageId: r.client_message_id,
     createdAt: r.created_at.toISOString(),
-    deliveredAt: r.delivered_at?.toISOString() ?? null,
-    readAt: r.read_at?.toISOString() ?? null,
+    deliveredAt: isoOrNull(r.delivered_at),
+    readAt: isoOrNull(r.read_at),
   };
 }
 
@@ -128,27 +128,25 @@ export async function sendMessage(
     );
   }
 
-  const client = await pool.connect();
   let row: Row;
   try {
-    await client.query('BEGIN');
-    const s = await client.query<{ chat_seq: number }>(
-      'UPDATE trips SET chat_seq = chat_seq + 1 WHERE id = $1 RETURNING chat_seq',
-      [tripId],
-    );
-    const ins = await client.query<Row>(
-      // created_at is taken NOW, under the row lock that also handed out the sequence number, so time
-      // and sequence can never disagree (the column default is the transaction's START time, and two
-      // simultaneous sends start their transactions in an order unrelated to who got the lock first).
-      `INSERT INTO trip_messages (trip_id, seq, sender_id, body, client_message_id, created_at)
-       VALUES ($1, $2, $3, $4, $5, clock_timestamp()) RETURNING ${COLS}`,
-      [tripId, s.rows[0]?.chat_seq, senderId, body, clientMessageId],
-    );
-    await client.query('COMMIT');
-    row = ins.rows[0] as Row;
+    row = await withTransaction(async (client) => {
+      const s = await client.query<{ chat_seq: number }>(
+        'UPDATE trips SET chat_seq = chat_seq + 1 WHERE id = $1 RETURNING chat_seq',
+        [tripId],
+      );
+      const ins = await client.query<Row>(
+        // created_at is taken NOW, under the row lock that also handed out the sequence number, so time
+        // and sequence can never disagree (the column default is the transaction's START time, and two
+        // simultaneous sends start their transactions in an order unrelated to who got the lock first).
+        `INSERT INTO trip_messages (trip_id, seq, sender_id, body, client_message_id, created_at)
+         VALUES ($1, $2, $3, $4, $5, clock_timestamp()) RETURNING ${COLS}`,
+        [tripId, s.rows[0]?.chat_seq, senderId, body, clientMessageId],
+      );
+      return ins.rows[0] as Row;
+    });
   } catch (err) {
-    await client.query('ROLLBACK').catch(() => undefined);
-    if ((err as { code?: string }).code === '23505') {
+    if (isUniqueViolation(err)) {
       // Two identical retries raced: return whichever won.
       const again = await query<Row>(
         `SELECT ${COLS} FROM trip_messages WHERE trip_id = $1 AND sender_id = $2 AND client_message_id = $3`,
@@ -157,8 +155,6 @@ export async function sendMessage(
       if (again.rows[0]) return toMessage(trip, again.rows[0]);
     }
     throw err;
-  } finally {
-    client.release();
   }
 
   const message = toMessage(trip, row);

@@ -1,3 +1,4 @@
+import { isoOrNull } from '../../lib/dates';
 import {
   RISK_CATEGORIES,
   RISK_EVENT_STATUSES,
@@ -57,7 +58,7 @@ export const toEvent = (r: EventRow): RiskEventInfo => ({
   evidence: r.evidence,
   tripId: r.trip_id,
   createdAt: r.created_at.toISOString(),
-  reviewedAt: r.reviewed_at?.toISOString() ?? null,
+  reviewedAt: isoOrNull(r.reviewed_at),
   reviewNote: r.review_note,
 });
 

@@ -1,3 +1,4 @@
+import { isoOrNull } from '../../lib/dates';
 import {
   ACTIVE_REFUND_STATES,
   PAYOUT_ACCOUNT_LABELS,
@@ -134,7 +135,7 @@ const toInfo = (p: PayoutRow, rides: number): PayoutInfo => ({
   status: p.status,
   statusText: statusSentence(p),
   createdAt: p.created_at.toISOString(),
-  paidAt: p.paid_at?.toISOString() ?? null,
+  paidAt: isoOrNull(p.paid_at),
   reference: p.status === 'PAID' ? p.reference : null,
 });
 
@@ -318,7 +319,7 @@ const toRow = (p: PayoutRow, rides: number, driverName: string | null): AdminPay
   statusLabel: PAYOUT_STATUS_LABELS[p.status],
   accountKind: p.account_kind,
   createdAt: p.created_at.toISOString(),
-  paidAt: p.paid_at?.toISOString() ?? null,
+  paidAt: isoOrNull(p.paid_at),
 });
 
 export async function adminList(f: { status?: PayoutStatus | undefined; limit: number; offset: number }): Promise<AdminPayoutList> {

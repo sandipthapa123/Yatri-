@@ -21,6 +21,7 @@ import {
 } from './documents.repository';
 import { toDocumentSummary } from './documents.types';
 import { listActiveDocumentTypes } from './document-types.repository';
+import { isUniqueViolation } from '../../lib/db';
 
 function toDocumentTypeRef(row: {
   id: string;
@@ -161,7 +162,7 @@ export async function uploadDocumentHandler(
     });
   } catch (err) {
     await removeFile(storageKey); // the record did not take it (for example two uploads to one slot at once): leave no file behind
-    if ((err as { code?: string }).code === '23505') {
+    if (isUniqueViolation(err)) {
       throw new HttpError(
         409,
         'UPLOAD_IN_PROGRESS',

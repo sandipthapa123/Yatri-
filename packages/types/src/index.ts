@@ -40,6 +40,7 @@ export * from './settings';
 export * from './security';
 export * from './availability';
 export * from './geo';
+export * from './auth';
 
 /** Matches the API's PublicProfile response shape (GET/PATCH /users/me). */
 export interface AppUser {

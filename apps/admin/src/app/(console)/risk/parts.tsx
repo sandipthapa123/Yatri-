@@ -7,6 +7,7 @@ import {
   type RiskEvidence,
   type RiskLevel,
   type RiskNoteInfo,
+  formatWhen,
 } from '@yatri/types';
 
 import { styles } from '../drivers/styles';
@@ -71,7 +72,7 @@ export function EventsTable({ events, label }: { events: RiskEventInfo[]; label:
                 '—'
               )}
             </td>
-            <td style={styles.td}>{new Date(e.createdAt).toLocaleString()}</td>
+            <td style={styles.td}>{formatWhen(e.createdAt)}</td>
           </tr>
         ))}
       </tbody>
@@ -85,7 +86,7 @@ export function NotesList({ notes }: { notes: RiskNoteInfo[] }) {
     <ol style={{ margin: 0, paddingLeft: 20, display: 'grid', gap: 6 }}>
       {notes.map((n) => (
         <li key={n.id}>
-          {new Date(n.createdAt).toLocaleString()}, {n.authorName ?? 'a team member'}: {n.note}
+          {formatWhen(n.createdAt)}, {n.authorName ?? 'a team member'}: {n.note}
         </li>
       ))}
     </ol>

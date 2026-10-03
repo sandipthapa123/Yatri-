@@ -1,3 +1,4 @@
+import { isoOrNull } from '../../lib/dates';
 import {
   ORG_NOTIFICATION_TYPES,
   ORG_ROLE_LABELS,
@@ -159,7 +160,7 @@ export async function listMembers(ctx: OrgContext): Promise<OrgMemberInfo[]> {
     defaultCostCenterId: m.default_cost_center_id,
     canChange: manage && m.user_id !== ctx.userId && canManageOrgMember(ctx.role, m.role),
     invitedAt: m.invited_at.toISOString(),
-    joinedAt: m.joined_at?.toISOString() ?? null,
+    joinedAt: isoOrNull(m.joined_at),
   }));
 }
 

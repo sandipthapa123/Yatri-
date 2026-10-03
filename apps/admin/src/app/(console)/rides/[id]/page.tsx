@@ -9,6 +9,7 @@ import {
   describePayment,
   TICKET_STATUS_LABELS,
   TRIP_STATUS_LABELS,
+  formatWhen,
 } from '@yatri/types';
 
 import { ApiError, getAdminTrip } from '../../../../lib/apiClient';
@@ -21,7 +22,7 @@ interface PageProps {
   params: Promise<{ id: string }>;
 }
 
-const at = (iso: string | null) => (iso ? new Date(iso).toLocaleString() : '—');
+const at = (iso: string | null) => formatWhen(iso, { empty: '—' });
 const FRESHNESS_TEXT: Record<string, string> = {
   fresh: 'Fresh',
   stale: 'Stale',

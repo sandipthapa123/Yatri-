@@ -9,7 +9,7 @@ import {
 import { z } from 'zod';
 
 import { recordAudit } from '../../lib/audit';
-import { query } from '../../lib/db';
+import { query, isUniqueViolation } from '../../lib/db';
 import { HttpError } from '../../middleware/errorHandler';
 import { listActiveCategories } from '../pricing/categories';
 import { allZones } from '../operations/zones.service';
@@ -189,7 +189,7 @@ export async function saveCostCenter(
     });
     return toCostCenter(r.rows[0]);
   } catch (err) {
-    if ((err as { code?: string }).code === '23505') {
+    if (isUniqueViolation(err)) {
       throw new HttpError(409, 'DUPLICATE_CODE', 'A cost centre with that code already exists.');
     }
     throw err;

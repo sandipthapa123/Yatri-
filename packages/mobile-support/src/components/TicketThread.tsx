@@ -4,6 +4,7 @@ import {
   type AttachmentInfo,
   type TicketDetail,
   type TicketMessageInfo,
+  formatWhen,
 } from '@yatri/types';
 import { ApiError, type PickedFile } from '@yatri/mobile-auth';
 import { ActionButton, Announcer, Card, Fact, type UiProps } from '@yatri/mobile-ride';
@@ -12,7 +13,7 @@ import { Linking, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { useNews, usePolled } from '../hooks';
 import { supportApi } from '../supportApi';
-import { fileSizeText, whenText } from '../supportText';
+import { fileSizeText } from '../supportText';
 import { RefundSection } from './RefundSection';
 
 const POLL_MS = 30_000;
@@ -246,10 +247,10 @@ function Message(props: {
   return (
     <View style={[styles.message, { borderColor: colors.border }]}>
       {/* The words are one stop for a screen reader; the file buttons stay separate, reachable controls. */}
-      <View accessible accessibilityLabel={`${who}, ${whenText(m.createdAt)}. ${m.body}`}>
+      <View accessible accessibilityLabel={`${who}, ${formatWhen(m.createdAt)}. ${m.body}`}>
         <Text
           style={{ color: colors.textSecondary, fontSize: 13 }}
-        >{`${who} · ${whenText(m.createdAt)}`}</Text>
+        >{`${who} · ${formatWhen(m.createdAt)}`}</Text>
         <Text style={{ color: colors.textPrimary, fontSize: 16 }}>{m.body}</Text>
       </View>
       {m.attachments.map((a) => (

@@ -1,3 +1,4 @@
+import { isoOrNull } from '../../lib/dates';
 import {
   ORG_PAYMENT_MODE_METHOD,
   TERMINAL_TRIP_STATUSES,
@@ -13,12 +14,16 @@ import {
   type TripStatus,
   type TripSummary,
   type PaymentMethod,
+  ASSIGNED_TRIP_STATUSES,
+  PRE_PICKUP_TRIP_STATUSES,
+  WAITING_TRIP_STATUSES,
+  ACTIVE_TRIP_STATUSES,
 } from '@yatri/types';
 
 import { env } from '../../config/env';
 import { driverNoteFor } from '../disability/verification.service';
 import { getPaymentGateway } from '../payments/gateway';
-import { query } from '../../lib/db';
+import { query, isUniqueViolation } from '../../lib/db';
 import { sqlIn } from '../../lib/sql';
 import { HttpError } from '../../middleware/errorHandler';
 import { nameForDriver } from '../preferences/preferences.service';
@@ -149,9 +154,10 @@ async function businessInfoOf(t: TripRow): Promise<TripSummary['business']> {
 export async function buildTripSummary(t: TripRow, viewerId: string): Promise<TripSummary> {
   const viewerIsPassenger = t.passenger_id === viewerId;
   const [pay, rated, counterpart, business] = await Promise.all([
-    query<{ status: TripPaymentStatus; method: PaymentMethod }>('SELECT status, method FROM trip_payments WHERE trip_id = $1', [
-      t.id,
-    ]),
+    query<{ status: TripPaymentStatus; method: PaymentMethod }>(
+      'SELECT status, method FROM trip_payments WHERE trip_id = $1',
+      [t.id],
+    ),
     query('SELECT 1 FROM trip_ratings WHERE trip_id = $1 AND rater_id = $2', [t.id, viewerId]),
     counterpartOf(t, viewerIsPassenger),
     businessInfoOf(t),
@@ -162,10 +168,10 @@ export async function buildTripSummary(t: TripRow, viewerId: string): Promise<Tr
     pickup: pickupOf(t),
     destination: destinationOf(t),
     requestedAt: t.requested_at.toISOString(),
-    matchedAt: t.matched_at?.toISOString() ?? null,
-    arrivedAt: t.arrived_at?.toISOString() ?? null,
-    startedAt: t.started_at?.toISOString() ?? null,
-    endedAt: t.ended_at?.toISOString() ?? null,
+    matchedAt: isoOrNull(t.matched_at),
+    arrivedAt: isoOrNull(t.arrived_at),
+    startedAt: isoOrNull(t.started_at),
+    endedAt: isoOrNull(t.ended_at),
     cancelReason: t.cancel_reason,
     cancelledBy: (t.cancelled_by as TripSummary['cancelledBy']) ?? null,
     fare:
@@ -184,7 +190,11 @@ export async function buildTripSummary(t: TripRow, viewerId: string): Promise<Tr
     paymentStatus: pay.rows[0]?.status ?? 'NONE',
     paymentMethod: pay.rows[0]?.method ?? null,
     onlinePaymentAvailable:
-      viewerIsPassenger && t.status === 'COMPLETED' && pay.rows[0]?.status === 'PENDING' && pay.rows[0].method !== 'ORGANIZATION' && getPaymentGateway() !== null,
+      viewerIsPassenger &&
+      t.status === 'COMPLETED' &&
+      pay.rows[0]?.status === 'PENDING' &&
+      pay.rows[0].method !== 'ORGANIZATION' &&
+      getPaymentGateway() !== null,
     vehicleCategory:
       t.vehicle_category_code && t.vehicle_category_label
         ? { code: t.vehicle_category_code, label: t.vehicle_category_label }
@@ -279,7 +289,12 @@ export async function estimateForRequest(passengerId: string, body: TripEstimate
         // What they would pay after offers and points: the growth engine's answer, never worked out here.
         promotion: await quoteRide(
           passengerId,
-          { fareNpr: fare.totalNpr, categoryCode: c.code, cityId: offeredHere?.info.id ?? null, companion: accessibility.companion },
+          {
+            fareNpr: fare.totalNpr,
+            categoryCode: c.code,
+            cityId: offeredHere?.info.id ?? null,
+            companion: accessibility.companion,
+          },
           body.promotion,
         ),
       };
@@ -387,7 +402,7 @@ export async function requestTrip(
             }),
     });
   } catch (err) {
-    if ((err as { code?: string }).code === '23505') {
+    if (isUniqueViolation(err)) {
       throw new HttpError(409, 'TRIP_ALREADY_ACTIVE', 'You already have a ride in progress.');
     }
     throw err;
@@ -439,12 +454,10 @@ async function transition(tripId: string, spec: TransitionSpec): Promise<TripRow
   // The driver's presence connection feeds exactly the trip they are assigned to.
   const driverId = updated.driver_id ?? before?.driver_id ?? null;
   if (driverId) {
-    const assigned =
-      spec.to === 'DRIVER_EN_ROUTE' || spec.to === 'DRIVER_ARRIVED' || spec.to === 'IN_PROGRESS';
-    await setDriverTrip(driverId, assigned ? tripId : null);
+    await setDriverTrip(driverId, ASSIGNED_TRIP_STATUSES.includes(spec.to) ? tripId : null);
   }
   // A call cannot outlive the assignment it belongs to.
-  if (spec.to !== 'DRIVER_ARRIVED' && spec.to !== 'IN_PROGRESS' && spec.to !== 'DRIVER_EN_ROUTE') {
+  if (!ASSIGNED_TRIP_STATUSES.includes(spec.to)) {
     await endLiveCallForTrip(tripId);
   }
   // Cancellations and re-matches record the state they left, alongside who/why/when (the event's
@@ -625,7 +638,7 @@ export async function passengerCancel(
   );
   const cancelled = await transition(tripId, {
     to: 'CANCELLED',
-    from: ['SEARCHING', 'DRIVER_EN_ROUTE', 'DRIVER_ARRIVED'],
+    from: PRE_PICKUP_TRIP_STATUSES,
     patch: {
       endedAt: 'now',
       cancelledBy: 'PASSENGER',
@@ -659,7 +672,7 @@ export async function driverDropsOut(
   }
   const back = await transition(tripId, {
     to: 'SEARCHING',
-    from: ['DRIVER_EN_ROUTE', 'DRIVER_ARRIVED'],
+    from: WAITING_TRIP_STATUSES,
     expectDriverId: driverId,
     patch: {
       driverId: null,
@@ -708,7 +721,7 @@ export async function adminCancelTrip(
 ): Promise<TripRow> {
   const cancelled = await transition(tripId, {
     to: 'CANCELLED',
-    from: ['SEARCHING', 'DRIVER_EN_ROUTE', 'DRIVER_ARRIVED', 'IN_PROGRESS'],
+    from: ACTIVE_TRIP_STATUSES,
     patch: { endedAt: 'now', cancelledBy: 'SYSTEM', cancelReason: reason },
     event: { type: 'TRIP_CANCELLED', actorId: adminId, payload: { by: 'SYSTEM', reason } },
   });

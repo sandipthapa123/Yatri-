@@ -1,8 +1,8 @@
+import { formatWhen } from '@yatri/types';
 import type { ShareInfo } from '@yatri/types';
 import { useCallback, useEffect, useState } from 'react';
 import { Share, StyleSheet, Text, View } from 'react-native';
 
-import { formatClockTime } from '../rideText';
 import { rideApi } from '../rideApi';
 import { ActionButton, Card, type UiProps } from './RideUi';
 
@@ -94,7 +94,7 @@ export function TripSharePanel(
               key={s.id}
               {...ui}
               label={`Stop sharing link ${i + 1}`}
-              accessibilityLabel={`Stop sharing link ${i + 1}, created at ${formatClockTime(s.createdAt)}`}
+              accessibilityLabel={`Stop sharing link ${i + 1}, created at ${formatWhen(s.createdAt, { style: 'time' })}`}
               tone="danger"
               disabled={busy}
               onPress={() => void stop(s.id)}

@@ -1,4 +1,4 @@
-import { PAYOUT_ACCOUNT_LABELS, maskedAccount } from '@yatri/types';
+import { PAYOUT_ACCOUNT_LABELS, maskedAccount, formatWhen } from '@yatri/types';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
@@ -9,7 +9,7 @@ import { styles } from '../../drivers/styles';
 import { NoAccess } from '../../ui/NoAccess';
 import { ShowAccountForm, StepForm } from '../Forms';
 
-const when = (iso: string | null) => (iso ? new Date(iso).toLocaleString() : 'not yet');
+const when = (iso: string | null) => formatWhen(iso, { empty: 'not yet' });
 
 /**
  * One payout: its state, the rides in it, who prepared and who confirmed it, the steps allowed now, and (only after it is asked

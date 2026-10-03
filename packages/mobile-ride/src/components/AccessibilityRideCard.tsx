@@ -11,6 +11,7 @@ import {
   type PickupInstructionCode,
   type TripRole,
   type TripSummary,
+  PRE_PICKUP_TRIP_STATUSES,
 } from '@yatri/types';
 import { useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
@@ -29,7 +30,6 @@ const PICKUP = PICKUP_INSTRUCTION_CODES.map((c) => ({
   value: c,
   label: PICKUP_INSTRUCTION_LABELS[c].label,
 }));
-const CHANGEABLE = ['SEARCHING', 'DRIVER_EN_ROUTE', 'DRIVER_ARRIVED'];
 
 /**
  * A ride's accessibility details. The driver reads what the passenger needs, as sentences (never a diagnosis); the
@@ -108,7 +108,7 @@ export function AccessibilityRideCard(
           {`Problem: ${problem}`}
         </Text>
       ) : null}
-      {CHANGEABLE.includes(trip.status) ? (
+      {PRE_PICKUP_TRIP_STATUSES.includes(trip.status) ? (
         editing ? (
           <View style={styles.form}>
             <ChoiceRadios

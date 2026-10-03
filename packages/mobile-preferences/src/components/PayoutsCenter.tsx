@@ -6,6 +6,7 @@ import {
   PAYOUT_ACCOUNT_LABELS,
   maskedAccount,
   type PayoutAccountKind,
+  formatWhen,
 } from '@yatri/types';
 import { useCallback, useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
@@ -116,7 +117,7 @@ export function PayoutsCenter(props: UiProps & { onExit: () => void }) {
         ) : (
           s.payouts.map((p) => (
             <Text key={p.id} accessibilityRole="text" style={{ color: colors.textPrimary }}>
-              {`${new Date(p.createdAt).toLocaleDateString()}: ${p.statusText}${p.reference ? ` Reference ${p.reference}.` : ''}`}
+              {`${formatWhen(p.createdAt, { style: 'date' })}: ${p.statusText}${p.reference ? ` Reference ${p.reference}.` : ''}`}
             </Text>
           ))
         )}

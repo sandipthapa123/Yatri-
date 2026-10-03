@@ -52,6 +52,14 @@ export const ASSIGNED_TRIP_STATUSES: readonly TripStatus[] = [
   'IN_PROGRESS',
 ];
 
+/** Statuses before the ride starts: still searching, or a driver on the way or waiting. The passenger can still cancel, and
+ * what the ride needs (accessibility, pickup notes) can still change. */
+export const PRE_PICKUP_TRIP_STATUSES: readonly TripStatus[] = [
+  'SEARCHING',
+  'DRIVER_EN_ROUTE',
+  'DRIVER_ARRIVED',
+];
+
 /** Statuses in which a driver has been assigned but the ride has not started (waiting, arriving). */
 export const WAITING_TRIP_STATUSES: readonly TripStatus[] = ['DRIVER_EN_ROUTE', 'DRIVER_ARRIVED'];
 

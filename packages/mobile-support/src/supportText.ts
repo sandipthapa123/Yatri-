@@ -86,12 +86,6 @@ export function checkPartialAmount(raw: string, quote: RefundQuote): string | nu
   return null;
 }
 
-/** "3 Oct 2026, 14:05": a date and time for a message, in the phone's own locale. */
-export function whenText(iso: string): string {
-  const d = new Date(iso);
-  return `${d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}, ${d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}`;
-}
-
 export function fileSizeText(bytes: number): string {
   if (bytes < 1024) return `${bytes} bytes`;
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;

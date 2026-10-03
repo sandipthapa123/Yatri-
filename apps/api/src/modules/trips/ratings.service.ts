@@ -6,7 +6,7 @@ import {
   type RatingSummary,
 } from '@yatri/types';
 
-import { query } from '../../lib/db';
+import { query, isUniqueViolation } from '../../lib/db';
 import { HttpError } from '../../middleware/errorHandler';
 import { getTrip } from './trips.repository';
 
@@ -62,7 +62,7 @@ export async function rateTrip(tripId: string, raterId: string, input: RatingInp
     );
     return { id: r.rows[0]?.id as string, tripId, stars: input.stars };
   } catch (err) {
-    if ((err as { code?: string }).code === '23505') {
+    if (isUniqueViolation(err)) {
       throw new HttpError(409, 'ALREADY_RATED', 'You have already rated this ride.');
     }
     throw err;

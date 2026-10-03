@@ -1,3 +1,4 @@
+import { isoOrNull } from '../../lib/dates';
 import type { Request, Response } from 'express';
 import type {
   AdminDriverAvailabilityResponse,
@@ -91,7 +92,7 @@ export async function listAvailabilityHandler(
     verificationStatus: r.vstatus,
     availabilityState: r.state,
     online: r.state === 'ONLINE',
-    lastLocationAt: r.recorded_at?.toISOString() ?? null,
+    lastLocationAt: isoOrNull(r.recorded_at),
     locationFreshness: r.freshness,
     location:
       canViewLocation && r.latitude !== null && r.longitude !== null

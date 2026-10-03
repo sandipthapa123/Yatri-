@@ -1,12 +1,10 @@
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { useAuth } from '@yatri/mobile-auth';
+import { createSignInScreens, useAuth, type SignInRoutes } from '@yatri/mobile-auth';
 
 import { BusinessScreen } from '../screens/BusinessScreen';
 import { EmergencyContactsScreen } from '../screens/EmergencyContactsScreen';
 import { HomeScreen } from '../screens/HomeScreen';
-import { OtpVerificationScreen } from '../screens/OtpVerificationScreen';
-import { PhoneEntryScreen } from '../screens/PhoneEntryScreen';
 import { PickLocationScreen } from '../screens/PickLocationScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 import { ProfileSetupScreen } from '../screens/ProfileSetupScreen';
@@ -17,18 +15,15 @@ import { TripTrackingScreen } from '../screens/TripTrackingScreen';
 import { DisabilityBenefitScreen } from '../screens/DisabilityBenefitScreen';
 import { RewardsScreen } from '../screens/RewardsScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
-import { SupportScreen } from '../screens/SupportScreen';
-import { WelcomeScreen } from '../screens/WelcomeScreen';
+import { SupportScreen, type SupportRoute } from '@yatri/mobile-support';
+import { SIGN_IN } from '../brand';
 
-export type RootStackParamList = {
-  Support: { tripId?: string; ticketId?: string } | undefined;
+// The sign-in steps are the shared ones (@yatri/mobile-auth), with their shared routes.
+export type RootStackParamList = SignInRoutes & SupportRoute & {
   Business: undefined;
   Settings: undefined;
   Rewards: undefined;
   DisabilityBenefit: undefined;
-  Welcome: undefined;
-  PhoneEntry: undefined;
-  OtpVerification: { phoneNumber: string };
   ProfileSetup: undefined;
   Home: undefined;
   Profile: undefined;
@@ -41,6 +36,7 @@ export type RootStackParamList = {
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
+const { WelcomeScreen, PhoneEntryScreen, OtpVerificationScreen } = createSignInScreens(SIGN_IN);
 
 /**
  * One stack, two logical phases: unauthenticated screens (Welcome -> phone

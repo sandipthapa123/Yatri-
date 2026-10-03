@@ -5,6 +5,7 @@ import {
   TRIP_STATUS_LABELS,
   TRIP_STATUSES,
   type TripStatus,
+  formatWhen,
 } from '@yatri/types';
 
 import { listAdminTrips } from '../../../lib/apiClient';
@@ -204,7 +205,7 @@ export default async function RidesPage({ searchParams }: PageProps) {
               <tr key={t.id}>
                 <td style={styles.td}>
                   <Link href={`/rides/${t.id}`} style={styles.rowLink}>
-                    {new Date(t.requestedAt).toLocaleString()}
+                    {formatWhen(t.requestedAt)}
                   </Link>
                 </td>
                 <td style={styles.td}>{TRIP_STATUS_LABELS[t.status]}</td>

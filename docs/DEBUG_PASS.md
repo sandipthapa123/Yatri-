@@ -75,3 +75,40 @@ settings; bundle integrity of both apps.
 Every earlier phase was read once more, from authentication to payments, and the findings above were fixed. After the last change the whole API suite was run once, on its own: **56 files, 999 tests, all passing**. Four of the fixes (the tracking race, the reconcile-after-failed-settlement case, and the two first-write races in accessibility and approvals) are covered only by existing tests or by none, because forcing the failure needs a fault-injection hook that does not exist; they were found by reading, not by a failing test.
 
 Still not checked: the admin and mobile front ends were not re-run this round, no real vendor, device or screen reader was used, and no load test was run.
+
+## Third pass: one of everything
+
+The whole repository was searched for things defined more than once (`scripts/duplicate-definitions.mjs`, plus searches for idioms the
+script cannot see) and each was given one owner. Where each now lives is in the single-source-of-truth skill.
+
+| What was repeated | Copies | Now |
+|---|---|---|
+| Sign-in screens (welcome, phone, code) | Copied in both apps | `createSignInScreens` in `@yatri/mobile-auth` |
+| Wordmark, loading, start-up error, support screen | One per app | `@yatri/mobile-ui` / `@yatri/mobile-support` |
+| Sign-in response shapes | API controller and app client separately | `@yatri/types` `auth.ts` |
+| Code length | Hard-coded 6 in both apps while the server's is configurable (4 to 8) | Sent by the server (`codeLength`); tested |
+| `ApiError` class | Admin site and mobile client | `@yatri/shared` |
+| Trip status lists | Written out in 3 files | Named groups, plus `PRE_PICKUP_TRIP_STATUSES` |
+| Postgres collision checks | 24 | `isUniqueViolation` / `isForeignKeyViolation` |
+| Paging schemas | 17 | `pageParam` / `pageSizeParam` |
+| Date to ISO or null | 64 | `isoOrNull` |
+| Transactions written by hand | 10, plus a private copy of `withTransaction` and a private rollback sentinel | `withTransaction` + `Rollback` |
+| Date and time formatting | 49 in the admin site, 15 in the apps and packages, 3 helper functions | `formatWhen` |
+| Dead constants | `SUPPORT_EMAIL`, `DEFAULT_API_TIMEOUT_MS` | Removed |
+
+Bugs that the consolidation exposed and fixed:
+
+- **Times on admin pages** were formatted by the server, in the server's time zone; a server in UTC showed every time 5 h 45 min off
+  without saying so. They are now always in Nepal time. The same applied to two sentences the API builds (a driver's restriction
+  end, a pricing window).
+- **Refund options** could read "NPR null" for an amount that does not apply; the option now shows no amount.
+- **A missing date on the driver page** read "—" (a screen reader says "em dash"); it now says "not recorded".
+- **`verifyOtp`'s `driverStatus`** was typed as any string on the server; it is now the driver status type.
+
+Kept on purpose: each app's `SettingsScreen` (each links to different screens), `brand.ts` (each app's identity), client functions
+named after the endpoint they call, and the public share page's own script, which runs in the viewer's browser and shows the viewer's
+clock.
+
+Testing note: on the day of this pass the test machine had become about 2.5 times slower than before. Clearing a test's data
+(`TRUNCATE users CASCADE` on an empty database) took 2.3 seconds, the same on the previous commit, which caused timeouts under the
+default 15-second limit. The suite was run with 60-second limits for that reason.

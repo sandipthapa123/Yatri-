@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { INCENTIVE_KIND_LABELS, describeIncentive, formatNpr } from '@yatri/types';
+import { INCENTIVE_KIND_LABELS, describeIncentive, formatNpr, formatWhen } from '@yatri/types';
 
 import {
   getOperationOptions,
@@ -87,7 +87,7 @@ export default async function IncentivesPage({ searchParams }: PageProps) {
             <tbody>
               {data.awards.items.map((a) => (
                 <tr key={a.id}>
-                  <td style={styles.td}>{new Date(a.createdAt).toLocaleString()}</td>
+                  <td style={styles.td}>{formatWhen(a.createdAt)}</td>
                   <td style={styles.td}>{a.driverName ?? 'Unnamed'}</td>
                   <td style={styles.td}>{a.ruleName}</td>
                   <td style={styles.td}>

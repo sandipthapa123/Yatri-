@@ -10,16 +10,20 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@yatri/mobile-ui": "workspace:*",
     "@yatri/shared": "workspace:*",
+    "@yatri/types": "workspace:*",
     "expo-secure-store": "~57.0.4"
   },
   "peerDependencies": {
     "react": "19.2.3",
-    "react-native": "0.86.3"
+    "react-native": "0.86.3",
+    "react-native-safe-area-context": "^5.10.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
     "@types/react": "~19.2.2",
+    "react-native-safe-area-context": "^5.10.0",
     "typescript": "~5.7.2",
     "vitest": "^5.0.2"
   }

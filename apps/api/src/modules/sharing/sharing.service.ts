@@ -9,8 +9,7 @@ import {
 } from '@yatri/types';
 
 import { env } from '../../config/env';
-import { pool } from '../../config/database';
-import { query } from '../../lib/db';
+import { query, withTransaction } from '../../lib/db';
 import { HttpError } from '../../middleware/errorHandler';
 import { buildSnapshot, loadMeta } from '../tracking/tracking.service';
 import { recordTripEvent } from '../trips/trip-events.service';
@@ -56,11 +55,9 @@ export async function issueShare(
     );
   }
   const token = randomBytes(32).toString('base64url');
-  const client = await pool.connect();
-  let shareId: string;
-  let expiresAt: Date;
-  try {
-    await client.query('BEGIN');
+  let shareId!: string;
+  let expiresAt!: Date;
+  await withTransaction(async (client) => {
     // The ride row lock serialises concurrent creations so the per-ride limit cannot be raced past.
     await client.query('SELECT 1 FROM trips WHERE id = $1 FOR UPDATE', [tripId]);
     if (purpose === 'TRIP') {
@@ -70,7 +67,6 @@ export async function issueShare(
         [tripId],
       );
       if (Number(count.rows[0]?.n ?? 0) >= env.SHARE_MAX_PER_TRIP) {
-        await client.query('ROLLBACK');
         throw new HttpError(
           409,
           'SHARE_LIMIT',
@@ -83,15 +79,9 @@ export async function issueShare(
        VALUES ($1, $2, $3, now() + ($4::float * interval '1 hour'), $5) RETURNING id, expires_at`,
       [tripId, createdBy, hashToken(token), env.SHARE_DURATION_HOURS, purpose],
     );
-    await client.query('COMMIT');
     shareId = (ins.rows[0] as { id: string }).id;
     expiresAt = (ins.rows[0] as { expires_at: Date }).expires_at;
-  } catch (err) {
-    await client.query('ROLLBACK').catch(() => undefined);
-    throw err;
-  } finally {
-    client.release();
-  }
+  });
   if (purpose === 'TRIP') {
     await recordTripEvent({
       tripId,

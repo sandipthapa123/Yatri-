@@ -60,3 +60,26 @@ export function compassWord(headingDegrees: number): string {
   const norm = ((headingDegrees % 360) + 360) % 360;
   return words[Math.round(norm / 45) % 8] as string;
 }
+
+/** The platform's own time zone: times are shown in it wherever a person reads them, whatever zone a server runs in. */
+export const PLATFORM_TIME_ZONE = 'Asia/Kathmandu';
+
+/**
+ * A moment as a person reads it: "2 Oct 2026, 16:05" (or only the date, or only the time), always in the platform's time zone
+ * and one fixed locale, so a page rendered on a server in another zone never shows a shifted time. `empty` is the words for
+ * "no time" (for example "not yet").
+ */
+export function formatWhen(
+  at: string | Date | null | undefined,
+  opts: { style?: 'datetime' | 'date' | 'time'; empty?: string; timeZone?: string } = {},
+): string {
+  if (!at) return opts.empty ?? '';
+  const d = at instanceof Date ? at : new Date(at);
+  if (Number.isNaN(d.getTime())) return opts.empty ?? '';
+  const style = opts.style ?? 'datetime';
+  return new Intl.DateTimeFormat('en-GB', {
+    timeZone: opts.timeZone ?? PLATFORM_TIME_ZONE,
+    ...(style !== 'time' ? { dateStyle: 'medium' as const } : {}),
+    ...(style !== 'date' ? { timeStyle: 'short' as const } : {}),
+  }).format(d);
+}

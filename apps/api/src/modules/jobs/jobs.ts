@@ -1,3 +1,4 @@
+import { isoOrNull } from '../../lib/dates';
 import { randomUUID } from 'node:crypto';
 
 import type { JobRunInfo, JobRunStatus, JobTrigger } from '@yatri/types';
@@ -168,7 +169,7 @@ export function toRun(x: {
     trigger: x.trigger,
     status: x.status,
     startedAt: x.started_at.toISOString(),
-    finishedAt: x.finished_at?.toISOString() ?? null,
+    finishedAt: isoOrNull(x.finished_at),
     durationMs: x.finished_at ? x.finished_at.getTime() - x.started_at.getTime() : null,
     result: x.result,
     error: x.error,

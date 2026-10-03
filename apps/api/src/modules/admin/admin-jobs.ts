@@ -1,3 +1,4 @@
+import { pageSizeParam } from '../../lib/pagination';
 import { describeJobState } from '@yatri/types';
 import type { ApiResponse, JobInfo, JobRunInfo } from '@yatri/types';
 import type { Request, Response } from 'express';
@@ -14,7 +15,7 @@ import { JOBS, jobByName } from '../jobs/registry';
 type Res<T> = Response<ApiResponse<T>>;
 
 export const jobHistoryQuerySchema = z.object({
-  limit: z.coerce.number().int().min(1).max(100).default(30),
+  limit: pageSizeParam(100, 30),
 });
 
 export async function listJobsHandler(_req: Request, res: Res<JobInfo[]>) {

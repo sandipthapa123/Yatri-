@@ -4,6 +4,7 @@ import {
   DATA_REQUEST_KIND_LABELS,
   DATA_REQUEST_STATES,
   DATA_REQUEST_STATUS_LABELS,
+  formatWhen,
 } from '@yatri/types';
 
 import { listDataRequests, listPolicies, listRetention } from '../../../lib/apiClient';
@@ -20,7 +21,7 @@ interface PageProps {
   searchParams: Promise<Record<string, string | undefined>>;
 }
 
-const at = (iso: string) => new Date(iso).toLocaleString();
+const at = (iso: string) => formatWhen(iso);
 
 /**
  * Privacy and compliance: policy versions and where their text is, the queue of account-deletion and

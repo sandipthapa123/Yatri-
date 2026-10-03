@@ -1,3 +1,4 @@
+import { isoOrNull } from '../../lib/dates';
 import {
   ACTIVE_TRIP_STATUSES,
   DATA_REQUEST_STATUS_LABELS,
@@ -17,7 +18,7 @@ import type { PoolClient } from 'pg';
 
 import { recordAudit } from '../../lib/audit';
 import { log } from '../../lib/logger';
-import { query, withTransaction } from '../../lib/db';
+import { query, withTransaction, isUniqueViolation } from '../../lib/db';
 import { notify } from '../../lib/notifications';
 import { sqlIn } from '../../lib/sql';
 import { getStorageProvider } from '../../lib/storage';
@@ -56,7 +57,7 @@ const toInfo = (r: Row): DataRequestInfo => ({
   dueAt: r.due_at.toISOString(),
   decisionNote: r.decision_note,
   createdAt: r.created_at.toISOString(),
-  completedAt: r.completed_at?.toISOString() ?? null,
+  completedAt: isoOrNull(r.completed_at),
   canDownload: r.kind === 'DATA_ACCESS' && r.status === 'COMPLETED',
   canCancel: canDataRequestTransition(r.status, 'CANCELLED'),
 });
@@ -84,7 +85,7 @@ export async function createDataRequest(
     });
     return toInfo(row);
   } catch (err) {
-    if ((err as { code?: string }).code === '23505') {
+    if (isUniqueViolation(err)) {
       throw new HttpError(
         409,
         'REQUEST_ALREADY_OPEN',

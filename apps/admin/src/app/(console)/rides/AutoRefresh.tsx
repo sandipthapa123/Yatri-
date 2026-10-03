@@ -1,5 +1,7 @@
 'use client';
 
+import { formatWhen } from '@yatri/types';
+
 import { useRouter } from 'next/navigation';
 import { useEffect, useId, useState } from 'react';
 
@@ -18,7 +20,7 @@ export function AutoRefresh({ seconds = 10 }: { seconds?: number }) {
     if (!on) return;
     const t = setInterval(() => {
       router.refresh();
-      setAt(new Date().toLocaleTimeString());
+      setAt(formatWhen(new Date(), { style: 'time' }));
     }, seconds * 1000);
     return () => clearInterval(t);
   }, [on, seconds, router]);

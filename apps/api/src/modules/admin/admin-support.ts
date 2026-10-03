@@ -1,3 +1,4 @@
+import { pageParam, pageSizeParam } from '../../lib/pagination';
 import {
   REFUND_METHODS,
   REFUND_REASONS,
@@ -65,8 +66,8 @@ export const adminTicketsQuerySchema = z.object({
   tripId: z.string().uuid().optional(),
   requesterId: z.string().uuid().optional(),
   search: z.string().trim().max(100).optional(),
-  page: z.coerce.number().int().min(1).default(1),
-  pageSize: z.coerce.number().int().min(1).max(50).default(20),
+  page: pageParam,
+  pageSize: pageSizeParam(50, 20),
 });
 
 export const adminReplySchema = z

@@ -1,9 +1,8 @@
-import { formatNpr, type TripRole, type TripSummary } from '@yatri/types';
+import { formatNpr, type TripRole, type TripSummary, formatWhen } from '@yatri/types';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { outcomeText } from '../rideActions';
-import { formatDateTime } from '../rideText';
 import { rideApi } from '../rideApi';
 import { ActionButton, type UiProps } from './RideUi';
 
@@ -15,7 +14,7 @@ export function historyLabel(t: TripSummary, role: TripRole): string {
     t.status === 'COMPLETED' && t.fare
       ? ` Fare ${formatNpr(t.fare.finalNpr ?? t.fare.estimateNpr)}.${t.paymentStatus === 'PAID' ? ' Paid.' : ''}`
       : '';
-  return `${formatDateTime(t.requestedAt)}. ${t.pickup.name} to ${t.destination.name}. ${outcomeText(t, role)}${money}`;
+  return `${formatWhen(t.requestedAt)}. ${t.pickup.name} to ${t.destination.name}. ${outcomeText(t, role)}${money}`;
 }
 
 /** The person's past rides, newest first, fetched a page at a time from the server. */
@@ -83,7 +82,7 @@ export function HistoryList(
             ]}
           >
             <Text style={{ color: colors.textSecondary, fontSize: 13 }}>
-              {formatDateTime(t.requestedAt)}
+              {formatWhen(t.requestedAt)}
             </Text>
             <Text style={{ color: colors.textPrimary, fontWeight: '600', fontSize: 16 }}>
               {t.pickup.name} to {t.destination.name}

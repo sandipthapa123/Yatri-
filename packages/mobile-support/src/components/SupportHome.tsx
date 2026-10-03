@@ -1,10 +1,10 @@
-import { TICKET_STATUS_LABELS, type TicketInfo } from '@yatri/types';
+import { TICKET_STATUS_LABELS, type TicketInfo, formatWhen } from '@yatri/types';
 import { ActionButton, Announcer, Card, type UiProps } from '@yatri/mobile-ride';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useNews, usePolled } from '../hooks';
 import { supportApi } from '../supportApi';
-import { statusNews, whenText } from '../supportText';
+import { statusNews } from '../supportText';
 
 const POLL_MS = 60_000;
 
@@ -60,7 +60,7 @@ export function SupportHome(
           <Pressable
             key={t.id}
             accessibilityRole="button"
-            accessibilityLabel={`Request ${t.number}, ${t.subject}. ${TICKET_STATUS_LABELS[t.status]}. Last change ${whenText(t.updatedAt)}.`}
+            accessibilityLabel={`Request ${t.number}, ${t.subject}. ${TICKET_STATUS_LABELS[t.status]}. Last change ${formatWhen(t.updatedAt)}.`}
             accessibilityHint="Opens the conversation"
             onPress={() => props.onOpen(t.id)}
             style={[styles.row, { borderColor: colors.border, minHeight: minTouchTarget }]}
@@ -72,7 +72,7 @@ export function SupportHome(
               {`${t.categoryLabel} · ${TICKET_STATUS_LABELS[t.status]}`}
             </Text>
             <Text style={{ color: colors.textSecondary, fontSize: 13 }}>
-              {`Last change ${whenText(t.updatedAt)}`}
+              {`Last change ${formatWhen(t.updatedAt)}`}
             </Text>
           </Pressable>
         ))}

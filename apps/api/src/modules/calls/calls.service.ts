@@ -1,3 +1,4 @@
+import { isoOrNull } from '../../lib/dates';
 import {
   ASSIGNED_TRIP_STATUSES,
   describeIncomingCall,
@@ -11,7 +12,7 @@ import {
 } from '@yatri/types';
 
 import { env } from '../../config/env';
-import { query } from '../../lib/db';
+import { query, isUniqueViolation } from '../../lib/db';
 import { driverMayCall } from '../accessibility/accessibility.service';
 import { HttpError } from '../../middleware/errorHandler';
 import { notify } from '../../lib/notifications';
@@ -65,9 +66,9 @@ function toInfo(r: Row, trip: TripRow): CallInfo {
     state: r.state,
     callerRole,
     createdAt: r.created_at.toISOString(),
-    answeredAt: r.answered_at?.toISOString() ?? null,
-    connectedAt: r.connected_at?.toISOString() ?? null,
-    endedAt: r.ended_at?.toISOString() ?? null,
+    answeredAt: isoOrNull(r.answered_at),
+    connectedAt: isoOrNull(r.connected_at),
+    endedAt: isoOrNull(r.ended_at),
     endReason: r.end_reason,
   };
 }
@@ -150,7 +151,7 @@ export async function startCall(
     }).catch(() => undefined);
     return call;
   } catch (err) {
-    if ((err as { code?: string }).code === '23505') {
+    if (isUniqueViolation(err)) {
       throw new HttpError(409, 'CALL_IN_PROGRESS', 'There is already a call on this ride.');
     }
     throw err;

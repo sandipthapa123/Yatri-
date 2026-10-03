@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { SOS_STATUS_LABELS } from '@yatri/types';
+import { SOS_STATUS_LABELS, formatWhen } from '@yatri/types';
 
 import { ApiError, getAdminSos } from '../../../../../lib/apiClient';
 import { requireAdminAccessToken } from '../../../../../lib/session';
@@ -12,7 +12,7 @@ interface PageProps {
   params: Promise<{ id: string }>;
 }
 
-const at = (iso: string | null) => (iso ? new Date(iso).toLocaleString() : '—');
+const at = (iso: string | null) => formatWhen(iso, { empty: '—' });
 const SOURCE_TEXT: Record<string, string> = {
   DEVICE: "the person's phone",
   DRIVER_FEED: "the driver's live location",

@@ -1,3 +1,4 @@
+import { formatWhen } from '@yatri/types';
 import { ApiError, useAuth } from '@yatri/mobile-auth';
 import { ActionButton, Announcer, Card, type UiProps } from '@yatri/mobile-ride';
 import { useNews, usePolled } from '@yatri/mobile-support';
@@ -210,7 +211,7 @@ export function RewardsCenter(props: UiProps & { onExit: () => void }) {
             )}
             {referral.data.referrals.map((r, i) => (
               <Text key={`${r.invitedAt}-${i}`} style={{ color: colors.textSecondary }}>
-                {`Friend invited ${new Date(r.invitedAt).toLocaleDateString()}: ${r.statusText}.`}
+                {`Friend invited ${formatWhen(r.invitedAt, { style: 'date' })}: ${r.statusText}.`}
               </Text>
             ))}
           </>

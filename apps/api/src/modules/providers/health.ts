@@ -1,3 +1,4 @@
+import { isoOrNull } from '../../lib/dates';
 import {
   PROVIDER_CAPABILITIES,
   PROVIDER_CAPABILITY_LABELS,
@@ -229,7 +230,7 @@ export async function providersOverview(): Promise<ProvidersOverview> {
       state,
       // A vendor that HAS a live check but has not been checked yet is not the same as one that has none.
       stateText: state === 'UNVERIFIED' && checkerFor(capability) !== null ? 'Set up, not checked yet (the provider check runs every 10 minutes)' : PROVIDER_HEALTH_LABELS[state],
-      checkedAt: row?.checked_at.toISOString() ?? null,
+      checkedAt: isoOrNull(row?.checked_at),
       latencyMs: row?.latency_ms ?? null,
       callsToday: calls,
       failuresToday: failures,

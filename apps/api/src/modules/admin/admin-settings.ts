@@ -9,9 +9,8 @@ import {
 import type { Request, Response } from 'express';
 import { z } from 'zod';
 
-import { pool } from '../../config/database';
 import { recordAudit } from '../../lib/audit';
-import { query } from '../../lib/db';
+import { query, withTransaction } from '../../lib/db';
 import { requireParam } from '../../lib/params';
 import { HttpError } from '../../middleware/errorHandler';
 import { listSettings, updateSetting } from '../settings/settings.service';
@@ -121,16 +120,13 @@ export async function updateCategoryHandler(
   if (!req.auth) throw new HttpError(401, 'UNAUTHENTICATED', 'Authentication required.');
   const id = requireParam(req, 'id');
   const { reason, ...changes } = req.body as VehicleCategoryBody;
-  const client = await pool.connect();
-  let before: CategoryRow;
-  try {
-    await client.query('BEGIN');
+  let before!: CategoryRow;
+  await withTransaction(async (client) => {
     const cur = await client.query<CategoryRow>(
       `SELECT ${COLUMNS} FROM vehicle_categories c WHERE c.id = $1 FOR UPDATE OF c`,
       [id],
     );
     if (!cur.rows[0]) {
-      await client.query('ROLLBACK');
       throw new HttpError(404, 'NOT_FOUND', 'Vehicle category not found.');
     }
     before = cur.rows[0];
@@ -140,7 +136,6 @@ export async function updateCategoryHandler(
         [id],
       );
       if (!others.rowCount) {
-        await client.query('ROLLBACK');
         throw new HttpError(
           409,
           'LAST_ACTIVE_CATEGORY',
@@ -174,13 +169,7 @@ export async function updateCategoryHandler(
         changes.minimumFareNpr ?? null,
       ],
     );
-    await client.query('COMMIT');
-  } catch (err) {
-    await client.query('ROLLBACK').catch(() => undefined);
-    throw err;
-  } finally {
-    client.release();
-  }
+  });
   const after = await query<CategoryRow>(
     `SELECT ${COLUMNS} FROM vehicle_categories c WHERE c.id = $1`,
     [id],

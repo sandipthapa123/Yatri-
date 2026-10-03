@@ -15,9 +15,8 @@ import {
   type TripRole,
 } from '@yatri/types';
 
-import { pool } from '../../config/database';
 import { recordAudit } from '../../lib/audit';
-import { query } from '../../lib/db';
+import { query, withTransaction } from '../../lib/db';
 import { notify } from '../../lib/notifications';
 import { HttpError } from '../../middleware/errorHandler';
 import { requireParticipant } from '../trips/access';
@@ -193,23 +192,15 @@ export async function changeIncidentStatus(
   to: IncidentStatus,
   note?: string,
 ): Promise<IncidentInfo> {
-  const client = await pool.connect();
-  let row: Row;
-  let from: IncidentStatus;
-  try {
-    await client.query('BEGIN');
+  const { row, from } = await withTransaction(async (client) => {
     const cur = await client.query<Row>(
       `SELECT ${COLS} FROM incident_reports WHERE id = $1 FOR UPDATE`,
       [id],
     );
     const current = cur.rows[0];
-    if (!current) {
-      await client.query('ROLLBACK');
-      throw new HttpError(404, 'NOT_FOUND', 'Report not found.');
-    }
-    from = current.status;
+    if (!current) throw new HttpError(404, 'NOT_FOUND', 'Report not found.');
+    const from = current.status;
     if (!canIncidentTransition(from, to)) {
-      await client.query('ROLLBACK');
       const next = INCIDENT_TRANSITIONS[from].map((x) => INCIDENT_STATUS_LABELS[x]);
       throw new HttpError(
         409,
@@ -223,19 +214,13 @@ export async function changeIncidentStatus(
       `UPDATE incident_reports SET status = $2, updated_at = now() WHERE id = $1 RETURNING ${COLS}`,
       [id, to],
     );
-    row = upd.rows[0] as Row;
     await client.query(
       `INSERT INTO incident_notes (incident_id, admin_id, kind, body, from_status, to_status)
        VALUES ($1, $2, 'STATUS', $3, $4, $5)`,
       [id, adminId, note?.trim() || `Status changed from ${from} to ${to}.`, from, to],
     );
-    await client.query('COMMIT');
-  } catch (err) {
-    await client.query('ROLLBACK').catch(() => undefined);
-    throw err;
-  } finally {
-    client.release();
-  }
+    return { row: upd.rows[0] as Row, from };
+  });
   await recordAudit({
     actorId: adminId,
     actorRole: 'ADMIN',

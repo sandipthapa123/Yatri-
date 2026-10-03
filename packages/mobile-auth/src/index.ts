@@ -16,6 +16,13 @@ export * as authApi from './apiClient';
 export { API_BASE_URL, resolveMediaUrl } from './config';
 export { OtpInput } from './components/OtpInput';
 export { PhoneNumberInput, toE164 } from './components/PhoneNumberInput';
+export {
+  createSignInScreens,
+  OtpVerificationView,
+  PhoneEntryView,
+  WelcomeView,
+} from './components/SignInScreens';
+export type { SignInIdentity, SignInRoutes } from './components/SignInScreens';
 export type {
   DriverProfile,
   DriverStatus,

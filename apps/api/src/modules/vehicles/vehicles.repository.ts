@@ -1,6 +1,6 @@
 import type { VehicleCreateBody, VehicleUpdateBody } from '@yatri/types';
 
-import { query } from '../../lib/db';
+import { query, isUniqueViolation } from '../../lib/db';
 import { HttpError } from '../../middleware/errorHandler';
 import type { VehicleCategoryRow, VehicleRow } from './vehicles.types';
 
@@ -29,7 +29,7 @@ export async function orRegistrationTaken<T>(write: () => Promise<T>): Promise<T
   try {
     return await write();
   } catch (err) {
-    if ((err as { code?: string }).code === '23505') throw registrationTaken();
+    if (isUniqueViolation(err)) throw registrationTaken();
     throw err;
   }
 }

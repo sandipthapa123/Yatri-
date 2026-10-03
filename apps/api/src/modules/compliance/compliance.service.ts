@@ -1,3 +1,4 @@
+import { isoOrNull } from '../../lib/dates';
 import type {
   ComplianceRecordInfo,
   MyPolicyStatus,
@@ -72,7 +73,7 @@ export async function myPolicyStatus(userId: string, role: TripRole): Promise<My
     ...toPolicy(x),
     accepted: x.accepted_current,
     acceptedVersion: x.accepted_version,
-    acceptedAt: x.accepted_at?.toISOString() ?? null,
+    acceptedAt: isoOrNull(x.accepted_at),
   }));
 }
 
@@ -135,7 +136,10 @@ export async function withdrawConsent(
   client?: Queryable,
 ): Promise<number> {
   const run = client ?? { query };
-  const policy = await run.query<{ kind: string }>('SELECT kind FROM compliance_policies WHERE key = $1', [key]);
+  const policy = await run.query<{ kind: string }>(
+    'SELECT kind FROM compliance_policies WHERE key = $1',
+    [key],
+  );
   if (policy.rows[0]?.kind !== 'CONSENT') {
     throw new HttpError(400, 'NOT_A_CONSENT', 'Only a consent can be withdrawn.');
   }
@@ -166,7 +170,7 @@ export async function myComplianceRecords(userId: string): Promise<ComplianceRec
     policyVersion: x.policy_version,
     acceptedAt: x.accepted_at.toISOString(),
     source: x.source,
-    withdrawnAt: x.withdrawn_at?.toISOString() ?? null,
+    withdrawnAt: isoOrNull(x.withdrawn_at),
   }));
 }
 

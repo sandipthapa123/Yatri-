@@ -323,9 +323,15 @@ importers:
 
   packages/mobile-auth:
     dependencies:
+      '@yatri/mobile-ui':
+        specifier: workspace:*
+        version: link:../mobile-ui
       '@yatri/shared':
         specifier: workspace:*
         version: link:../shared
+      '@yatri/types':
+        specifier: workspace:*
+        version: link:../types
       expo-secure-store:
         specifier: ~57.0.4
         version: 57.0.4(expo@57.0.25)
@@ -342,6 +348,9 @@ importers:
       '@types/react':
         specifier: ~19.2.2
         version: 19.2.18
+      react-native-safe-area-context:
+        specifier: ^5.10.0
+        version: 5.10.0(react-native@0.86.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
       typescript:
         specifier: ~5.7.2
         version: 5.7.3
@@ -493,6 +502,9 @@ importers:
       '@yatri/mobile-ride':
         specifier: workspace:*
         version: link:../mobile-ride
+      '@yatri/mobile-ui':
+        specifier: workspace:*
+        version: link:../mobile-ui
       '@yatri/types':
         specifier: workspace:*
         version: link:../types
@@ -521,6 +533,9 @@ importers:
       '@types/react':
         specifier: ~19.2.2
         version: 19.2.18
+      react-native-safe-area-context:
+        specifier: ^5.10.0
+        version: 5.10.0(react-native@0.86.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
       typescript:
         specifier: ~5.7.2
         version: 5.7.3
@@ -543,6 +558,9 @@ importers:
       '@types/react':
         specifier: ~19.2.2
         version: 19.2.18
+      react-native-safe-area-context:
+        specifier: ^5.10.0
+        version: 5.10.0(react-native@0.86.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
       typescript:
         specifier: ~5.7.2
         version: 5.7.3

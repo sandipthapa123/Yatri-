@@ -7,9 +7,9 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import * as driverApi from '../api/driverApi';
-import { Logo } from '../components/Logo';
+import { BRAND } from '../brand';
 import type { RootStackParamList } from '../navigation/RootNavigator';
-import { useTheme } from '@yatri/mobile-ui';
+import { useTheme, Wordmark } from '@yatri/mobile-ui';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'VerificationPending'>;
 
@@ -103,7 +103,7 @@ export function VerificationPendingScreen({ navigation }: Props) {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <Logo size="lg" />
+      <Wordmark {...BRAND} size="lg" />
       <View
         style={styles.body}
         accessible

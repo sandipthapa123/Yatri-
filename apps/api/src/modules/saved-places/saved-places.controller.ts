@@ -1,3 +1,4 @@
+import { isUniqueViolation } from '../../lib/db';
 import type { Request, Response } from 'express';
 import type { ApiResponse, SavedPlace, SavedPlaceKind } from '@yatri/types';
 
@@ -30,9 +31,8 @@ const NOT_FOUND = () => new HttpError(404, 'NOT_FOUND', 'Saved place not found.'
 
 /** Unique-index violations become clear 409s instead of raw Postgres errors. */
 function mapConflict(err: unknown): never {
-  const e = err as { code?: string; constraint?: string };
-  if (e?.code === '23505') {
-    if (e.constraint === 'saved_places_one_home_work') {
+  if (isUniqueViolation(err)) {
+    if (isUniqueViolation(err, 'saved_places_one_home_work')) {
       throw new HttpError(
         409,
         'SAVED_PLACE_EXISTS',

@@ -8,7 +8,7 @@ import {
 import { z } from 'zod';
 
 import { recordAudit, auditTrail } from '../../lib/audit';
-import { query, withTransaction } from '../../lib/db';
+import { query, withTransaction, isUniqueViolation } from '../../lib/db';
 import { HttpError } from '../../middleware/errorHandler';
 import { enforceEligibility } from './enforcement';
 import { listFleetDrivers } from './operational.service';
@@ -96,7 +96,7 @@ export async function createFleet(body: AdminFleetBody, adminId: string): Promis
     });
     return fleetDetail(id);
   } catch (err) {
-    if ((err as { code?: string }).code === '23505') {
+    if (isUniqueViolation(err)) {
       throw new HttpError(409, 'FLEET_NAME_TAKEN', 'A fleet with that name already exists.');
     }
     throw err;
@@ -121,7 +121,7 @@ export async function updateFleet(
         [id, body.name, body.contactName, body.contactPhone, body.contactEmail, body.status],
       );
     } catch (err) {
-      if ((err as { code?: string }).code === '23505') {
+      if (isUniqueViolation(err)) {
         throw new HttpError(409, 'FLEET_NAME_TAKEN', 'A fleet with that name already exists.');
       }
       throw err;

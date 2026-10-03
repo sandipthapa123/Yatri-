@@ -1,3 +1,4 @@
+import { isoOrNull } from '../../lib/dates';
 import type { DeviceSession, RecentPlace, RecentPlacesResponse } from '@yatri/types';
 
 import { query } from '../../lib/db';
@@ -34,7 +35,7 @@ export async function listDevices(
   return r.rows.map((s) => ({
     id: s.id,
     deviceLabel: s.device_label,
-    lastUsedAt: s.last_used_at?.toISOString() ?? null,
+    lastUsedAt: isoOrNull(s.last_used_at),
     signedInAt: s.created_at.toISOString(),
     current: s.id === currentSessionId,
   }));

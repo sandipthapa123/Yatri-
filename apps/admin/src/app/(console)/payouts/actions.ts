@@ -1,6 +1,6 @@
 'use server';
 
-import { PAYOUT_STATUSES, type PayoutStatus } from '@yatri/types';
+import { PAYOUT_STATUSES, type PayoutStatus, formatNpr } from '@yatri/types';
 import { revalidatePath } from 'next/cache';
 
 import { ApiError, payoutAccountApi, payoutActionApi, payoutPrepareApi } from '../../../lib/apiClient';
@@ -29,8 +29,8 @@ export async function preparePayoutsAction(_prev: PayoutActionState, fd: FormDat
     return {
       done:
         r.prepared !== undefined
-          ? `${r.prepared} ${r.prepared === 1 ? 'payout' : 'payouts'} prepared (NPR ${r.totalNpr ?? 0}). ${r.skipped ?? 0} ${r.skipped === 1 ? 'driver was' : 'drivers were'} skipped: no payout account, or too little ready.`
-          : `A payout of NPR ${r.amountNpr ?? 0} was prepared.`,
+          ? `${r.prepared} ${r.prepared === 1 ? 'payout' : 'payouts'} prepared (${formatNpr(r.totalNpr ?? 0)}). ${r.skipped ?? 0} ${r.skipped === 1 ? 'driver was' : 'drivers were'} skipped: no payout account, or too little ready.`
+          : `A payout of ${formatNpr(r.amountNpr ?? 0)} was prepared.`,
     };
   } catch (e) {
     return fail(e);

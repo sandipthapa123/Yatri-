@@ -5,6 +5,7 @@ import {
   RISK_EVENT_STATUS_LABELS,
   RISK_EVENT_TRANSITIONS,
   riskRuleDef,
+  formatWhen,
 } from '@yatri/types';
 
 import { ApiError, getRiskEvent } from '../../../../../lib/apiClient';
@@ -45,7 +46,7 @@ export default async function RiskEventPage({ params }: PageProps) {
         </h2>
         <p style={{ margin: 0 }}>
           {RISK_CATEGORY_LABELS[e.category]}. {RISK_EVENT_STATUS_LABELS[e.status]}. {e.points}{' '}
-          points. Raised {new Date(e.createdAt).toLocaleString()}.
+          points. Raised {formatWhen(e.createdAt)}.
         </p>
         {rule ? <p style={{ margin: 0 }}>{rule.help}</p> : null}
         <p style={{ margin: 0 }}>Evidence: {describeEvidence(e.evidence)}.</p>
@@ -73,7 +74,7 @@ export default async function RiskEventPage({ params }: PageProps) {
         </ul>
         {e.reviewedAt ? (
           <p style={{ margin: 0 }}>
-            Reviewed {new Date(e.reviewedAt).toLocaleString()}
+            Reviewed {formatWhen(e.reviewedAt)}
             {e.reviewNote ? `. Reason: ${e.reviewNote}` : ''}
           </p>
         ) : null}

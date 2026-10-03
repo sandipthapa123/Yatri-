@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { INCIDENT_CATEGORY_LABELS, INCIDENT_STATUS_LABELS } from '@yatri/types';
+import { INCIDENT_CATEGORY_LABELS, INCIDENT_STATUS_LABELS, formatWhen } from '@yatri/types';
 
 import { ApiError, getAdminIncident } from '../../../../../lib/apiClient';
 import { requireAdminAccessToken } from '../../../../../lib/session';
@@ -12,7 +12,7 @@ interface PageProps {
   params: Promise<{ id: string }>;
 }
 
-const at = (iso: string) => new Date(iso).toLocaleString();
+const at = (iso: string) => formatWhen(iso);
 const KIND_TEXT = { NOTE: 'Note', ACTION: 'Action taken', STATUS: 'Status change' } as const;
 
 /** One incident report: what was said, the review history and internal notes, and the controls. */

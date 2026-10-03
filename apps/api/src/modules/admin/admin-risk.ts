@@ -1,3 +1,4 @@
+import { pageParam, pageSizeParam } from '../../lib/pagination';
 import {
   RISK_CATEGORIES,
   RISK_EVENT_STATUSES,
@@ -50,8 +51,8 @@ type Res<T> = Response<ApiResponse<T>>;
 
 const reason = z.string().trim().min(3).max(300);
 const uuid = z.string().uuid();
-const page = z.coerce.number().int().min(1).default(1);
-const pageSize = z.coerce.number().int().min(1).max(100).default(20);
+const page = pageParam;
+const pageSize = pageSizeParam(100, 20);
 
 export const riskEventsQuerySchema = z.object({
   status: z.enum(RISK_EVENT_STATUSES).optional(),

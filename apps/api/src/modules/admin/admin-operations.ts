@@ -1,3 +1,4 @@
+import { pageParam, pageSizeParam } from '../../lib/pagination';
 import type {
   AdminIncentiveRuleBody,
   AdminPricingRuleBody,
@@ -37,8 +38,8 @@ const adminId = (req: Request) => {
 type Res<T> = Response<ApiResponse<T>>;
 
 export const awardsQuerySchema = z.object({
-  page: z.coerce.number().int().min(1).default(1),
-  pageSize: z.coerce.number().int().min(1).max(50).default(20),
+  page: pageParam,
+  pageSize: pageSizeParam(50, 20),
 });
 
 /** The zones and vehicle categories a rule can be limited to (names only), for the editing forms. */

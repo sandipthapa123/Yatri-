@@ -1,3 +1,4 @@
+import { isoOrNull } from '../../lib/dates';
 import {
   ASSIGNED_TRIP_STATUSES,
   describeSosStatus,
@@ -395,13 +396,13 @@ export async function sosDetail(sosId: string): Promise<Omit<AdminSosDetail, 'au
             longitude: Number(s.longitude),
             accuracyMeters: s.accuracy_meters,
             source: s.location_source,
-            recordedAt: s.location_at?.toISOString() ?? null,
+            recordedAt: isoOrNull(s.location_at),
           }
         : null,
-    acknowledgedAt: s.acknowledged_at?.toISOString() ?? null,
-    resolvedAt: s.resolved_at?.toISOString() ?? null,
+    acknowledgedAt: isoOrNull(s.acknowledged_at),
+    resolvedAt: isoOrNull(s.resolved_at),
     resolutionNote: s.resolution_note,
-    cancelledAt: s.cancelled_at?.toISOString() ?? null,
+    cancelledAt: isoOrNull(s.cancelled_at),
     trip: {
       status: trip?.status ?? 'UNKNOWN',
       passengerName: nameOf(trip?.passenger_id ?? null),

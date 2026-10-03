@@ -7,3 +7,4 @@ export { Wordmark } from './Wordmark';
 export type { WordmarkProps } from './Wordmark';
 export { LoadingView, StartupErrorView } from './AppStatusViews';
 export type { AppIdentity } from './AppStatusViews';
+export { Fact, Problem } from './Fact';

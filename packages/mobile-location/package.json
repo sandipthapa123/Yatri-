@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@yatri/mobile-auth": "workspace:*",
+    "@yatri/mobile-ui": "workspace:*",
     "@yatri/types": "workspace:*",
     "expo-location": "~57.0.20",
     "react-native-webview": "^14.0.1"

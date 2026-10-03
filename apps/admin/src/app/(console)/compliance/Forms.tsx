@@ -1,5 +1,7 @@
 'use client';
 
+import { Feedback } from '../ui/FormParts';
+
 import {
   DATA_REQUEST_STATUS_LABELS,
   type AdminDataRequestRow,
@@ -13,19 +15,10 @@ import {
   dataRequestAction,
   publishPolicyAction,
   retentionAction,
-  type ComplianceActionState,
 } from './actions';
 
 const column = { display: 'flex', flexDirection: 'column', gap: 8 } as const;
 
-function Feedback({ state }: { state: ComplianceActionState }) {
-  return (
-    <div role="status" aria-live="polite">
-      {state.error ? <p style={styles.errorText}>Problem: {state.error}</p> : null}
-      {state.done ? <p style={{ margin: 0, fontSize: 14 }}>{state.done}</p> : null}
-    </div>
-  );
-}
 
 /** Publish the next version of a policy. The words live at the address; only the version is recorded. */
 export function PublishPolicyForm({ policy }: { policy: PolicyInfo }) {

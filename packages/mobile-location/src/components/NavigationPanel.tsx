@@ -1,3 +1,4 @@
+import { Fact } from '@yatri/mobile-ui';
 import {
   APPROACH_PHASE_LABELS,
   describeGuidance,
@@ -134,18 +135,8 @@ export function NavigationPanel(props: {
   );
 }
 
-function Fact({ colors, label, value }: { colors: MapColors; label: string; value: string }) {
-  return (
-    <View accessible accessibilityLabel={`${label}: ${value}`} style={styles.fact}>
-      <Text style={{ color: colors.textSecondary, flex: 1 }}>{label}</Text>
-      <Text style={{ color: colors.textPrimary, fontWeight: '600' }}>{value}</Text>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   box: { borderWidth: 1, borderRadius: 10, padding: 14, gap: 8 },
   heading: { fontSize: 18, fontWeight: '700' },
-  fact: { flexDirection: 'row', gap: 8, justifyContent: 'space-between' },
   button: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, justifyContent: 'center' },
 });

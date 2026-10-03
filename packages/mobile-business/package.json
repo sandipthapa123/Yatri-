@@ -13,6 +13,7 @@
     "@yatri/mobile-auth": "workspace:*",
     "@yatri/mobile-ride": "workspace:*",
     "@yatri/mobile-support": "workspace:*",
+    "@yatri/mobile-ui": "workspace:*",
     "@yatri/types": "workspace:*"
   },
   "peerDependencies": {

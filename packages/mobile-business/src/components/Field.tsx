@@ -49,16 +49,11 @@ export function Field(
 }
 
 /** A problem shown as text with the role alert, so it is announced and not only coloured. */
-export function Problem(props: { text: string; color: string }) {
-  return (
-    <Text accessibilityRole="alert" style={{ color: props.color }}>
-      {`Problem: ${props.text}`}
-    </Text>
-  );
-}
-
 const styles = StyleSheet.create({
   wrap: { gap: 4 },
   label: { fontSize: 15, fontWeight: '600' },
   input: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, fontSize: 16 },
 });
+
+// The problem line is the shared one.
+export { Problem } from '@yatri/mobile-ui';

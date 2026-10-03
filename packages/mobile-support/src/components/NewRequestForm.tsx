@@ -1,3 +1,4 @@
+import { Problem } from '@yatri/mobile-ui';
 import {
   TICKET_BODY_MAX,
   TICKET_SUBJECT_MAX,
@@ -163,14 +164,6 @@ export function NewRequestForm(
 }
 
 /** A problem with a field, in words (the colour is only a second cue). */
-function Problem(props: { text: string; color: string }) {
-  return (
-    <Text accessibilityRole="alert" style={{ color: props.color, fontWeight: '600' }}>
-      {`Problem: ${props.text}`}
-    </Text>
-  );
-}
-
 const styles = StyleSheet.create({
   group: { gap: 8 },
   label: { fontSize: 16, fontWeight: '700' },

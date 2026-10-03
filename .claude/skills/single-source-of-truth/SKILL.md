@@ -143,3 +143,6 @@ Yatri-specific reminders:
   An app supplies only its identity (`brand.ts`) and its navigation; it writes no copy of a shared screen.
 - A failed API call is the one `ApiError` (`@yatri/shared`) in the admin site and both apps. A duplicate vehicle registration is
   `registrationTaken()` (`vehicles.repository.ts`).
+- In the apps, a label-and-value line is `Fact` and a form's error line is `Problem` (`@yatri/mobile-ui`; `Fact` follows the
+  person's text size). In the admin site, an action's result is `Feedback` (`ui/FormParts.tsx`) and a list of facts is `Facts`
+  (`ui/Facts.tsx`). A screen or package never defines its own.

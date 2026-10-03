@@ -1,18 +1,12 @@
 'use client';
 
+import { Feedback } from '../ui/FormParts';
+
 import { useActionState, useId } from 'react';
 
 import { styles } from '../drivers/styles';
-import { cancelRideAction, type RideActionState } from './actions';
+import { cancelRideAction } from './actions';
 
-function Feedback({ state }: { state: RideActionState }) {
-  return (
-    <div role="status" aria-live="polite">
-      {state.error ? <p style={styles.errorText}>{state.error}</p> : null}
-      {state.done ? <p style={{ margin: 0, fontSize: 14 }}>{state.done}</p> : null}
-    </div>
-  );
-}
 
 /** Cancel a live ride as an operator. Needs a written reason, which both people are shown. */
 export function CancelRideForm({ tripId }: { tripId: string }) {

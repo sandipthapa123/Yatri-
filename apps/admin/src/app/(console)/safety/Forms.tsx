@@ -1,5 +1,7 @@
 'use client';
 
+import { Feedback } from '../ui/FormParts';
+
 import {
   INCIDENT_STATUS_LABELS,
   INCIDENT_TRANSITIONS,
@@ -13,17 +15,8 @@ import {
   incidentNoteAction,
   incidentStatusAction,
   moveSosAction,
-  type SafetyActionState,
 } from './actions';
 
-function Feedback({ state }: { state: SafetyActionState }) {
-  return (
-    <div role="status" aria-live="polite">
-      {state.error ? <p style={styles.errorText}>{state.error}</p> : null}
-      {state.done ? <p style={{ margin: 0, fontSize: 14 }}>{state.done}</p> : null}
-    </div>
-  );
-}
 
 const column = { display: 'flex', flexDirection: 'column', gap: 8 } as const;
 

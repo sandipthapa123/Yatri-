@@ -138,19 +138,6 @@ export function Card(
 }
 
 /** A label/value pair read as one sentence ("Fare: NPR 320"). */
-export function Fact(props: UiProps & { label: string; value: string }) {
-  const { colors } = props;
-  const { fontScale } = useUiPreferences();
-  return (
-    <View accessible accessibilityLabel={`${props.label}: ${props.value}`} style={styles.fact}>
-      <Text style={{ color: colors.textSecondary, fontSize: 13 * fontScale }}>{props.label}</Text>
-      <Text style={{ color: colors.textPrimary, fontSize: 17 * fontScale, fontWeight: '600' }}>
-        {props.value}
-      </Text>
-    </View>
-  );
-}
-
 export const styles = StyleSheet.create({
   button: {
     borderRadius: 12,
@@ -164,5 +151,7 @@ export const styles = StyleSheet.create({
   banner: { borderWidth: 2, borderRadius: 12, padding: 12, fontSize: 17, fontWeight: '700' },
   card: { borderWidth: 1, borderRadius: 14, padding: 14, gap: 8 },
   cardTitle: { fontSize: 18, fontWeight: '700' },
-  fact: { paddingVertical: 4 },
 });
+
+// The label-and-value line is the shared one.
+export { Fact } from '@yatri/mobile-ui';

@@ -1,5 +1,7 @@
 'use client';
 
+import { Feedback } from '../ui/FormParts';
+
 import {
   REFUND_METHODS,
   REFUND_METHOD_LABELS,
@@ -29,19 +31,10 @@ import {
   refundAction,
   replyAction,
   statusAction,
-  type SupportActionState,
 } from './actions';
 
 const column = { display: 'flex', flexDirection: 'column', gap: 8 } as const;
 
-function Feedback({ state }: { state: SupportActionState }) {
-  return (
-    <div role="status" aria-live="polite">
-      {state.error ? <p style={styles.errorText}>Problem: {state.error}</p> : null}
-      {state.done ? <p style={{ margin: 0, fontSize: 14 }}>{state.done}</p> : null}
-    </div>
-  );
-}
 
 /** A reply to the person, optionally with a file, optionally moving the ticket to a working state. */
 export function ReplyForm({

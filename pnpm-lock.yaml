@@ -369,6 +369,9 @@ importers:
       '@yatri/mobile-support':
         specifier: workspace:*
         version: link:../mobile-support
+      '@yatri/mobile-ui':
+        specifier: workspace:*
+        version: link:../mobile-ui
       '@yatri/types':
         specifier: workspace:*
         version: link:../types
@@ -397,6 +400,9 @@ importers:
       '@yatri/mobile-auth':
         specifier: workspace:*
         version: link:../mobile-auth
+      '@yatri/mobile-ui':
+        specifier: workspace:*
+        version: link:../mobile-ui
       '@yatri/types':
         specifier: workspace:*
         version: link:../types

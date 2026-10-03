@@ -1,3 +1,4 @@
+import { Facts } from '../../ui/Facts';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import {
@@ -35,18 +36,6 @@ const CALL_STATE_TEXT: Record<string, string> = {
   ENDED: 'Ended',
 };
 
-function Facts({ rows }: { rows: Array<[string, string]> }) {
-  return (
-    <dl style={styles.definitionList}>
-      {rows.map(([k, v]) => (
-        <div key={k} style={{ display: 'contents' }}>
-          <dt style={styles.dt}>{k}</dt>
-          <dd style={styles.dd}>{v}</dd>
-        </div>
-      ))}
-    </dl>
-  );
-}
 
 /**
  * One ride, end to end, from the same records the passenger and driver apps use: the state

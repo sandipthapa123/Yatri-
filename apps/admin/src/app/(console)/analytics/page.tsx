@@ -1,3 +1,4 @@
+import { Facts } from '../ui/Facts';
 import {
   INCIDENT_CATEGORY_LABELS,
   INCIDENT_STATUS_LABELS,
@@ -21,18 +22,6 @@ interface PageProps {
 const pct = (n: number | null) => (n === null ? 'No rides ended yet' : `${n}%`);
 const num = (n: number | null) => (n === null ? '—' : String(n));
 
-function Facts({ rows }: { rows: Array<[string, string]> }) {
-  return (
-    <dl style={styles.definitionList}>
-      {rows.map(([k, v]) => (
-        <div key={k} style={{ display: 'contents' }}>
-          <dt style={styles.dt}>{k}</dt>
-          <dd style={styles.dd}>{v}</dd>
-        </div>
-      ))}
-    </dl>
-  );
-}
 
 /**
  * Analytics for a chosen period, computed by the API from the live records (no separate analytics

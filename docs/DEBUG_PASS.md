@@ -126,6 +126,18 @@ default 15-second limit. The suite was run with 60-second limits for that reason
 All three are build tools that run on a developer's machine and are not part of the app bundles, so the risk is to the build machine,
 not to riders, drivers or the servers. Re-run the audit after the next Expo upgrade.
 
+## Final full-system verification (2026-10-04)
+
+Every CI check plus the repository audits, run in one pass on the developer machine: formatting, lint, typecheck, types and API
+build, package tests, the API suite (56 files, 1 002 tests, all passing), admin build, both Android bundles, dependency audit,
+migrations down 3 and up again, and the duplicate, dead-file and unused-dependency scans. All passed.
+
+One finding, fixed: the driver app declared `@yatri/shared` but never imports it; the dependency is removed.
+
+The unused-dependency scan still lists packages that are needed and stay: native modules (`expo-secure-store`,
+`react-native-webrtc`, `react-native-incall-manager`, `react-native-screens`), which an app must declare itself for native
+autolinking; `typescript`, used by each package's `tsc` script; and `react-dom`, which Next requires.
+
 ## Verification after the deduplication pass (2026-10-04)
 
 - Whole API suite, `--maxWorkers=2`, nothing else running: **56 files, 999 tests, all passing** (24 minutes). Earlier runs with 4

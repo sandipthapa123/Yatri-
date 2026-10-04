@@ -184,9 +184,6 @@ importers:
       '@yatri/mobile-ui':
         specifier: workspace:*
         version: link:../../packages/mobile-ui
-      '@yatri/shared':
-        specifier: workspace:*
-        version: link:../../packages/shared
       '@yatri/types':
         specifier: workspace:*
         version: link:../../packages/types

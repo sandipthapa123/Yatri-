@@ -21,7 +21,6 @@
     "@yatri/mobile-ride": "workspace:*",
     "@yatri/mobile-support": "workspace:*",
     "@yatri/mobile-ui": "workspace:*",
-    "@yatri/shared": "workspace:*",
     "@yatri/types": "workspace:*",
     "expo": "~57.0.25",
     "expo-document-picker": "~57.0.2",

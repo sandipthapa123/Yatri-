@@ -132,7 +132,10 @@ export function CampaignForm({ campaign }: { campaign?: CampaignInfo }) {
           />
         )}
         {kind === 'DISABILITY_BENEFIT' ? (
-          <p style={hint}>This benefit is only for riders whose disability benefit is verified. That is fixed for this kind.</p>
+          <p style={hint}>
+            This benefit is only for riders whose disability benefit is verified. That is fixed for
+            this kind.
+          </p>
         ) : (
           <Checkbox
             name="requiresDisabilityVerified"
@@ -151,8 +154,9 @@ export function CampaignForm({ campaign }: { campaign?: CampaignInfo }) {
           </>
         ) : null}
         <p style={hint}>
-          Eligibility comes only from the verification workspace: nobody can be added here by name. The value, vehicle types, cities,
-          limits, dates and stacking below are ordinary campaign settings.
+          Eligibility comes only from the verification workspace: nobody can be added here by name.
+          The value, vehicle types, cities, limits, dates and stacking below are ordinary campaign
+          settings.
         </p>
         <Field
           name="minCompletedRides"

@@ -91,10 +91,28 @@ export interface VerificationRow {
 export const columnsFor = (alias = ''): string => {
   const p = alias ? `${alias}.` : '';
   return [
-    'id', 'user_id', 'status', 'method', 'verified_method', 'card_hash', 'card_last4', 'issuing_authority',
-    `to_char(${p}issue_date, 'YYYY-MM-DD') AS issue_date`, `to_char(${p}expiry_date, 'YYYY-MM-DD') AS expiry_date`,
-    'document_key', 'document_name', 'document_mime', 'document_size', 'document_uploaded_at', 'message', 'submitted_at',
-    'decided_at', 'verified_at', `to_char(${p}valid_until, 'YYYY-MM-DD') AS valid_until`, 'warned_days', 'updated_at',
+    'id',
+    'user_id',
+    'status',
+    'method',
+    'verified_method',
+    'card_hash',
+    'card_last4',
+    'issuing_authority',
+    `to_char(${p}issue_date, 'YYYY-MM-DD') AS issue_date`,
+    `to_char(${p}expiry_date, 'YYYY-MM-DD') AS expiry_date`,
+    'document_key',
+    'document_name',
+    'document_mime',
+    'document_size',
+    'document_uploaded_at',
+    'message',
+    'submitted_at',
+    'decided_at',
+    'verified_at',
+    `to_char(${p}valid_until, 'YYYY-MM-DD') AS valid_until`,
+    'warned_days',
+    'updated_at',
   ]
     .map((c) => (c.includes(' AS ') ? c : `${p}${c}`))
     .join(', ');
@@ -105,30 +123,47 @@ export const COLUMNS = columnsFor();
  * Hash a card number with a key derived from the storage signing secret (a separate purpose, so one leak does not open
  * both). Two accounts holding the same number hash the same; nothing can recover the number from the hash.
  */
-const cardKey = () => createHmac('sha256', env.STORAGE_SIGNING_SECRET).update('yatri:disability-card:v1').digest();
+const cardKey = () =>
+  createHmac('sha256', env.STORAGE_SIGNING_SECRET).update('yatri:disability-card:v1').digest();
 export const hashCard = (raw: string): string =>
   createHmac('sha256', cardKey()).update(normalizeCardNumber(raw)).digest('hex');
 
 export const featureOn = () => settingBool('DISABILITY_VERIFICATION_ENABLED');
 function requireFeature(): void {
   if (!featureOn()) {
-    throw new HttpError(503, 'DISABILITY_VERIFICATION_OFF', 'Disability benefit verification is not available right now.');
+    throw new HttpError(
+      503,
+      'DISABILITY_VERIFICATION_OFF',
+      'Disability benefit verification is not available right now.',
+    );
   }
 }
 
-async function loadRow(userId: string, client?: PoolClient, lock = false): Promise<VerificationRow | null> {
+async function loadRow(
+  userId: string,
+  client?: PoolClient,
+  lock = false,
+): Promise<VerificationRow | null> {
   const sql = `SELECT ${COLUMNS} FROM disability_verifications WHERE user_id = $1${lock ? ' FOR UPDATE' : ''}`;
-  const r = client ? await client.query<VerificationRow>(sql, [userId]) : await query<VerificationRow>(sql, [userId]);
+  const r = client
+    ? await client.query<VerificationRow>(sql, [userId])
+    : await query<VerificationRow>(sql, [userId]);
   return r.rows[0] ?? null;
 }
 
 async function ensureRow(userId: string, client: PoolClient): Promise<VerificationRow> {
-  await client.query(`INSERT INTO disability_verifications (user_id) VALUES ($1) ON CONFLICT (user_id) DO NOTHING`, [userId]);
+  await client.query(
+    `INSERT INTO disability_verifications (user_id) VALUES ($1) ON CONFLICT (user_id) DO NOTHING`,
+    [userId],
+  );
   return (await loadRow(userId, client, true)) as VerificationRow;
 }
 
 /** Whether the rider's consent to use their card details is in force (given and not withdrawn). */
-export async function consentActive(userId: string, client?: PoolClient): Promise<{ active: boolean; givenAt: Date | null }> {
+export async function consentActive(
+  userId: string,
+  client?: PoolClient,
+): Promise<{ active: boolean; givenAt: Date | null }> {
   const sql = `SELECT accepted_at FROM compliance_records
                WHERE user_id = $1 AND policy_key = $2 AND withdrawn_at IS NULL ORDER BY accepted_at DESC LIMIT 1`;
   const r = client
@@ -155,7 +190,11 @@ export async function benefitActiveFor(userId: string): Promise<boolean> {
  * The ONE rule for "this rider's disability benefit is active", as a SQL expression, so a query over many riders (a message
  * audience) and the single-rider check above can never disagree. The arguments are SQL (a column or a typed parameter).
  */
-export const benefitActiveSql = (userExpr: string, todayExpr: string, consentKeyExpr: string): string =>
+export const benefitActiveSql = (
+  userExpr: string,
+  todayExpr: string,
+  consentKeyExpr: string,
+): string =>
   `EXISTS (SELECT 1 FROM disability_verifications v
            WHERE v.user_id = ${userExpr} AND v.status = 'VERIFIED' AND v.valid_until >= ${todayExpr}
              AND EXISTS (SELECT 1 FROM compliance_records c
@@ -171,7 +210,8 @@ export async function driverNoteFor(
   live: boolean,
 ): Promise<TripDisabilityNote | null> {
   if (!trip.driver_id || trip.driver_id !== viewerId || !live) return null; // only the assigned driver, only while the ride is live
-  if ((await personalPreference(trip.passenger_id, 'shareDisabilityStatusWithDriver')) !== true) return null;
+  if ((await personalPreference(trip.passenger_id, 'shareDisabilityStatusWithDriver')) !== true)
+    return null;
   if (!(await benefitActiveFor(trip.passenger_id))) return null;
   return { verified: true, text: DISABILITY_DRIVER_TEXT };
 }
@@ -207,7 +247,14 @@ async function applyMove(
   };
   switch (to) {
     case 'SUBMITTED':
-      sets.push('submitted_at = now()', 'decided_at = NULL', 'verified_at = NULL', 'valid_until = NULL', 'verified_method = NULL', 'warned_days = NULL');
+      sets.push(
+        'submitted_at = now()',
+        'decided_at = NULL',
+        'verified_at = NULL',
+        'valid_until = NULL',
+        'verified_method = NULL',
+        'warned_days = NULL',
+      );
       set('message', null);
       set('decided_by', null);
       break;
@@ -252,7 +299,12 @@ async function applyMove(
   return { row: updated.rows[0] as VerificationRow, notice };
 }
 
-async function tell(userId: string, id: string, to: DisabilityVerificationStatus, notice: { title: string; body: string } | null) {
+async function tell(
+  userId: string,
+  id: string,
+  to: DisabilityVerificationStatus,
+  notice: { title: string; body: string } | null,
+) {
   if (!notice) return;
   await notify({
     userId,
@@ -288,7 +340,9 @@ async function deleteDocumentBytes(key: string | null): Promise<boolean> {
 // ---------------------------------------------------------------- the rider's view
 
 async function consentInfo(userId: string) {
-  const policy = (await listPolicies('PASSENGER')).find((p) => p.key === DISABILITY_CONSENT_POLICY_KEY);
+  const policy = (await listPolicies('PASSENGER')).find(
+    (p) => p.key === DISABILITY_CONSENT_POLICY_KEY,
+  );
   const state = await consentActive(userId);
   return {
     policyKey: DISABILITY_CONSENT_POLICY_KEY,
@@ -327,7 +381,12 @@ function gapsOf(row: VerificationRow | null, consentGiven: boolean): string[] {
 }
 
 async function historyOf(rowId: string): Promise<DisabilityHistoryEntry[]> {
-  const r = await query<{ created_at: Date; to_status: DisabilityVerificationStatus; actor_kind: DisabilityActor; note: string | null }>(
+  const r = await query<{
+    created_at: Date;
+    to_status: DisabilityVerificationStatus;
+    actor_kind: DisabilityActor;
+    note: string | null;
+  }>(
     `SELECT created_at, to_status, actor_kind, note FROM disability_verification_events
      WHERE verification_id = $1 ORDER BY created_at DESC, id LIMIT 30`,
     [rowId],
@@ -349,7 +408,8 @@ export async function viewFor(userId: string): Promise<DisabilityVerificationVie
   const words = DISABILITY_PASSENGER_WORDS[status];
   const editable = (DISABILITY_EDITABLE_STATUSES as readonly string[]).includes(status);
   const active = await benefitActiveFor(userId);
-  const daysLeft = row?.valid_until && status === 'VERIFIED' ? daysUntil(row.valid_until, today) : null;
+  const daysLeft =
+    row?.valid_until && status === 'VERIFIED' ? daysUntil(row.valid_until, today) : null;
   return {
     enabled: featureOn(),
     status,
@@ -373,7 +433,10 @@ export async function viewFor(userId: string): Promise<DisabilityVerificationVie
     validUntil: row?.valid_until ?? null,
     expiry: {
       daysLeft,
-      state: row?.valid_until && status === 'VERIFIED' ? disabilityExpiryState(row.valid_until, today) : null,
+      state:
+        row?.valid_until && status === 'VERIFIED'
+          ? disabilityExpiryState(row.valid_until, today)
+          : null,
     },
     canOptIn: featureOn() && !consent.given,
     canEdit: featureOn() && consent.given && editable,
@@ -396,29 +459,54 @@ export async function viewFor(userId: string): Promise<DisabilityVerificationVie
 // ---------------------------------------------------------------- the rider's actions
 
 /** Opt in: record the consent (the existing consent system) and open the rider's record. */
-export async function optIn(userId: string, body: { consentVersion: string; method?: DisabilityMethod }): Promise<DisabilityVerificationView> {
+export async function optIn(
+  userId: string,
+  body: { consentVersion: string; method?: DisabilityMethod },
+): Promise<DisabilityVerificationView> {
   requireFeature();
   if (body.method === 'OFFICIAL_API' && !officialMethodState().available) {
-    throw new HttpError(409, 'METHOD_UNAVAILABLE', officialMethodState().reason ?? 'That check is not available.');
+    throw new HttpError(
+      409,
+      'METHOD_UNAVAILABLE',
+      officialMethodState().reason ?? 'That check is not available.',
+    );
   }
   await acceptPolicy(userId, 'PASSENGER', DISABILITY_CONSENT_POLICY_KEY, body.consentVersion); // refuses an out-of-date version
   await withTransaction(async (client) => {
     const row = await ensureRow(userId, client);
     if (body.method && body.method !== row.method) {
-      await client.query('UPDATE disability_verifications SET method = $2, updated_at = now() WHERE id = $1', [row.id, body.method]);
+      await client.query(
+        'UPDATE disability_verifications SET method = $2, updated_at = now() WHERE id = $1',
+        [row.id, body.method],
+      );
     }
   });
-  await recordAudit({ actorId: userId, actorRole: 'PASSENGER', action: 'DISABILITY_CONSENT_GIVEN', subjectType: 'user', subjectIds: [userId], detail: {} });
+  await recordAudit({
+    actorId: userId,
+    actorRole: 'PASSENGER',
+    action: 'DISABILITY_CONSENT_GIVEN',
+    subjectType: 'user',
+    subjectIds: [userId],
+    detail: {},
+  });
   return viewFor(userId);
 }
 
-const validAuthority = (v: string) => v.trim().length >= DISABILITY_AUTHORITY_MIN && v.trim().length <= DISABILITY_AUTHORITY_MAX;
+const validAuthority = (v: string) =>
+  v.trim().length >= DISABILITY_AUTHORITY_MIN && v.trim().length <= DISABILITY_AUTHORITY_MAX;
 
 /** Save the card's details (never the number itself) while the application is still the rider's to edit. */
-export async function saveDetails(userId: string, d: DisabilityDetailsBody): Promise<DisabilityVerificationView> {
+export async function saveDetails(
+  userId: string,
+  d: DisabilityDetailsBody,
+): Promise<DisabilityVerificationView> {
   requireFeature();
   if (d.method === 'OFFICIAL_API' && !officialMethodState().available) {
-    throw new HttpError(409, 'METHOD_UNAVAILABLE', officialMethodState().reason ?? 'That check is not available.');
+    throw new HttpError(
+      409,
+      'METHOD_UNAVAILABLE',
+      officialMethodState().reason ?? 'That check is not available.',
+    );
   }
   await withTransaction(async (client) => {
     if (!(await consentActive(userId, client)).active) {
@@ -426,7 +514,11 @@ export async function saveDetails(userId: string, d: DisabilityDetailsBody): Pro
     }
     const row = await ensureRow(userId, client);
     if (!(DISABILITY_EDITABLE_STATUSES as readonly string[]).includes(row.status)) {
-      throw new HttpError(409, 'NOT_EDITABLE', 'Your application is with a reviewer, so it cannot be changed now.');
+      throw new HttpError(
+        409,
+        'NOT_EDITABLE',
+        'Your application is with a reviewer, so it cannot be changed now.',
+      );
     }
     const issue = d.issueDate ?? row.issue_date;
     const expiry = d.expiryDate ?? row.expiry_date;
@@ -435,10 +527,15 @@ export async function saveDetails(userId: string, d: DisabilityDetailsBody): Pro
       if (p) throw new HttpError(400, 'VALIDATION_ERROR', p);
     }
     if (d.issuingAuthority !== undefined && !validAuthority(d.issuingAuthority)) {
-      throw new HttpError(400, 'VALIDATION_ERROR', `Who issued the card needs ${DISABILITY_AUTHORITY_MIN} to ${DISABILITY_AUTHORITY_MAX} characters.`);
+      throw new HttpError(
+        400,
+        'VALIDATION_ERROR',
+        `Who issued the card needs ${DISABILITY_AUTHORITY_MIN} to ${DISABILITY_AUTHORITY_MAX} characters.`,
+      );
     }
     const dates = cardDatesProblem({ issueDate: issue, expiryDate: expiry }, todayKey());
-    if (dates && (d.issueDate !== undefined || d.expiryDate !== undefined)) throw new HttpError(400, 'VALIDATION_ERROR', dates);
+    if (dates && (d.issueDate !== undefined || d.expiryDate !== undefined))
+      throw new HttpError(400, 'VALIDATION_ERROR', dates);
     await client.query(
       `UPDATE disability_verifications SET
          card_hash = COALESCE($2, card_hash), card_last4 = COALESCE($3, card_last4),
@@ -460,18 +557,28 @@ export async function saveDetails(userId: string, d: DisabilityDetailsBody): Pro
 }
 
 /** Store the card's photo or PDF behind the storage provider (the same file checks as every other document). */
-export async function saveDocument(userId: string, file: { buffer: Buffer; size: number; originalname: string }): Promise<DisabilityVerificationView> {
+export async function saveDocument(
+  userId: string,
+  file: { buffer: Buffer; size: number; originalname: string },
+): Promise<DisabilityVerificationView> {
   requireFeature();
-  if (file.size > env.MAX_UPLOAD_FILE_SIZE_BYTES) throw new HttpError(413, 'FILE_TOO_LARGE', 'That file is too large.');
+  if (file.size > env.MAX_UPLOAD_FILE_SIZE_BYTES)
+    throw new HttpError(413, 'FILE_TOO_LARGE', 'That file is too large.');
   const detected = detectFileType(file.buffer);
-  if (!detected) throw new HttpError(400, 'INVALID_FILE_TYPE', 'Only JPEG, PNG, or PDF files are accepted.');
+  if (!detected)
+    throw new HttpError(400, 'INVALID_FILE_TYPE', 'Only JPEG, PNG, or PDF files are accepted.');
   const key = generateStorageKey(`disability/${userId}`, detected.extension);
   let oldKey: string | null = null;
   await withTransaction(async (client) => {
-    if (!(await consentActive(userId, client)).active) throw new HttpError(409, 'CONSENT_REQUIRED', 'Please give your consent first.');
+    if (!(await consentActive(userId, client)).active)
+      throw new HttpError(409, 'CONSENT_REQUIRED', 'Please give your consent first.');
     const row = await ensureRow(userId, client);
     if (!(DISABILITY_EDITABLE_STATUSES as readonly string[]).includes(row.status)) {
-      throw new HttpError(409, 'NOT_EDITABLE', 'Your application is with a reviewer, so it cannot be changed now.');
+      throw new HttpError(
+        409,
+        'NOT_EDITABLE',
+        'Your application is with a reviewer, so it cannot be changed now.',
+      );
     }
     await getStorageProvider().upload({ key, buffer: file.buffer, contentType: detected.mimeType });
     oldKey = row.document_key;
@@ -492,33 +599,69 @@ export async function saveDocument(userId: string, file: { buffer: Buffer; size:
  * Send the application. The server lists anything still missing (the same list the app shows). An official check, when the
  * rider chose it and it is available, can only CONFIRM; otherwise (or if it cannot be asked) the application goes to a reviewer.
  */
-export async function submit(userId: string, body: { cardNumber?: string } = {}): Promise<DisabilityVerificationView> {
+export async function submit(
+  userId: string,
+  body: { cardNumber?: string } = {},
+): Promise<DisabilityVerificationView> {
   requireFeature();
   const moved = await withTransaction(async (client) => {
     const consent = await consentActive(userId, client);
     const row = await ensureRow(userId, client);
     const gaps = gapsOf(row, consent.active);
-    if (gaps.length > 0) throw new HttpError(400, 'INCOMPLETE', gaps[0] as string).withDetails({ gaps });
+    if (gaps.length > 0)
+      throw new HttpError(400, 'INCOMPLETE', gaps[0] as string).withDetails({ gaps });
     if (row.method === 'OFFICIAL_API' && !officialMethodState().available) {
-      throw new HttpError(409, 'METHOD_UNAVAILABLE', officialMethodState().reason ?? 'That check is not available.');
+      throw new HttpError(
+        409,
+        'METHOD_UNAVAILABLE',
+        officialMethodState().reason ?? 'That check is not available.',
+      );
     }
-    const out = await applyMove(client, row, 'SUBMITTED', { actor: 'PASSENGER', actorId: userId, method: row.method });
+    const out = await applyMove(client, row, 'SUBMITTED', {
+      actor: 'PASSENGER',
+      actorId: userId,
+      method: row.method,
+    });
     return { row: out.row };
   });
-  await recordAudit({ actorId: userId, actorRole: 'PASSENGER', action: 'DISABILITY_SUBMITTED', subjectType: 'disability_verification', subjectIds: [moved.row.id], detail: { method: moved.row.method } });
+  await recordAudit({
+    actorId: userId,
+    actorRole: 'PASSENGER',
+    action: 'DISABILITY_SUBMITTED',
+    subjectType: 'disability_verification',
+    subjectIds: [moved.row.id],
+    detail: { method: moved.row.method },
+  });
 
-  if (moved.row.method === 'OFFICIAL_API') await tryOfficialCheck(userId, moved.row, body.cardNumber);
+  if (moved.row.method === 'OFFICIAL_API')
+    await tryOfficialCheck(userId, moved.row, body.cardNumber);
   return viewFor(userId);
 }
 
 /** The official check: confirmation verifies; anything else sends the application to a person. Never a refusal. */
-async function tryOfficialCheck(userId: string, row: VerificationRow, cardNumber: string | undefined): Promise<void> {
+async function tryOfficialCheck(
+  userId: string,
+  row: VerificationRow,
+  cardNumber: string | undefined,
+): Promise<void> {
   const verifier = getDisabilityVerifier();
   let confirmed = false;
   // The number is needed for this one call: it must be the one already saved (same hash) and is never stored.
-  if (verifier && cardNumber && row.card_hash === hashCard(cardNumber) && row.issuing_authority && row.issue_date && row.expiry_date) {
+  if (
+    verifier &&
+    cardNumber &&
+    row.card_hash === hashCard(cardNumber) &&
+    row.issuing_authority &&
+    row.issue_date &&
+    row.expiry_date
+  ) {
     try {
-      confirmed = await verifier.confirm({ cardNumber, issuingAuthority: row.issuing_authority, issueDate: row.issue_date, expiryDate: row.expiry_date });
+      confirmed = await verifier.confirm({
+        cardNumber,
+        issuingAuthority: row.issuing_authority,
+        issueDate: row.issue_date,
+        expiryDate: row.expiry_date,
+      });
     } catch {
       confirmed = false; // could not be asked: a person looks at it
     }
@@ -530,11 +673,20 @@ async function tryOfficialCheck(userId: string, row: VerificationRow, cardNumber
       actor: 'SYSTEM',
       actorId: null,
       method: 'OFFICIAL_API',
-      note: confirmed ? 'Confirmed by the official verification service.' : 'The official check could not confirm the card, so a reviewer will look at it.',
+      note: confirmed
+        ? 'Confirmed by the official verification service.'
+        : 'The official check could not confirm the card, so a reviewer will look at it.',
     });
   });
   if (!out) return;
-  await recordAudit({ actorId: null, actorRole: 'SYSTEM', action: confirmed ? 'DISABILITY_VERIFIED_OFFICIAL' : 'DISABILITY_SENT_TO_REVIEW', subjectType: 'disability_verification', subjectIds: [row.id], detail: { method: 'OFFICIAL_API' } });
+  await recordAudit({
+    actorId: null,
+    actorRole: 'SYSTEM',
+    action: confirmed ? 'DISABILITY_VERIFIED_OFFICIAL' : 'DISABILITY_SENT_TO_REVIEW',
+    subjectType: 'disability_verification',
+    subjectIds: [row.id],
+    detail: { method: 'OFFICIAL_API' },
+  });
   await tell(userId, row.id, out.row.status, out.notice);
 }
 
@@ -548,11 +700,16 @@ export async function withdraw(userId: string): Promise<DisabilityVerificationVi
   await withTransaction(async (client) => {
     const row = await loadRow(userId, client, true);
     if (row && row.status !== 'NOT_SUBMITTED') {
-      const to: DisabilityVerificationStatus = row.status === 'VERIFIED' ? 'REVOKED' : 'NOT_SUBMITTED';
+      const to: DisabilityVerificationStatus =
+        row.status === 'VERIFIED' ? 'REVOKED' : 'NOT_SUBMITTED';
       const check = checkDisabilityMove(row.status, to, 'PASSENGER');
       if (!check.ok) throw new HttpError(409, 'INVALID_TRANSITION', check.reason);
       oldKey = row.document_key;
-      await applyMove(client, row, to, { actor: 'PASSENGER', actorId: userId, note: 'The rider withdrew their consent.' });
+      await applyMove(client, row, to, {
+        actor: 'PASSENGER',
+        actorId: userId,
+        note: 'The rider withdrew their consent.',
+      });
       await eraseCard(client, row);
     } else if (row) {
       oldKey = row.document_key;
@@ -561,7 +718,14 @@ export async function withdraw(userId: string): Promise<DisabilityVerificationVi
     await withdrawConsent(userId, DISABILITY_CONSENT_POLICY_KEY, client);
   });
   await deleteDocumentBytes(oldKey);
-  await recordAudit({ actorId: userId, actorRole: 'PASSENGER', action: 'DISABILITY_CONSENT_WITHDRAWN', subjectType: 'user', subjectIds: [userId], detail: {} });
+  await recordAudit({
+    actorId: userId,
+    actorRole: 'PASSENGER',
+    action: 'DISABILITY_CONSENT_WITHDRAWN',
+    subjectType: 'user',
+    subjectIds: [userId],
+    detail: {},
+  });
   return viewFor(userId);
 }
 
@@ -575,7 +739,9 @@ export interface StaffMove {
 }
 
 /** How many OTHER riders hold a card with this number (a reason to look, never proof). */
-export async function duplicateCount(row: Pick<VerificationRow, 'id' | 'card_hash'>): Promise<number> {
+export async function duplicateCount(
+  row: Pick<VerificationRow, 'id' | 'card_hash'>,
+): Promise<number> {
   if (!row.card_hash) return 0;
   const r = await query<{ n: number }>(
     `SELECT count(*)::int AS n FROM disability_verifications
@@ -588,19 +754,35 @@ export async function duplicateCount(row: Pick<VerificationRow, 'id' | 'card_has
 /** An administrator's decision. Every one is audited; approving a card that is also on another account needs an acknowledgement. */
 export async function staffMove(verificationId: string, m: StaffMove): Promise<VerificationRow> {
   const moved = await withTransaction(async (client) => {
-    const found = await client.query<VerificationRow>(`SELECT ${COLUMNS} FROM disability_verifications WHERE id = $1 FOR UPDATE`, [verificationId]);
+    const found = await client.query<VerificationRow>(
+      `SELECT ${COLUMNS} FROM disability_verifications WHERE id = $1 FOR UPDATE`,
+      [verificationId],
+    );
     const row = found.rows[0];
     if (!row) throw new HttpError(404, 'NOT_FOUND', 'Verification not found.');
     if (m.to === 'VERIFIED') {
       if (row.expiry_date && row.expiry_date < todayKey()) {
-        throw new HttpError(409, 'CARD_EXPIRED', 'This card has expired, so it cannot be approved.');
+        throw new HttpError(
+          409,
+          'CARD_EXPIRED',
+          'This card has expired, so it cannot be approved.',
+        );
       }
       const others = await duplicateCount(row);
       if (others > 0 && !m.acknowledgeDuplicate) {
-        throw new HttpError(409, 'DUPLICATE_CARD', `This card number is also on ${others} other ${others === 1 ? 'account' : 'accounts'}. Look at them, then approve again and confirm you have.`).withDetails({ duplicates: others });
+        throw new HttpError(
+          409,
+          'DUPLICATE_CARD',
+          `This card number is also on ${others} other ${others === 1 ? 'account' : 'accounts'}. Look at them, then approve again and confirm you have.`,
+        ).withDetails({ duplicates: others });
       }
     }
-    const out = await applyMove(client, row, m.to, { actor: 'ADMIN', actorId: m.adminId, method: 'MANUAL', note: m.note ?? null });
+    const out = await applyMove(client, row, m.to, {
+      actor: 'ADMIN',
+      actorId: m.adminId,
+      method: 'MANUAL',
+      note: m.note ?? null,
+    });
     return { out, from: row.status, userId: row.user_id };
   });
   await recordAudit({
@@ -609,7 +791,13 @@ export async function staffMove(verificationId: string, m: StaffMove): Promise<V
     action: `DISABILITY_${m.to}`,
     subjectType: 'disability_verification',
     subjectIds: [verificationId],
-    detail: { from: moved.from, to: m.to, method: 'MANUAL', acknowledgedDuplicate: !!m.acknowledgeDuplicate, hasNote: !!m.note },
+    detail: {
+      from: moved.from,
+      to: m.to,
+      method: 'MANUAL',
+      acknowledgedDuplicate: !!m.acknowledgeDuplicate,
+      hasNote: !!m.note,
+    },
   });
   await tell(moved.userId, verificationId, m.to, moved.out.notice);
   return moved.out.row;
@@ -663,12 +851,20 @@ export async function sweepDisabilityExpiry(): Promise<{ expired: number; warned
   for (const d of due.rows) {
     const out = await withTransaction(async (client) => {
       const row = await loadRow(d.user_id, client, true);
-      if (!row || row.status !== 'VERIFIED' || !row.valid_until || row.valid_until >= today) return null;
+      if (!row || row.status !== 'VERIFIED' || !row.valid_until || row.valid_until >= today)
+        return null;
       return applyMove(client, row, 'EXPIRED', { actor: 'SYSTEM', actorId: null });
     });
     if (!out) continue;
     expired += 1;
-    await recordAudit({ actorId: null, actorRole: 'SYSTEM', action: 'DISABILITY_EXPIRED', subjectType: 'disability_verification', subjectIds: [d.id], detail: {} });
+    await recordAudit({
+      actorId: null,
+      actorRole: 'SYSTEM',
+      action: 'DISABILITY_EXPIRED',
+      subjectType: 'disability_verification',
+      subjectIds: [d.id],
+      detail: {},
+    });
     await tell(d.user_id, d.id, 'EXPIRED', out.notice);
   }
 
@@ -683,7 +879,10 @@ export async function sweepDisabilityExpiry(): Promise<{ expired: number; warned
     const left = daysUntil(v.valid_until, today);
     const stage = disabilityExpiryReminder(left);
     if (stage === null || (v.warned_days !== null && v.warned_days <= stage)) continue; // already warned at this stage or a closer one
-    const claimed = await query(`UPDATE disability_verifications SET warned_days = $2 WHERE id = $1 AND (warned_days IS NULL OR warned_days > $2)`, [v.id, stage]);
+    const claimed = await query(
+      `UPDATE disability_verifications SET warned_days = $2 WHERE id = $1 AND (warned_days IS NULL OR warned_days > $2)`,
+      [v.id, stage],
+    );
     if ((claimed.rowCount ?? 0) === 0) continue;
     const text = disabilityExpiryWarningText(left);
     await notify({
@@ -698,4 +897,3 @@ export async function sweepDisabilityExpiry(): Promise<{ expired: number; warned
   }
   return { expired, warned };
 }
-

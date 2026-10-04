@@ -78,7 +78,11 @@ export function createRouteProvider(
     case 'valhalla':
       return new ValhallaRouteProvider(http);
     case 'mapbox':
-      return new MapboxRouteProvider({ ...http, baseUrl: c.MAPBOX_BASE_URL, apiKey: c.MAPBOX_ACCESS_TOKEN });
+      return new MapboxRouteProvider({
+        ...http,
+        baseUrl: c.MAPBOX_BASE_URL,
+        apiKey: c.MAPBOX_ACCESS_TOKEN,
+      });
     case 'haversine':
       return new HaversineRouteProvider();
   }

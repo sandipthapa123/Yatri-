@@ -15,7 +15,9 @@ exports.up = (pgm) => {
     calls: { type: 'integer', notNull: true, default: 0 },
     total_ms: { type: 'bigint', notNull: true, default: 0 },
   });
-  pgm.addConstraint('provider_usage', 'provider_usage_pkey', { primaryKey: ['day', 'capability', 'provider', 'outcome'] });
+  pgm.addConstraint('provider_usage', 'provider_usage_pkey', {
+    primaryKey: ['day', 'capability', 'provider', 'outcome'],
+  });
 
   pgm.createTable('provider_health', {
     capability: { type: 'text', notNull: true },
@@ -25,7 +27,9 @@ exports.up = (pgm) => {
     failure_kind: { type: 'text' },
     checked_at: { type: 'timestamptz', notNull: true, default: pgm.func('now()') },
   });
-  pgm.addConstraint('provider_health', 'provider_health_pkey', { primaryKey: ['capability', 'provider'] });
+  pgm.addConstraint('provider_health', 'provider_health_pkey', {
+    primaryKey: ['capability', 'provider'],
+  });
 
   pgm.createTable('push_tokens', {
     token: { type: 'text', primaryKey: true },
@@ -34,7 +38,9 @@ exports.up = (pgm) => {
     created_at: { type: 'timestamptz', notNull: true, default: pgm.func('now()') },
     last_seen_at: { type: 'timestamptz', notNull: true, default: pgm.func('now()') },
   });
-  pgm.addConstraint('push_tokens', 'push_tokens_platform_check', { check: "platform IN ('ios', 'android')" });
+  pgm.addConstraint('push_tokens', 'push_tokens_platform_check', {
+    check: "platform IN ('ios', 'android')",
+  });
   pgm.createIndex('push_tokens', ['user_id']);
 
   pgm.createTable('payment_attempts', {
@@ -53,13 +59,27 @@ exports.up = (pgm) => {
   pgm.addConstraint('payment_attempts', 'payment_attempts_status_check', {
     check: "status IN ('INITIATED', 'COMPLETED', 'FAILED', 'EXPIRED')",
   });
-  pgm.addConstraint('payment_attempts', 'payment_attempts_amount_check', { check: 'amount_npr >= 0' });
+  pgm.addConstraint('payment_attempts', 'payment_attempts_amount_check', {
+    check: 'amount_npr >= 0',
+  });
   // At most one open attempt per ride: asking again returns it instead of opening a second one.
-  pgm.createIndex('payment_attempts', ['trip_id'], { unique: true, where: "status = 'INITIATED'", name: 'payment_attempts_open_one' });
+  pgm.createIndex('payment_attempts', ['trip_id'], {
+    unique: true,
+    where: "status = 'INITIATED'",
+    name: 'payment_attempts_open_one',
+  });
   // A vendor reference belongs to one attempt: a repeated callback cannot be applied to two rides.
-  pgm.createIndex('payment_attempts', ['provider', 'provider_ref'], { unique: true, where: 'provider_ref IS NOT NULL', name: 'payment_attempts_provider_ref' });
+  pgm.createIndex('payment_attempts', ['provider', 'provider_ref'], {
+    unique: true,
+    where: 'provider_ref IS NOT NULL',
+    name: 'payment_attempts_provider_ref',
+  });
   // At most one completed attempt per ride: a ride cannot be paid twice online.
-  pgm.createIndex('payment_attempts', ['trip_id'], { unique: true, where: "status = 'COMPLETED'", name: 'payment_attempts_completed_one' });
+  pgm.createIndex('payment_attempts', ['trip_id'], {
+    unique: true,
+    where: "status = 'COMPLETED'",
+    name: 'payment_attempts_completed_one',
+  });
 };
 
 exports.down = (pgm) => {

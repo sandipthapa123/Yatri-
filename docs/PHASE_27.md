@@ -43,14 +43,14 @@ disability benefit applies (`quoteLines`), as sentences a screen reader reads in
 
 All reuse the existing accessibility and dispatch modules.
 
-| Service | How |
-|---|---|
-| Wheelchair-accessible vehicle | existing need `WHEELCHAIR` → required vehicle feature → matching only offers the ride to approved vehicles |
-| Pickup assistance | existing need `ASSISTANCE` and pickup instructions (accessible entrance, meeting point, note) |
-| Communication preference | existing preference (any, text preferred, text only) |
-| Extra boarding time | new need `EXTRA_BOARDING_TIME`: the free waiting time and the wait before a driver may cancel for a no-show grow by `EXTRA_BOARDING_SECONDS` (platform setting). One function (`pricingConfigForTrip`) feeds the waiting charge, the no-show rule and the rule the apps display, so they agree. No extra charge |
-| Accessible vehicle priority | a request that needs a vehicle feature searches `ACCESSIBLE_SEARCH_RADIUS_BONUS_PERCENT` wider from the first offer on (`searchRadius`) |
-| Accessible pickup point | existing pickup instructions and note |
+| Service                       | How                                                                                                                                                                                                                                                                                                             |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Wheelchair-accessible vehicle | existing need `WHEELCHAIR` → required vehicle feature → matching only offers the ride to approved vehicles                                                                                                                                                                                                      |
+| Pickup assistance             | existing need `ASSISTANCE` and pickup instructions (accessible entrance, meeting point, note)                                                                                                                                                                                                                   |
+| Communication preference      | existing preference (any, text preferred, text only)                                                                                                                                                                                                                                                            |
+| Extra boarding time           | new need `EXTRA_BOARDING_TIME`: the free waiting time and the wait before a driver may cancel for a no-show grow by `EXTRA_BOARDING_SECONDS` (platform setting). One function (`pricingConfigForTrip`) feeds the waiting charge, the no-show rule and the rule the apps display, so they agree. No extra charge |
+| Accessible vehicle priority   | a request that needs a vehicle feature searches `ACCESSIBLE_SEARCH_RADIUS_BONUS_PERCENT` wider from the first offer on (`searchRadius`)                                                                                                                                                                         |
+| Accessible pickup point       | existing pickup instructions and note                                                                                                                                                                                                                                                                           |
 
 Drivers get **operational instructions only** (the need's driver sentence, the companion line, the pickup note), never an identity,
 a card or a verification. The separate, rider-controlled "verified benefit" note from Phase 26 is unchanged.

@@ -64,7 +64,11 @@ export function errorHandler(
       : 'Something went wrong. Please try again.';
 
   if (isProviderError) {
-    log.warn('Provider failure answered with 503', { requestId: req.id, route: req.route?.path, kind: err.kind });
+    log.warn('Provider failure answered with 503', {
+      requestId: req.id,
+      route: req.route?.path,
+      kind: err.kind,
+    });
   } else if (!isHttpError) {
     // The correlation id lets support match the caller's "something went wrong" to this line.
     log.error('Unhandled error', { requestId: req.id, route: req.route?.path }, err);

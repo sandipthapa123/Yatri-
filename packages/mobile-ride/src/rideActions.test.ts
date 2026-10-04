@@ -193,23 +193,43 @@ describe('business rides billed to an organization', () => {
 });
 
 describe('paying online (the server decides whether it is offered)', () => {
-  const done = (online: boolean) => ({ ...trip('COMPLETED', 'PENDING', true), onlinePaymentAvailable: online });
+  const done = (online: boolean) => ({
+    ...trip('COMPLETED', 'PENDING', true),
+    onlinePaymentAvailable: online,
+  });
 
   it('offers the rider online payment only when the server says it is available, and never the driver', () => {
-    expect(ids(rideActions('PASSENGER', done(true), null))).toEqual(['payOnline', 'checkOnlinePayment', 'dispute', 'incident']);
+    expect(ids(rideActions('PASSENGER', done(true), null))).toEqual([
+      'payOnline',
+      'checkOnlinePayment',
+      'dispute',
+      'incident',
+    ]);
     expect(ids(rideActions('PASSENGER', done(false), null))).toEqual(['dispute', 'incident']);
-    expect(ids(rideActions('DRIVER', done(true), null))).toEqual(['confirmPayment', 'dispute', 'incident']);
+    expect(ids(rideActions('DRIVER', done(true), null))).toEqual([
+      'confirmPayment',
+      'dispute',
+      'incident',
+    ]);
   });
 
   it('every online-payment action says what it does in words', () => {
-    for (const a of rideActions('PASSENGER', done(true), null).filter((x) => x.id.includes('nline') || x.id === 'checkOnlinePayment')) {
+    for (const a of rideActions('PASSENGER', done(true), null).filter(
+      (x) => x.id.includes('nline') || x.id === 'checkOnlinePayment',
+    )) {
       expect(a.label.length).toBeGreaterThan(5);
     }
   });
 
   it('says how it was paid', () => {
-    expect(paymentText('PASSENGER', 'PAID', 350, null, 'DIGITAL')).toBe('Payment NPR 350 received. Paid online.');
-    expect(paymentText('PASSENGER', 'PAID', 350, null, 'CASH')).toBe('Payment NPR 350 received. Paid in cash.');
-    expect(paymentText('PASSENGER', 'PENDING', 350, null, 'CASH', true)).toContain('online here, or in cash');
+    expect(paymentText('PASSENGER', 'PAID', 350, null, 'DIGITAL')).toBe(
+      'Payment NPR 350 received. Paid online.',
+    );
+    expect(paymentText('PASSENGER', 'PAID', 350, null, 'CASH')).toBe(
+      'Payment NPR 350 received. Paid in cash.',
+    );
+    expect(paymentText('PASSENGER', 'PENDING', 350, null, 'CASH', true)).toContain(
+      'online here, or in cash',
+    );
   });
 });

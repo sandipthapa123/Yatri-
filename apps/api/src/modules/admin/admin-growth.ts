@@ -55,12 +55,10 @@ export async function getCampaignHandler(req: Request, res: Res<CampaignInfo>) {
   res.json({ success: true, data: await getCampaign(requireParam(req, 'id')) });
 }
 export async function createCampaignHandler(req: Request, res: Res<CampaignInfo>) {
-  res
-    .status(201)
-    .json({
-      success: true,
-      data: await createCampaign(req.body as AdminCampaignBody, adminId(req)),
-    });
+  res.status(201).json({
+    success: true,
+    data: await createCampaign(req.body as AdminCampaignBody, adminId(req)),
+  });
 }
 export async function updateCampaignHandler(req: Request, res: Res<CampaignInfo>) {
   res.json({

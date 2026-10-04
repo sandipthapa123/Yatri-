@@ -74,7 +74,11 @@ export function getPaymentGateway(): PaymentGateway | null {
     case 'khalti':
       gateway = new KhaltiGateway({
         secretKey: env.KHALTI_SECRET_KEY ?? '',
-        baseUrl: env.KHALTI_BASE_URL ?? (env.NODE_ENV === 'production' ? 'https://khalti.com/api/v2' : 'https://dev.khalti.com/api/v2'),
+        baseUrl:
+          env.KHALTI_BASE_URL ??
+          (env.NODE_ENV === 'production'
+            ? 'https://khalti.com/api/v2'
+            : 'https://dev.khalti.com/api/v2'),
         returnUrl: env.KHALTI_RETURN_URL ?? '',
         websiteUrl: env.PUBLIC_BASE_URL,
         timeoutMs: env.PROVIDER_TIMEOUT_MS,

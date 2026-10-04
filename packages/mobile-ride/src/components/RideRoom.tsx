@@ -162,7 +162,9 @@ export function RideRoom(props: RideRoomProps) {
         // The server opens the payment for the amount it decided; the provider's page is where the rider pays.
         const p = await rideApi.startOnlinePayment(token, tripId);
         if (p.paymentUrl) {
-          setNotice('Opening the payment page. When you have paid, come back and choose "I have paid: check my payment".');
+          setNotice(
+            'Opening the payment page. When you have paid, come back and choose "I have paid: check my payment".',
+          );
           await Linking.openURL(p.paymentUrl);
         }
       } else if (id === 'checkOnlinePayment') {

@@ -1,6 +1,10 @@
 import { authApi } from '@yatri/mobile-auth';
 import type { PickedFile } from '@yatri/mobile-auth';
-import type { DisabilityDetailsBody, DisabilityMethod, DisabilityVerificationView } from '@yatri/types';
+import type {
+  DisabilityDetailsBody,
+  DisabilityMethod,
+  DisabilityVerificationView,
+} from '@yatri/types';
 
 /**
  * The only place the passenger app talks to the disability benefit verification endpoints. The app asks; the server
@@ -19,9 +23,17 @@ export const disabilityApi = {
       body: { consentVersion, ...(method ? { method } : {}) },
     }),
   saveDetails: (t: Token, details: DisabilityDetailsBody) =>
-    authApi.request<DisabilityVerificationView>(BASE, { method: 'PATCH', accessToken: t, body: { details } }),
+    authApi.request<DisabilityVerificationView>(BASE, {
+      method: 'PATCH',
+      accessToken: t,
+      body: { details },
+    }),
   withdraw: (t: Token) =>
-    authApi.request<DisabilityVerificationView>(BASE, { method: 'PATCH', accessToken: t, body: { withdrawConsent: true } }),
+    authApi.request<DisabilityVerificationView>(BASE, {
+      method: 'PATCH',
+      accessToken: t,
+      body: { withdrawConsent: true },
+    }),
   uploadDocument: (t: Token, file: PickedFile) => {
     const form = new FormData();
     // React Native's FormData accepts { uri, name, type } for a file part.

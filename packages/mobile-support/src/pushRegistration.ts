@@ -48,13 +48,19 @@ export async function registerPush(d: PushDeps): Promise<PushOutcome> {
 
 // ---------------------------------------------------------------- the real phone
 
-const toState = (s: string): PermissionState => (s === 'granted' ? 'granted' : s === 'denied' ? 'denied' : 'undetermined');
+const toState = (s: string): PermissionState =>
+  s === 'granted' ? 'granted' : s === 'denied' ? 'denied' : 'undetermined';
 
 async function currentToken(): Promise<string | null> {
-  const projectId = (Constants.expoConfig?.extra as { eas?: { projectId?: string } } | undefined)?.eas?.projectId ?? Constants.easConfig?.projectId;
+  const projectId =
+    (Constants.expoConfig?.extra as { eas?: { projectId?: string } } | undefined)?.eas?.projectId ??
+    Constants.easConfig?.projectId;
   if (!projectId) return null; // push needs the app's EAS project id; without it this build simply has no push address
   if (Platform.OS === 'android') {
-    await Notifications.setNotificationChannelAsync('default', { name: 'Yatri', importance: Notifications.AndroidImportance.MAX });
+    await Notifications.setNotificationChannelAsync('default', {
+      name: 'Yatri',
+      importance: Notifications.AndroidImportance.MAX,
+    });
   }
   return (await Notifications.getExpoPushTokenAsync({ projectId })).data;
 }
@@ -66,7 +72,11 @@ function phoneDeps(getAccessToken: () => Promise<string>): PushDeps {
     requestPermission: async () => toState((await Notifications.requestPermissionsAsync()).status),
     getToken: currentToken,
     send: async (token, platform) => {
-      await authApi.request('/users/me/push-token', { method: 'POST', accessToken: await getAccessToken(), body: { token, platform } });
+      await authApi.request('/users/me/push-token', {
+        method: 'POST',
+        accessToken: await getAccessToken(),
+        body: { token, platform },
+      });
     },
   };
 }
@@ -77,12 +87,20 @@ function configureDisplay(): void {
   if (displayConfigured) return;
   displayConfigured = true;
   Notifications.setNotificationHandler({
-    handleNotification: async () => ({ shouldShowBanner: true, shouldShowList: true, shouldPlaySound: true, shouldSetBadge: false }),
+    handleNotification: async () => ({
+      shouldShowBanner: true,
+      shouldShowList: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+    }),
   });
 }
 
 /** Register this phone once the person is signed in. Safe to run again (the server keeps one row per address). */
-export function usePushRegistration(auth: { status: string; getAccessToken: () => Promise<string> }): void {
+export function usePushRegistration(auth: {
+  status: string;
+  getAccessToken: () => Promise<string>;
+}): void {
   const { status, getAccessToken } = auth;
   useEffect(() => {
     if (status !== 'authenticated') return;
@@ -99,7 +117,11 @@ export async function unregisterPush(accessToken: string): Promise<void> {
   try {
     const token = await currentToken();
     if (!token) return;
-    await authApi.request('/users/me/push-token', { method: 'DELETE', accessToken, body: { token } });
+    await authApi.request('/users/me/push-token', {
+      method: 'DELETE',
+      accessToken,
+      body: { token },
+    });
   } catch {
     /* nothing to undo */
   }

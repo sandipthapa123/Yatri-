@@ -35,7 +35,6 @@ import {
 
 const column = { display: 'flex', flexDirection: 'column', gap: 8 } as const;
 
-
 /** A reply to the person, optionally with a file, optionally moving the ticket to a working state. */
 export function ReplyForm({
   ticketId,
@@ -325,7 +324,9 @@ export function RaiseRefundForm({ ticketId, quote }: { ticketId: string; quote: 
         {reasons.map((r) => (
           <option key={r} value={r}>
             {REFUND_REASON_LABELS[r]}
-            {r !== 'PARTIAL' && quote.amounts[r] !== null ? ` (${formatNpr(quote.amounts[r])})` : ''}
+            {r !== 'PARTIAL' && quote.amounts[r] !== null
+              ? ` (${formatNpr(quote.amounts[r])})`
+              : ''}
           </option>
         ))}
       </select>

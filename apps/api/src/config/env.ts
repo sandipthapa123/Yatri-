@@ -158,9 +158,7 @@ const envSchema = z
     LOCATION_REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(4000),
     LOCATION_SEARCH_CACHE_TTL_SECONDS: z.coerce.number().int().min(0).default(86400),
     LOCATION_REVERSE_CACHE_TTL_SECONDS: z.coerce.number().int().min(0).default(86400),
-    LOCATION_ROUTING_PROVIDER: z
-      .enum(PROVIDER_CHOICES.MAPS_ROUTING)
-      .default('haversine'),
+    LOCATION_ROUTING_PROVIDER: z.enum(PROVIDER_CHOICES.MAPS_ROUTING).default('haversine'),
     LOCATION_ROUTING_BASE_URL: z.string().url().default('https://router.project-osrm.org'),
     LOCATION_ROUTING_API_KEY: z.preprocess(
       (v) => (v === '' ? undefined : v),
@@ -476,14 +474,31 @@ const envSchema = z
       const v = (data as Record<string, unknown>)[key];
       return typeof v === 'string' ? v.length > 0 : v !== undefined && v !== null;
     };
-    for (const problem of providerProblems(environmentProfileOf(data.NODE_ENV), chosen, configured)) {
-      ctx.addIssue({ code: 'custom', path: [problem.split(/[ =]/)[0] ?? 'PROVIDERS'], message: problem });
+    for (const problem of providerProblems(
+      environmentProfileOf(data.NODE_ENV),
+      chosen,
+      configured,
+    )) {
+      ctx.addIssue({
+        code: 'custom',
+        path: [problem.split(/[ =]/)[0] ?? 'PROVIDERS'],
+        message: problem,
+      });
     }
     if (data.SMS_FALLBACK_PROVIDER !== 'none' && data.SMS_FALLBACK_PROVIDER === data.SMS_PROVIDER) {
-      issue('SMS_FALLBACK_PROVIDER', 'SMS_FALLBACK_PROVIDER must be a different vendor from SMS_PROVIDER');
+      issue(
+        'SMS_FALLBACK_PROVIDER',
+        'SMS_FALLBACK_PROVIDER must be a different vendor from SMS_PROVIDER',
+      );
     }
-    if (data.SMS_FALLBACK_PROVIDER === 'twilio' && !(data.TWILIO_ACCOUNT_SID && data.TWILIO_AUTH_TOKEN && data.TWILIO_FROM_NUMBER)) {
-      issue('SMS_FALLBACK_PROVIDER', 'SMS_FALLBACK_PROVIDER=twilio needs TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN and TWILIO_FROM_NUMBER');
+    if (
+      data.SMS_FALLBACK_PROVIDER === 'twilio' &&
+      !(data.TWILIO_ACCOUNT_SID && data.TWILIO_AUTH_TOKEN && data.TWILIO_FROM_NUMBER)
+    ) {
+      issue(
+        'SMS_FALLBACK_PROVIDER',
+        'SMS_FALLBACK_PROVIDER=twilio needs TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN and TWILIO_FROM_NUMBER',
+      );
     }
     if (data.SMS_FALLBACK_PROVIDER === 'http' && !data.SMS_HTTP_ENDPOINT) {
       issue('SMS_FALLBACK_PROVIDER', 'SMS_FALLBACK_PROVIDER=http needs SMS_HTTP_ENDPOINT');

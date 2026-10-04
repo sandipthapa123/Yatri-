@@ -33,13 +33,17 @@ export default async function DisabilityBenefitsPage() {
         </Link>
       </div>
       <p style={{ margin: 0 }}>
-        Who is eligible is decided only by the verification workspace. What a benefit is worth, where and how often it applies, and
-        whether it combines with other offers are set in <Link href="/campaigns">Campaigns</Link> (choose the kind &quot;Disability
-        benefit&quot;). Every change there is recorded.
+        Who is eligible is decided only by the verification workspace. What a benefit is worth,
+        where and how often it applies, and whether it combines with other offers are set in{' '}
+        <Link href="/campaigns">Campaigns</Link> (choose the kind &quot;Disability benefit&quot;).
+        Every change there is recorded.
       </p>
       <p role="status" style={{ margin: 0, fontWeight: 600 }}>
-        {data.waitingForReview} {data.waitingForReview === 1 ? 'application is' : 'applications are'} waiting for a person.{' '}
-        {data.toReview.length === 0 ? 'Nothing unusual is waiting for review.' : `${data.toReview.length} unusual ${data.toReview.length === 1 ? 'thing needs' : 'things need'} a look.`}
+        {data.waitingForReview}{' '}
+        {data.waitingForReview === 1 ? 'application is' : 'applications are'} waiting for a person.{' '}
+        {data.toReview.length === 0
+          ? 'Nothing unusual is waiting for review.'
+          : `${data.toReview.length} unusual ${data.toReview.length === 1 ? 'thing needs' : 'things need'} a look.`}
       </p>
 
       <section aria-labelledby="pol-h" style={styles.section}>
@@ -48,18 +52,23 @@ export default async function DisabilityBenefitsPage() {
         </h2>
         {data.policies.length === 0 ? (
           <p>
-            No disability benefit has been set up yet, so verified riders get no discount. <Link href="/campaigns/new">Create one</Link>.
+            No disability benefit has been set up yet, so verified riders get no discount.{' '}
+            <Link href="/campaigns/new">Create one</Link>.
           </p>
         ) : (
           <table style={styles.table}>
-            <caption style={{ textAlign: 'left', position: 'absolute', left: -9999 }}>Disability benefit policies</caption>
+            <caption style={{ textAlign: 'left', position: 'absolute', left: -9999 }}>
+              Disability benefit policies
+            </caption>
             <thead>
               <tr>
-                {['Policy', 'State', 'Times used', 'Taken off fares (NPR)', 'Different riders'].map((h) => (
-                  <th key={h} scope="col" style={styles.th}>
-                    {h}
-                  </th>
-                ))}
+                {['Policy', 'State', 'Times used', 'Taken off fares (NPR)', 'Different riders'].map(
+                  (h) => (
+                    <th key={h} scope="col" style={styles.th}>
+                      {h}
+                    </th>
+                  ),
+                )}
               </tr>
             </thead>
             <tbody>
@@ -84,14 +93,27 @@ export default async function DisabilityBenefitsPage() {
           Accessible ride services
         </h2>
         <ul>
-          <li>Verification of disability benefits: {o.verificationEnabled ? 'switched on' : 'switched off (no benefit applies)'}.</li>
-          <li>Official card check: {o.officialCheckOffered ? 'offered (if a service is connected)' : 'not offered'}.</li>
-          <li>Extra boarding time: {o.extraBoardingSeconds} seconds added to the free waiting time and to the no-show wait, for riders who need it.</li>
-          <li>Accessible vehicle priority: requests that need a vehicle feature search {o.accessibleSearchRadiusBonusPercent}% farther.</li>
+          <li>
+            Verification of disability benefits:{' '}
+            {o.verificationEnabled ? 'switched on' : 'switched off (no benefit applies)'}.
+          </li>
+          <li>
+            Official card check:{' '}
+            {o.officialCheckOffered ? 'offered (if a service is connected)' : 'not offered'}.
+          </li>
+          <li>
+            Extra boarding time: {o.extraBoardingSeconds} seconds added to the free waiting time and
+            to the no-show wait, for riders who need it.
+          </li>
+          <li>
+            Accessible vehicle priority: requests that need a vehicle feature search{' '}
+            {o.accessibleSearchRadiusBonusPercent}% farther.
+          </li>
         </ul>
         <p>
-          These are platform settings: change them in <Link href="/settings">Settings</Link>, under &quot;Disability benefits and accessible
-          rides&quot;. Wheelchair-accessible vehicles are approved in <Link href="/accessibility">Accessible rides</Link>.
+          These are platform settings: change them in <Link href="/settings">Settings</Link>, under
+          &quot;Disability benefits and accessible rides&quot;. Wheelchair-accessible vehicles are
+          approved in <Link href="/accessibility">Accessible rides</Link>.
         </p>
       </section>
 
@@ -105,7 +127,8 @@ export default async function DisabilityBenefitsPage() {
           <ul>
             {data.toReview.map((r) => (
               <li key={r.riskEventId}>
-                {when(r.at)}: {RULE_WORDS[r.rule] ?? r.rule} ({r.userName ?? 'unnamed rider'}, {r.points} points). It is a reason to look, not a verdict:{' '}
+                {when(r.at)}: {RULE_WORDS[r.rule] ?? r.rule} ({r.userName ?? 'unnamed rider'},{' '}
+                {r.points} points). It is a reason to look, not a verdict:{' '}
                 <Link href={`/risk`}>open it in Fraud and risk</Link>.
               </li>
             ))}

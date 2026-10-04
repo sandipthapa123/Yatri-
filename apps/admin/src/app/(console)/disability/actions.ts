@@ -51,7 +51,9 @@ export async function disabilityDecisionAction(
   }
   revalidatePath(`/disability/${id}`);
   revalidatePath('/disability');
-  return { done: `${DISABILITY_ADMIN_ACTION_LABELS[action].label}: done. The rider has been told.` };
+  return {
+    done: `${DISABILITY_ADMIN_ACTION_LABELS[action].label}: done. The rider has been told.`,
+  };
 }
 
 /** Open the card's document through a short-lived link. Every opening is audited by the API. */

@@ -54,9 +54,18 @@ export default async function DisabilityCasePage({ params }: { params: Promise<{
           <li>Issued by: {d.issuingAuthority ?? 'not given'}</li>
           <li>Issue date: {d.issueDate ?? 'not given'}</li>
           <li>Expiry date: {d.expiryDate ?? 'not given'}</li>
-          <li>Consent to use the card details: {d.consentActive ? `given ${when(d.consentGivenAt)}` : 'not in force (withdrawn or never given)'}</li>
+          <li>
+            Consent to use the card details:{' '}
+            {d.consentActive
+              ? `given ${when(d.consentGivenAt)}`
+              : 'not in force (withdrawn or never given)'}
+          </li>
           <li>Sent: {when(d.submittedAt)}</li>
-          {d.verifiedAt ? <li>Verified: {when(d.verifiedAt)}, valid until {d.validUntil ?? 'not set'}</li> : null}
+          {d.verifiedAt ? (
+            <li>
+              Verified: {when(d.verifiedAt)}, valid until {d.validUntil ?? 'not set'}
+            </li>
+          ) : null}
           {d.message ? <li>Latest message to the rider: {d.message}</li> : null}
         </ul>
       </section>
@@ -67,13 +76,15 @@ export default async function DisabilityCasePage({ params }: { params: Promise<{
             Same card number on other accounts
           </h2>
           <p>
-            This card number is also on {d.duplicateCount} other {d.duplicateCount === 1 ? 'account' : 'accounts'}. That is a
-            reason to look, not proof of anything: a family may share an address, and a number can be mistyped.
+            This card number is also on {d.duplicateCount} other{' '}
+            {d.duplicateCount === 1 ? 'account' : 'accounts'}. That is a reason to look, not proof
+            of anything: a family may share an address, and a number can be mistyped.
           </p>
           <ul>
             {d.duplicates.map((x) => (
               <li key={x.verificationId}>
-                <Link href={`/disability/${x.verificationId}`}>Another application</Link>, state: {x.status.toLowerCase().replace(/_/g, ' ')}
+                <Link href={`/disability/${x.verificationId}`}>Another application</Link>, state:{' '}
+                {x.status.toLowerCase().replace(/_/g, ' ')}
               </li>
             ))}
           </ul>
@@ -87,12 +98,17 @@ export default async function DisabilityCasePage({ params }: { params: Promise<{
         {d.document ? (
           <>
             <p>
-              {d.document.name} ({d.document.mimeType}, {Math.max(1, Math.round(d.document.sizeBytes / 1024))} KB), added {when(d.document.uploadedAt)}.
+              {d.document.name} ({d.document.mimeType},{' '}
+              {Math.max(1, Math.round(d.document.sizeBytes / 1024))} KB), added{' '}
+              {when(d.document.uploadedAt)}.
             </p>
             <OpenDocumentForm id={d.id} name={d.document.name} />
           </>
         ) : (
-          <p>No document was added{d.method === 'OFFICIAL_API' ? ' (the official check does not need one)' : ''}.</p>
+          <p>
+            No document was added
+            {d.method === 'OFFICIAL_API' ? ' (the official check does not need one)' : ''}.
+          </p>
         )}
       </section>
 
@@ -119,8 +135,13 @@ export default async function DisabilityCasePage({ params }: { params: Promise<{
         <ol>
           {d.history.map((h) => (
             <li key={h.id}>
-              {when(h.at)}: {h.fromStatus.toLowerCase().replace(/_/g, ' ')} to {h.toLabel.toLowerCase()}, by{' '}
-              {h.actorKind === 'ADMIN' ? (h.actorName ?? 'an administrator') : h.actorKind === 'SYSTEM' ? 'the system' : 'the rider'}
+              {when(h.at)}: {h.fromStatus.toLowerCase().replace(/_/g, ' ')} to{' '}
+              {h.toLabel.toLowerCase()}, by{' '}
+              {h.actorKind === 'ADMIN'
+                ? (h.actorName ?? 'an administrator')
+                : h.actorKind === 'SYSTEM'
+                  ? 'the system'
+                  : 'the rider'}
               {h.method ? ` (${DISABILITY_METHOD_LABELS[h.method].label})` : ''}
               {h.note ? `. ${h.note}` : ''}
             </li>

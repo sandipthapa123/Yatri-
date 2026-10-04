@@ -76,7 +76,12 @@ async function loadFacts(
     daysSinceLastRide: row?.since === null || row?.since === undefined ? null : Number(row.since),
     disabilityVerified: await benefitActiveFor(userId),
     ride: ride
-      ? { categoryCode: ride.categoryCode, cityId: ride.cityId, fareNpr: ride.fareNpr, withCompanion: ride.companion ?? false }
+      ? {
+          categoryCode: ride.categoryCode,
+          cityId: ride.cityId,
+          fareNpr: ride.fareNpr,
+          withCompanion: ride.companion ?? false,
+        }
       : null,
   };
 }
@@ -236,7 +241,12 @@ const toQuote = (p: Plan, fareNpr: number): PromotionQuote => ({
   payableNpr: p.payableNpr,
   pointsToEarn: p.pointsToEarn,
   codeProblem: p.codeProblem,
-  breakdown: payableBreakdown({ fareNpr, offers: p.applied, pointsValueNpr: p.pointsValueNpr, payableNpr: p.payableNpr }),
+  breakdown: payableBreakdown({
+    fareNpr,
+    offers: p.applied,
+    pointsValueNpr: p.pointsValueNpr,
+    payableNpr: p.payableNpr,
+  }),
 });
 
 /** What the rider would pay. Null when nothing applies and nothing was asked for (so the screen shows only the fare). */

@@ -21,17 +21,14 @@ describe('a registration number another vehicle already holds', () => {
         code: string;
       }>
     ).find((c) => c.code === 'CAR')!;
-    const res = await api
-      .post('/api/v1/vehicles')
-      .set(auth(b.accessToken))
-      .send({
-        categoryId: category.id,
-        make: 'Toyota',
-        model: 'Corolla',
-        year: 2020,
-        color: 'White',
-        registrationNumber: plate,
-      });
+    const res = await api.post('/api/v1/vehicles').set(auth(b.accessToken)).send({
+      categoryId: category.id,
+      make: 'Toyota',
+      model: 'Corolla',
+      year: 2020,
+      color: 'White',
+      registrationNumber: plate,
+    });
     expect(res.status, JSON.stringify(res.body)).toBe(409);
     expect(res.body.error.code).toBe('REGISTRATION_TAKEN');
   });

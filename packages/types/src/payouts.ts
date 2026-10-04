@@ -19,7 +19,9 @@ export function driverPayableForRide(r: {
   /** ONLINE_REFUND_DRIVER_SHARE_PERCENT: 0 means Yatri bears refunds, 100 means the driver does. */
   driverSharePercent: number;
 }): number {
-  const share = Math.floor((Math.max(0, r.refundedNpr) * Math.min(100, Math.max(0, r.driverSharePercent))) / 100);
+  const share = Math.floor(
+    (Math.max(0, r.refundedNpr) * Math.min(100, Math.max(0, r.driverSharePercent))) / 100,
+  );
   return Math.max(0, r.fareNpr - share);
 }
 
@@ -48,13 +50,21 @@ export const canPayoutTransition = (from: PayoutStatus, to: PayoutStatus) =>
   PAYOUT_TRANSITIONS[from].includes(to);
 
 /** A payout in these states still holds its rides (they cannot go in another payout). */
-export const PAYOUT_HOLDING_STATES: readonly PayoutStatus[] = ['PENDING', 'PROCESSING', 'FAILED', 'PAID'];
+export const PAYOUT_HOLDING_STATES: readonly PayoutStatus[] = [
+  'PENDING',
+  'PROCESSING',
+  'FAILED',
+  'PAID',
+];
 
 // ---------------------------------------------------------------- payout accounts
 
 export const PAYOUT_ACCOUNT_KINDS = ['BANK', 'KHALTI', 'ESEWA', 'IME_PAY'] as const;
 export type PayoutAccountKind = (typeof PAYOUT_ACCOUNT_KINDS)[number];
-export const PAYOUT_ACCOUNT_LABELS: Record<PayoutAccountKind, { label: string; numberLabel: string }> = {
+export const PAYOUT_ACCOUNT_LABELS: Record<
+  PayoutAccountKind,
+  { label: string; numberLabel: string }
+> = {
   BANK: { label: 'Bank account', numberLabel: 'Account number' },
   KHALTI: { label: 'Khalti wallet', numberLabel: 'Khalti mobile number' },
   ESEWA: { label: 'eSewa wallet', numberLabel: 'eSewa mobile number' },
@@ -70,8 +80,13 @@ export const PAYOUT_NUMBER_MAX = 30;
 export const normalizeAccountNumber = (raw: string): string => raw.replace(/[^0-9A-Za-z]/g, '');
 
 /** What is wrong with a payout account, in words, or null. */
-export function payoutAccountProblem(a: { kind: string; holderName: string; accountNumber: string }): string | null {
-  if (!(PAYOUT_ACCOUNT_KINDS as readonly string[]).includes(a.kind)) return 'Choose where payouts should go.';
+export function payoutAccountProblem(a: {
+  kind: string;
+  holderName: string;
+  accountNumber: string;
+}): string | null {
+  if (!(PAYOUT_ACCOUNT_KINDS as readonly string[]).includes(a.kind))
+    return 'Choose where payouts should go.';
   const holder = a.holderName.trim();
   if (holder.length < PAYOUT_HOLDER_MIN || holder.length > PAYOUT_HOLDER_MAX) {
     return `The name on the account needs ${PAYOUT_HOLDER_MIN} to ${PAYOUT_HOLDER_MAX} characters.`;
@@ -80,7 +95,8 @@ export function payoutAccountProblem(a: { kind: string; holderName: string; acco
   if (n.length < PAYOUT_NUMBER_MIN || n.length > PAYOUT_NUMBER_MAX) {
     return `The ${PAYOUT_ACCOUNT_LABELS[a.kind as PayoutAccountKind].numberLabel.toLowerCase()} needs ${PAYOUT_NUMBER_MIN} to ${PAYOUT_NUMBER_MAX} letters or digits.`;
   }
-  if (a.kind !== 'BANK' && !/^\d+$/.test(n)) return 'A wallet is identified by a mobile number: digits only.';
+  if (a.kind !== 'BANK' && !/^\d+$/.test(n))
+    return 'A wallet is identified by a mobile number: digits only.';
   return null;
 }
 
@@ -124,7 +140,9 @@ export interface PayoutAccountBody {
   accountNumber: string;
 }
 
-export function driverPayoutSentences(s: Omit<DriverPayoutSummary, 'sentences' | 'payouts'>): string[] {
+export function driverPayoutSentences(
+  s: Omit<DriverPayoutSummary, 'sentences' | 'payouts'>,
+): string[] {
   const out: string[] = [];
   out.push(
     s.readyNpr > 0
@@ -132,11 +150,16 @@ export function driverPayoutSentences(s: Omit<DriverPayoutSummary, 'sentences' |
       : 'Nothing from online rides is ready to be paid out yet.',
   );
   if (s.holdingNpr > 0) {
-    out.push(`NPR ${s.holdingNpr} is on hold for ${s.holdHours} hours after each ride, in case of a problem, or while a refund is decided.`);
+    out.push(
+      `NPR ${s.holdingNpr} is on hold for ${s.holdHours} hours after each ride, in case of a problem, or while a refund is decided.`,
+    );
   }
-  if (s.inPayoutNpr > 0) out.push(`NPR ${s.inPayoutNpr} is in a payout that is being prepared or sent.`);
+  if (s.inPayoutNpr > 0)
+    out.push(`NPR ${s.inPayoutNpr} is in a payout that is being prepared or sent.`);
   if (s.paidNpr > 0) out.push(`NPR ${s.paidNpr} has been paid out to you.`);
-  out.push(`Payouts are made when at least NPR ${s.minPayoutNpr} is ready. Cash rides are never part of a payout: you keep that cash.`);
+  out.push(
+    `Payouts are made when at least NPR ${s.minPayoutNpr} is ready. Cash rides are never part of a payout: you keep that cash.`,
+  );
   out.push(
     s.account
       ? `Payouts go to your ${PAYOUT_ACCOUNT_LABELS[s.account.kind].label.toLowerCase()} (${maskedAccount(s.account.last4)}).`

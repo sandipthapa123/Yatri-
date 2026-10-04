@@ -16,7 +16,6 @@ export interface SafetyActionState {
   done?: string;
 }
 
-
 const field = (fd: FormData, name: string) => {
   const v = fd.get(name);
   return typeof v === 'string' ? v.trim() : '';

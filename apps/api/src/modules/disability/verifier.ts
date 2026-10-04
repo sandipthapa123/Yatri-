@@ -35,6 +35,7 @@ export function officialMethodState(): { available: boolean; reason: string | nu
   if (!settingBool('DISABILITY_OFFICIAL_API_ENABLED')) {
     return { available: false, reason: 'The official check has not been switched on.' };
   }
-  if (!verifier) return { available: false, reason: 'No official verification service is connected.' };
+  if (!verifier)
+    return { available: false, reason: 'No official verification service is connected.' };
   return { available: true, reason: null };
 }

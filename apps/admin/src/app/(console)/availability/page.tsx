@@ -203,9 +203,7 @@ export default async function AvailabilityPage({ searchParams }: PageProps) {
                   {STATUS_LABEL[d.verificationStatus] ?? d.verificationStatus}
                 </td>
                 <td style={styles.td}>{STATE_TEXT[d.availabilityState] ?? d.availabilityState}</td>
-                <td style={styles.td}>
-                  {d.lastLocationAt ? formatWhen(d.lastLocationAt) : '—'}
-                </td>
+                <td style={styles.td}>{d.lastLocationAt ? formatWhen(d.lastLocationAt) : '—'}</td>
                 <td style={styles.td}>
                   {d.online || d.lastLocationAt ? FRESHNESS_TEXT[d.locationFreshness] : '—'}
                 </td>

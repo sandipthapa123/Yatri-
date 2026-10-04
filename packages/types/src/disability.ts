@@ -174,7 +174,8 @@ export interface TripDisabilityNote {
 // ---------------------------------------------------------------- the card rules (one place, pure)
 
 /** Upper-case letters and digits only: the form in which a number is hashed and its last four kept. */
-export const normalizeCardNumber = (raw: string): string => raw.toUpperCase().replace(/[^A-Z0-9]/g, '');
+export const normalizeCardNumber = (raw: string): string =>
+  raw.toUpperCase().replace(/[^A-Z0-9]/g, '');
 
 export function cardNumberProblem(raw: string): string | null {
   const n = normalizeCardNumber(raw);
@@ -459,7 +460,10 @@ export const DISABILITY_ADMIN_ACTIONS = [
   'revoke',
 ] as const;
 export type DisabilityAdminAction = (typeof DISABILITY_ADMIN_ACTIONS)[number];
-export const DISABILITY_ADMIN_ACTION_TARGET: Record<DisabilityAdminAction, DisabilityVerificationStatus> = {
+export const DISABILITY_ADMIN_ACTION_TARGET: Record<
+  DisabilityAdminAction,
+  DisabilityVerificationStatus
+> = {
   'start-review': 'UNDER_REVIEW',
   approve: 'VERIFIED',
   reject: 'REJECTED',

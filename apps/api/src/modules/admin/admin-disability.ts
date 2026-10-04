@@ -31,7 +31,13 @@ import { requireParam } from '../../lib/params';
 import { getStorageProvider } from '../../lib/storage';
 import { HttpError } from '../../middleware/errorHandler';
 import { settingBool, settingNumber } from '../settings/settings.service';
-import { columnsFor, consentActive, duplicateCount, staffMove, type VerificationRow } from '../disability/verification.service';
+import {
+  columnsFor,
+  consentActive,
+  duplicateCount,
+  staffMove,
+  type VerificationRow,
+} from '../disability/verification.service';
 
 /**
  * The verification workspace for staff. Reading a list or a case needs DISABILITY_VERIFICATION_VIEW; a decision, and opening
@@ -50,8 +56,19 @@ const adminId = (req: Request) => {
  * has been used, the accessible-ride service options (platform settings), and what looks unusual for a person to review. It holds
  * counts and references only: no card, no document, no identity.
  */
-export async function disabilityBenefitsOverviewHandler(_req: Request, res: Res<DisabilityBenefitsOverview>) {
-  const policies = await query<{ id: string; name: string; status: string; kind: string; uses: string; discount: string; riders: string }>(
+export async function disabilityBenefitsOverviewHandler(
+  _req: Request,
+  res: Res<DisabilityBenefitsOverview>,
+) {
+  const policies = await query<{
+    id: string;
+    name: string;
+    status: string;
+    kind: string;
+    uses: string;
+    discount: string;
+    riders: string;
+  }>(
     `SELECT c.id, c.name, c.status, c.kind,
             count(r.id) FILTER (WHERE r.status <> 'VOID')::text AS uses,
             COALESCE(sum(r.discount_npr) FILTER (WHERE r.status = 'APPLIED'), 0)::text AS discount,
@@ -60,13 +77,22 @@ export async function disabilityBenefitsOverviewHandler(_req: Request, res: Res<
      WHERE c.kind = 'DISABILITY_BENEFIT' OR c.eligibility @> '{"requiresDisabilityVerified": true}'::jsonb
      GROUP BY c.id ORDER BY c.created_at DESC LIMIT 100`,
   );
-  const review = await query<{ id: string; user_id: string; rule_code: string; points: number; created_at: Date; full_name: string | null }>(
+  const review = await query<{
+    id: string;
+    user_id: string;
+    rule_code: string;
+    points: number;
+    created_at: Date;
+    full_name: string | null;
+  }>(
     `SELECT e.id, e.user_id, e.rule_code, e.points, e.created_at, u.full_name
      FROM risk_events e JOIN users u ON u.id = e.user_id
      WHERE e.status = 'OPEN' AND e.rule_code IN ('DISABILITY_BENEFIT_BURST', 'DISABILITY_DUPLICATE_CARD', 'DISABILITY_REPEATED_SUBMISSIONS')
      ORDER BY e.created_at DESC LIMIT 50`,
   );
-  const waiting = await query<{ n: number }>(`SELECT count(*)::int AS n FROM disability_verifications WHERE status IN ('SUBMITTED', 'UNDER_REVIEW')`);
+  const waiting = await query<{ n: number }>(
+    `SELECT count(*)::int AS n FROM disability_verifications WHERE status IN ('SUBMITTED', 'UNDER_REVIEW')`,
+  );
   res.json({
     success: true,
     data: {
@@ -145,7 +171,11 @@ export async function listDisabilityHandler(req: Request, res: Res<AdminDisabili
   const where = `WHERE v.status <> 'NOT_SUBMITTED'
     AND ($1::text IS NULL OR v.status = $1) AND ($2::text IS NULL OR v.method = $2)
     AND ($3::boolean IS NULL OR (${DUPLICATES_SQL} > 0) = $3)`;
-  const args = [q.status ?? null, q.method ?? null, q.duplicate === undefined ? null : q.duplicate === 'true'];
+  const args = [
+    q.status ?? null,
+    q.method ?? null,
+    q.duplicate === undefined ? null : q.duplicate === 'true',
+  ];
   const [rows, total] = await Promise.all([
     query<ListRow>(
       `SELECT ${columnsFor('v')},
@@ -155,9 +185,20 @@ export async function listDisabilityHandler(req: Request, res: Res<AdminDisabili
        LIMIT $4 OFFSET $5`,
       [...args, q.limit, q.offset],
     ),
-    query<{ n: number }>(`SELECT count(*)::int AS n FROM disability_verifications v ${where}`, args),
+    query<{ n: number }>(
+      `SELECT count(*)::int AS n FROM disability_verifications v ${where}`,
+      args,
+    ),
   ]);
-  res.json({ success: true, data: { items: rows.rows.map(toRow), total: total.rows[0]?.n ?? 0, limit: q.limit, offset: q.offset } });
+  res.json({
+    success: true,
+    data: {
+      items: rows.rows.map(toRow),
+      total: total.rows[0]?.n ?? 0,
+      limit: q.limit,
+      offset: q.offset,
+    },
+  });
 }
 
 async function loadCase(id: string): Promise<ListRow> {
@@ -182,8 +223,14 @@ export async function getDisabilityHandler(req: Request, res: Res<AdminDisabilit
       )
     : { rows: [] as Array<{ id: string; status: DisabilityVerificationStatus }> };
   const events = await query<{
-    id: string; created_at: Date; from_status: DisabilityVerificationStatus; to_status: DisabilityVerificationStatus;
-    actor_kind: DisabilityActor; method: DisabilityMethod | null; note: string | null; actor_name: string | null;
+    id: string;
+    created_at: Date;
+    from_status: DisabilityVerificationStatus;
+    to_status: DisabilityVerificationStatus;
+    actor_kind: DisabilityActor;
+    method: DisabilityMethod | null;
+    note: string | null;
+    actor_name: string | null;
   }>(
     `SELECT e.id, e.created_at, e.from_status, e.to_status, e.actor_kind, e.method, e.note, a.full_name AS actor_name
      FROM disability_verification_events e LEFT JOIN users a ON a.id = e.actor_id
@@ -201,7 +248,14 @@ export async function getDisabilityHandler(req: Request, res: Res<AdminDisabilit
     method: e.method,
     note: e.note,
   }));
-  await recordAudit({ actorId: adminId(req), actorRole: 'ADMIN', action: 'DISABILITY_CASE_VIEWED', subjectType: 'disability_verification', subjectIds: [id], detail: {} });
+  await recordAudit({
+    actorId: adminId(req),
+    actorRole: 'ADMIN',
+    action: 'DISABILITY_CASE_VIEWED',
+    subjectType: 'disability_verification',
+    subjectIds: [id],
+    detail: {},
+  });
   res.json({
     success: true,
     data: {
@@ -215,7 +269,12 @@ export async function getDisabilityHandler(req: Request, res: Res<AdminDisabilit
       validUntil: row.valid_until,
       duplicates: dupes.rows.map((d) => ({ verificationId: d.id, status: d.status })),
       document: row.document_key
-        ? { name: row.document_name ?? 'Card document', mimeType: row.document_mime ?? '', sizeBytes: row.document_size ?? 0, uploadedAt: row.document_uploaded_at?.toISOString() ?? '' }
+        ? {
+            name: row.document_name ?? 'Card document',
+            mimeType: row.document_mime ?? '',
+            sizeBytes: row.document_size ?? 0,
+            uploadedAt: row.document_uploaded_at?.toISOString() ?? '',
+          }
         : null,
       history,
       allowedActions: disabilityAdminActionsFrom(row.status),
@@ -224,15 +283,29 @@ export async function getDisabilityHandler(req: Request, res: Res<AdminDisabilit
 }
 
 /** A short-lived link to the card's document. Opening it is audited. */
-export async function disabilityDocumentHandler(req: Request, res: Res<{ url: string; expiresInSeconds: number }>) {
+export async function disabilityDocumentHandler(
+  req: Request,
+  res: Res<{ url: string; expiresInSeconds: number }>,
+) {
   const id = requireParam(req, 'id');
   const row = await loadCase(id);
   if (!row.document_key) throw new HttpError(404, 'NOT_FOUND', 'No document was added.');
-  const url = await getStorageProvider().createTemporaryAccessUrl(row.document_key, env.STORAGE_SIGNED_URL_TTL_SECONDS, {
-    contentType: row.document_mime ?? undefined,
-    filename: row.document_name ?? undefined,
+  const url = await getStorageProvider().createTemporaryAccessUrl(
+    row.document_key,
+    env.STORAGE_SIGNED_URL_TTL_SECONDS,
+    {
+      contentType: row.document_mime ?? undefined,
+      filename: row.document_name ?? undefined,
+    },
+  );
+  await recordAudit({
+    actorId: adminId(req),
+    actorRole: 'ADMIN',
+    action: 'DISABILITY_DOCUMENT_VIEWED',
+    subjectType: 'disability_verification',
+    subjectIds: [id],
+    detail: {},
   });
-  await recordAudit({ actorId: adminId(req), actorRole: 'ADMIN', action: 'DISABILITY_DOCUMENT_VIEWED', subjectType: 'disability_verification', subjectIds: [id], detail: {} });
   res.json({ success: true, data: { url, expiresInSeconds: env.STORAGE_SIGNED_URL_TTL_SECONDS } });
 }
 
@@ -243,7 +316,13 @@ export function disabilityActionHandler(action: DisabilityAdminAction) {
     const needs = DISABILITY_ADMIN_ACTION_LABELS[action].needs;
     const text = needs === 'reason' ? body.reason : needs === 'message' ? body.message : body.note;
     if (needs !== 'none' && !text) {
-      throw new HttpError(400, 'VALIDATION_ERROR', needs === 'reason' ? 'Please give a reason.' : 'Please write the correction the rider should make.');
+      throw new HttpError(
+        400,
+        'VALIDATION_ERROR',
+        needs === 'reason'
+          ? 'Please give a reason.'
+          : 'Please write the correction the rider should make.',
+      );
     }
     await staffMove(requireParam(req, 'id'), {
       to: DISABILITY_ADMIN_ACTION_TARGET[action],
@@ -254,4 +333,3 @@ export function disabilityActionHandler(action: DisabilityAdminAction) {
     res.json({ success: true, data: { ok: true } });
   };
 }
-

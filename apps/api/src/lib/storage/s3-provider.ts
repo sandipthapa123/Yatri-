@@ -31,17 +31,27 @@ export class S3StorageProvider implements StorageProvider {
   constructor(private readonly c: S3Config) {}
 
   private url(key: string): URL {
-    const path = key.split('/').map((s) => encodeRfc3986(s)).join('/');
+    const path = key
+      .split('/')
+      .map((s) => encodeRfc3986(s))
+      .join('/');
     if (this.c.endpoint) {
       const base = this.c.endpoint.replace(/\/$/, '');
-      return this.c.forcePathStyle ? new URL(`${base}/${this.c.bucket}/${path}`) : new URL(`${base.replace('://', `://${this.c.bucket}.`)}/${path}`);
+      return this.c.forcePathStyle
+        ? new URL(`${base}/${this.c.bucket}/${path}`)
+        : new URL(`${base.replace('://', `://${this.c.bucket}.`)}/${path}`);
     }
     return this.c.forcePathStyle
       ? new URL(`https://s3.${this.c.region}.amazonaws.com/${this.c.bucket}/${path}`)
       : new URL(`https://${this.c.bucket}.s3.${this.c.region}.amazonaws.com/${path}`);
   }
 
-  private call<T>(operation: string, method: string, url: URL, opts: { body?: Buffer; headers?: Record<string, string>; expect: 'none' | 'buffer' }) {
+  private call<T>(
+    operation: string,
+    method: string,
+    url: URL,
+    opts: { body?: Buffer; headers?: Record<string, string>; expect: 'none' | 'buffer' },
+  ) {
     const headers = signRequest({
       method,
       url,
@@ -75,7 +85,8 @@ export class S3StorageProvider implements StorageProvider {
     try {
       return (await this.call<Buffer>('get', 'GET', this.url(key), { expect: 'buffer' })).data;
     } catch (err) {
-      if (err instanceof ProviderError && err.status === 404) throw new StorageObjectNotFoundError(key);
+      if (err instanceof ProviderError && err.status === 404)
+        throw new StorageObjectNotFoundError(key);
       throw err;
     }
   }
@@ -89,11 +100,16 @@ export class S3StorageProvider implements StorageProvider {
     }
   }
 
-  async createTemporaryAccessUrl(key: string, expiresInSeconds: number, options: TemporaryAccessUrlOptions = {}): Promise<string> {
+  async createTemporaryAccessUrl(
+    key: string,
+    expiresInSeconds: number,
+    options: TemporaryAccessUrlOptions = {},
+  ): Promise<string> {
     const query: Record<string, string> = {};
     if (options.contentType) query['response-content-type'] = options.contentType;
     if (options.filename) {
-      query['response-content-disposition'] = `attachment; filename="${options.filename.replace(/[^\w.\- ]/g, '_')}"`;
+      query['response-content-disposition'] =
+        `attachment; filename="${options.filename.replace(/[^\w.\- ]/g, '_')}"`;
     }
     return presignUrl({
       method: 'GET',
@@ -108,6 +124,8 @@ export class S3StorageProvider implements StorageProvider {
   /** A cheap check that the bucket answers and the credentials work: a signed HEAD of the bucket. */
   async check(): Promise<void> {
     const url = this.url('');
-    await this.call('head', 'HEAD', new URL(url.toString().replace(/\/$/, '') + '/'), { expect: 'none' });
+    await this.call('head', 'HEAD', new URL(url.toString().replace(/\/$/, '') + '/'), {
+      expect: 'none',
+    });
   }
 }

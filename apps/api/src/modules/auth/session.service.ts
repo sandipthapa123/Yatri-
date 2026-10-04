@@ -102,7 +102,12 @@ export async function refreshSession(
 
   const newRefreshToken = generateOpaqueToken();
   const newExpiresAt = refreshExpiry();
-  const swapped = await rotateSession(session.id, sha256Hex(refreshToken), sha256Hex(newRefreshToken), newExpiresAt);
+  const swapped = await rotateSession(
+    session.id,
+    sha256Hex(refreshToken),
+    sha256Hex(newRefreshToken),
+    newExpiresAt,
+  );
   if (!swapped) {
     // Someone else used this refresh token a moment ago (or it was revoked): only one use of a token can win.
     await recordAuthEvent({

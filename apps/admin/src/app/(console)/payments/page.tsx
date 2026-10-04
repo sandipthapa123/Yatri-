@@ -259,9 +259,7 @@ export default async function PaymentsPage({ searchParams }: PageProps) {
                     <td style={styles.td}>
                       {describePayment(p.method as PaymentMethod, p.status)}
                     </td>
-                    <td style={styles.td}>
-                      {p.paidAt ? formatWhen(p.paidAt) : '—'}
-                    </td>
+                    <td style={styles.td}>{p.paidAt ? formatWhen(p.paidAt) : '—'}</td>
                   </tr>
                 ))}
               </tbody>

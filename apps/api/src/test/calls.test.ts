@@ -121,7 +121,10 @@ describe('call setup and state', () => {
     dc.send({ type: 'call_answer', callId: ringing.id });
     await pc.waitFor(callState('CONNECTING'));
     expect(await sweepCalls()).toBe(0); // still within the connect window
-    await pool.query("UPDATE trip_calls SET answered_at = now() - interval '5 minutes' WHERE trip_id = $1", [w.tripId]);
+    await pool.query(
+      "UPDATE trip_calls SET answered_at = now() - interval '5 minutes' WHERE trip_id = $1",
+      [w.tripId],
+    );
     expect(await sweepCalls()).toBe(1);
     expect((await pc.waitFor(callState('ENDED'))).call.endReason).toBe('FAILED');
     pc.send({ type: 'call_start', tripId: w.tripId, kind: 'AUDIO' });

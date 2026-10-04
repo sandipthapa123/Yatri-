@@ -13,7 +13,8 @@ export interface SigV4Credentials {
 }
 
 const sha256 = (data: string | Buffer) => createHash('sha256').update(data).digest('hex');
-const hmac = (key: string | Buffer, data: string) => createHmac('sha256', key).update(data).digest();
+const hmac = (key: string | Buffer, data: string) =>
+  createHmac('sha256', key).update(data).digest();
 
 /** RFC 3986 percent-encoding as S3 wants it: everything but letters, digits and - _ . ~ ; "/" kept in a path. */
 export function encodeRfc3986(value: string, keepSlash = false): string {
@@ -25,7 +26,10 @@ export function encodeRfc3986(value: string, keepSlash = false): string {
 export const amzDate = (d: Date) => d.toISOString().replace(/[:-]|\.\d{3}/g, '');
 
 function signingKey(c: SigV4Credentials, date: string): Buffer {
-  return hmac(hmac(hmac(hmac(`AWS4${c.secretAccessKey}`, date), c.region), c.service ?? 's3'), 'aws4_request');
+  return hmac(
+    hmac(hmac(hmac(`AWS4${c.secretAccessKey}`, date), c.region), c.service ?? 's3'),
+    'aws4_request',
+  );
 }
 
 const canonicalQuery = (params: Array<[string, string]>) =>
@@ -62,10 +66,19 @@ export function signRequest(input: {
   const canonicalHeaders = names.map((n) => `${n}:${headers[n]}\n`).join('');
   const signedHeaders = names.join(';');
   const query = canonicalQuery([...input.url.searchParams.entries()]);
-  const canonical = [input.method, encodeRfc3986(decodeURIComponent(input.url.pathname), true), query, canonicalHeaders, signedHeaders, payloadHash].join('\n');
+  const canonical = [
+    input.method,
+    encodeRfc3986(decodeURIComponent(input.url.pathname), true),
+    query,
+    canonicalHeaders,
+    signedHeaders,
+    payloadHash,
+  ].join('\n');
   const scope = `${date}/${input.credentials.region}/${input.credentials.service ?? 's3'}/aws4_request`;
   const toSign = ['AWS4-HMAC-SHA256', stamp, scope, sha256(canonical)].join('\n');
-  const signature = createHmac('sha256', signingKey(input.credentials, date)).update(toSign).digest('hex');
+  const signature = createHmac('sha256', signingKey(input.credentials, date))
+    .update(toSign)
+    .digest('hex');
   return {
     ...headers,
     Authorization: `AWS4-HMAC-SHA256 Credential=${input.credentials.accessKeyId}/${scope}, SignedHeaders=${signedHeaders}, Signature=${signature}`,
@@ -105,6 +118,8 @@ export function presignUrl(input: {
     'UNSIGNED-PAYLOAD',
   ].join('\n');
   const toSign = ['AWS4-HMAC-SHA256', stamp, scope, sha256(canonical)].join('\n');
-  const signature = createHmac('sha256', signingKey(input.credentials, date)).update(toSign).digest('hex');
+  const signature = createHmac('sha256', signingKey(input.credentials, date))
+    .update(toSign)
+    .digest('hex');
   return `${input.url.origin}${input.url.pathname}?${query}&X-Amz-Signature=${signature}`;
 }

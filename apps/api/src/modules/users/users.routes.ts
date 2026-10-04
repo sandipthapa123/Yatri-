@@ -81,7 +81,12 @@ usersRouter.post(
   validateBody(pushTokenSchema),
   registerPushTokenHandler,
 );
-usersRouter.delete('/me/push-token', authenticate, userRateLimit('push-token', 60, 3600), removePushTokenHandler);
+usersRouter.delete(
+  '/me/push-token',
+  authenticate,
+  userRateLimit('push-token', 60, 3600),
+  removePushTokenHandler,
+);
 usersRouter.use('/me/saved-places', savedPlacesRouter);
 // Preferences, recent destinations and devices (after the routes above, so they cannot shadow them).
 usersRouter.use('/me', preferencesRouter);

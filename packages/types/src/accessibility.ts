@@ -57,7 +57,8 @@ export const PASSENGER_NEEDS: readonly PassengerNeedDef[] = [
     code: 'EXTRA_BOARDING_TIME',
     label: 'I need extra time to get in and out of the vehicle',
     help: 'Your driver waits longer before any waiting charge starts and before they can cancel because you have not come. Nothing extra is charged for the extra time.',
-    driverText: 'Needs extra time to get in and out of the vehicle. Please be patient: the waiting time is longer for this ride.',
+    driverText:
+      'Needs extra time to get in and out of the vehicle. Please be patient: the waiting time is longer for this ride.',
     vehicleAttribute: null,
   },
   {
@@ -172,7 +173,8 @@ export const PICKUP_INSTRUCTION_LABELS: Record<
 export const ACCESSIBILITY_NOTE_MAX = 200;
 
 /** What the driver reads when a companion travels with the passenger. Never anything about why. */
-export const COMPANION_DRIVER_TEXT = 'Someone travels with the passenger. Please allow room for them.';
+export const COMPANION_DRIVER_TEXT =
+  'Someone travels with the passenger. Please allow room for them.';
 export const COMMUNICATION_ALLOWED_TO_CALL: Record<CommunicationPreference, boolean> = {
   ANY: true,
   TEXT_PREFERRED: true,

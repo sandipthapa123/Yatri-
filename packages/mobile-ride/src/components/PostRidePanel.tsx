@@ -77,13 +77,24 @@ export function PostRidePanel(
         ) : null}
         {trip.status === 'COMPLETED' ? (
           <Text accessibilityRole="text" style={{ color: colors.textPrimary }}>
-            {paymentText(role, trip.paymentStatus, amount, trip.business, trip.paymentMethod, trip.onlinePaymentAvailable)}
+            {paymentText(
+              role,
+              trip.paymentStatus,
+              amount,
+              trip.business,
+              trip.paymentMethod,
+              trip.onlinePaymentAvailable,
+            )}
           </Text>
         ) : null}
       </Card>
 
       {props.notice ? (
-        <Text accessibilityRole="text" accessibilityLiveRegion="polite" style={{ color: colors.textPrimary }}>
+        <Text
+          accessibilityRole="text"
+          accessibilityLiveRegion="polite"
+          style={{ color: colors.textPrimary }}
+        >
           {props.notice}
         </Text>
       ) : null}
@@ -103,7 +114,10 @@ export function PostRidePanel(
             {...ui}
             label={a.label}
             tone={a.tone}
-            busy={busy && (a.id === 'confirmPayment' || a.id === 'payOnline' || a.id === 'checkOnlinePayment')}
+            busy={
+              busy &&
+              (a.id === 'confirmPayment' || a.id === 'payOnline' || a.id === 'checkOnlinePayment')
+            }
             disabled={busy}
             onPress={() => props.onAction(a.id)}
           />

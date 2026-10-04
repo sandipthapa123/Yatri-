@@ -21,7 +21,11 @@ export function getStorageProvider(): StorageProvider {
             region: env.S3_REGION,
             ...(env.S3_ENDPOINT ? { endpoint: env.S3_ENDPOINT } : {}),
             forcePathStyle: env.S3_FORCE_PATH_STYLE,
-            credentials: { accessKeyId: env.S3_ACCESS_KEY_ID ?? '', secretAccessKey: env.S3_SECRET_ACCESS_KEY ?? '', region: env.S3_REGION },
+            credentials: {
+              accessKeyId: env.S3_ACCESS_KEY_ID ?? '',
+              secretAccessKey: env.S3_SECRET_ACCESS_KEY ?? '',
+              region: env.S3_REGION,
+            },
             timeoutMs: env.PROVIDER_TIMEOUT_MS * 3, // files are larger than a text message
           })
         : new LocalDiskStorageProvider(path.resolve(env.STORAGE_LOCAL_ROOT));

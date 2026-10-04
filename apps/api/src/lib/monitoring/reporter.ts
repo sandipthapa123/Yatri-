@@ -102,10 +102,31 @@ export class SentryErrorReporter implements ErrorReporter {
       logger: 'yatri-api',
       transaction: e.where,
       message: { formatted: `${e.name}: ${e.message}` },
-      tags: { status: e.status === null ? 'none' : String(e.status), request_id: e.requestId ?? 'none' },
-      exception: { values: [{ type: e.name, value: e.message, ...(e.stack ? { stacktrace: { frames: [{ filename: e.stack.split('\n').slice(0, 12).join(' | ') }] } } : {}) }] },
+      tags: {
+        status: e.status === null ? 'none' : String(e.status),
+        request_id: e.requestId ?? 'none',
+      },
+      exception: {
+        values: [
+          {
+            type: e.name,
+            value: e.message,
+            ...(e.stack
+              ? {
+                  stacktrace: {
+                    frames: [{ filename: e.stack.split('\n').slice(0, 12).join(' | ') }],
+                  },
+                }
+              : {}),
+          },
+        ],
+      },
     };
-    const body = [JSON.stringify({ event_id: eventId, sent_at: new Date().toISOString() }), JSON.stringify({ type: 'event' }), JSON.stringify(event)].join('\n');
+    const body = [
+      JSON.stringify({ event_id: eventId, sent_at: new Date().toISOString() }),
+      JSON.stringify({ type: 'event' }),
+      JSON.stringify(event),
+    ].join('\n');
     await providerRequest({
       capability: 'MONITORING',
       provider: this.name,

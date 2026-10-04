@@ -36,7 +36,6 @@ const CALL_STATE_TEXT: Record<string, string> = {
   ENDED: 'Ended',
 };
 
-
 /**
  * One ride, end to end, from the same records the passenger and driver apps use: the state
  * machine's events, dispatch history, waiting, location freshness, calls, chat counts, payment,

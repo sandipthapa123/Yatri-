@@ -48,27 +48,29 @@ export class KhaltiGateway implements PaymentGateway {
   }
 
   async initiate(r: GatewayPaymentRequest): Promise<GatewayPaymentOpened> {
-    const res = await providerRequest<{ pidx?: string; payment_url?: string; expires_in?: number }>({
-      capability: 'PAYMENTS',
-      provider: this.name,
-      operation: 'initiate',
-      url: this.url('/epayment/initiate/'),
-      init: {
-        method: 'POST',
-        headers: this.headers(),
-        body: JSON.stringify({
-          return_url: this.c.returnUrl,
-          website_url: this.c.websiteUrl,
-          amount: r.amountNpr * PAISA_PER_NPR,
-          purchase_order_id: r.attemptId,
-          purchase_order_name: r.description.slice(0, 100),
-        }),
+    const res = await providerRequest<{ pidx?: string; payment_url?: string; expires_in?: number }>(
+      {
+        capability: 'PAYMENTS',
+        provider: this.name,
+        operation: 'initiate',
+        url: this.url('/epayment/initiate/'),
+        init: {
+          method: 'POST',
+          headers: this.headers(),
+          body: JSON.stringify({
+            return_url: this.c.returnUrl,
+            website_url: this.c.websiteUrl,
+            amount: r.amountNpr * PAISA_PER_NPR,
+            purchase_order_id: r.attemptId,
+            purchase_order_name: r.description.slice(0, 100),
+          }),
+        },
+        timeoutMs: this.c.timeoutMs,
+        idempotent: false, // a second "initiate" would open a second payment
+        expect: 'json',
+        ...(this.c.fetchImpl ? { fetchImpl: this.c.fetchImpl } : {}),
       },
-      timeoutMs: this.c.timeoutMs,
-      idempotent: false, // a second "initiate" would open a second payment
-      expect: 'json',
-      ...(this.c.fetchImpl ? { fetchImpl: this.c.fetchImpl } : {}),
-    });
+    );
     const { pidx, payment_url: paymentUrl, expires_in: expiresIn } = res.data ?? {};
     if (!pidx || !paymentUrl) throw new ProviderError('PAYMENTS', this.name, 'BAD_RESPONSE');
     return {
@@ -84,14 +86,19 @@ export class KhaltiGateway implements PaymentGateway {
       provider: this.name,
       operation: 'lookup',
       url: this.url('/epayment/lookup/'),
-      init: { method: 'POST', headers: this.headers(), body: JSON.stringify({ pidx: providerRef }) },
+      init: {
+        method: 'POST',
+        headers: this.headers(),
+        body: JSON.stringify({ pidx: providerRef }),
+      },
       timeoutMs: this.c.timeoutMs,
       idempotent: true,
       expect: 'json',
       ...(this.c.fetchImpl ? { fetchImpl: this.c.fetchImpl } : {}),
     });
     const body = res.data;
-    if (!body || typeof body.status !== 'string') throw new ProviderError('PAYMENTS', this.name, 'BAD_RESPONSE');
+    if (!body || typeof body.status !== 'string')
+      throw new ProviderError('PAYMENTS', this.name, 'BAD_RESPONSE');
     return {
       state: STATE[body.status] ?? 'FAILED',
       amountNpr: typeof body.total_amount === 'number' ? body.total_amount / PAISA_PER_NPR : null,
@@ -106,7 +113,11 @@ export class KhaltiGateway implements PaymentGateway {
         provider: this.name,
         operation: 'check',
         url: this.url('/epayment/lookup/'),
-        init: { method: 'POST', headers: this.headers(), body: JSON.stringify({ pidx: 'health-check' }) },
+        init: {
+          method: 'POST',
+          headers: this.headers(),
+          body: JSON.stringify({ pidx: 'health-check' }),
+        },
         timeoutMs: this.c.timeoutMs,
         idempotent: true,
         expect: 'none',

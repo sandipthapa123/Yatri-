@@ -1,5 +1,12 @@
 import { useEffect } from 'react';
-import { AccessibilityInfo, ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  AccessibilityInfo,
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useTheme } from './useTheme';
@@ -17,9 +24,16 @@ export function LoadingView({ label, tone }: AppIdentity) {
   return (
     <SafeAreaView style={[styles.loading, { backgroundColor: theme.colors.background }]}>
       <Wordmark label={label} tone={tone} />
-      <View style={styles.status} accessible accessibilityRole="progressbar" accessibilityLabel={`Loading ${label}`}>
+      <View
+        style={styles.status}
+        accessible
+        accessibilityRole="progressbar"
+        accessibilityLabel={`Loading ${label}`}
+      >
         <ActivityIndicator size="large" color={theme.colors[tone]} />
-        <Text style={[styles.label, { color: theme.colors.textSecondary }]}>Getting things ready…</Text>
+        <Text style={[styles.label, { color: theme.colors.textSecondary }]}>
+          Getting things ready…
+        </Text>
       </View>
     </SafeAreaView>
   );
@@ -29,7 +43,12 @@ export function LoadingView({ label, tone }: AppIdentity) {
  * Shown when the app could not start. The failure is announced once (a screen reader would otherwise lose the race against the
  * layout change) and there is one clear way out: try again.
  */
-export function StartupErrorView({ label, tone, message, onRetry }: AppIdentity & { message?: string; onRetry: () => void }) {
+export function StartupErrorView({
+  label,
+  tone,
+  message,
+  onRetry,
+}: AppIdentity & { message?: string; onRetry: () => void }) {
   const theme = useTheme();
   const description = message ?? `Something went wrong while starting ${label}.`;
 
@@ -51,7 +70,10 @@ export function StartupErrorView({ label, tone, message, onRetry }: AppIdentity 
         accessibilityHint="Retries starting the app"
         style={({ pressed }) => [
           styles.button,
-          { backgroundColor: pressed ? theme.colors.primaryDark : theme.colors[tone], minHeight: theme.minTouchTarget },
+          {
+            backgroundColor: pressed ? theme.colors.primaryDark : theme.colors[tone],
+            minHeight: theme.minTouchTarget,
+          },
         ]}
       >
         <Text style={[styles.buttonText, { color: theme.colors.textInverse }]}>Try again</Text>
@@ -64,10 +86,21 @@ const styles = StyleSheet.create({
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 32 },
   status: { alignItems: 'center', gap: 12 },
   label: { fontSize: 16 },
-  error: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 24, paddingHorizontal: 32 },
+  error: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 24,
+    paddingHorizontal: 32,
+  },
   body: { alignItems: 'center', gap: 8 },
   title: { fontSize: 20, fontWeight: '700' },
   message: { fontSize: 15, textAlign: 'center' },
-  button: { paddingHorizontal: 24, justifyContent: 'center', alignItems: 'center', borderRadius: 999 },
+  button: {
+    paddingHorizontal: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 999,
+  },
   buttonText: { fontSize: 16, fontWeight: '600' },
 });

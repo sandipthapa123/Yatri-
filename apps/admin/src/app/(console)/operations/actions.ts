@@ -15,7 +15,12 @@ import {
 } from '@yatri/types';
 import { revalidatePath } from 'next/cache';
 
-import { saveIncentiveRule, savePricingRule, saveZone, actionFailure } from '../../../lib/apiClient';
+import {
+  saveIncentiveRule,
+  savePricingRule,
+  saveZone,
+  actionFailure,
+} from '../../../lib/apiClient';
 import { requireAdminAccessToken } from '../../../lib/session';
 
 export interface OpsActionState {

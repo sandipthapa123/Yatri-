@@ -7,8 +7,13 @@ import type { DriverPayoutSummary, PayoutAccountBody } from '@yatri/types';
  */
 type Token = string;
 export const payoutsApi = {
-  summary: (t: Token) => authApi.request<DriverPayoutSummary>('/drivers/me/payouts', { accessToken: t }),
+  summary: (t: Token) =>
+    authApi.request<DriverPayoutSummary>('/drivers/me/payouts', { accessToken: t }),
   saveAccount: (t: Token, body: PayoutAccountBody) =>
-    authApi.request<DriverPayoutSummary>('/drivers/me/payout-account', { method: 'PUT', accessToken: t, body }),
+    authApi.request<DriverPayoutSummary>('/drivers/me/payout-account', {
+      method: 'PUT',
+      accessToken: t,
+      body,
+    }),
 };
 export type PayoutsApi = typeof payoutsApi;

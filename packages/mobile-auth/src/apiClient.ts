@@ -17,14 +17,19 @@ export const NETWORK_ERROR_MESSAGE =
 /** How long a request may wait for an answer; an upload of a photo or document is given longer. */
 export const REQUEST_TIMEOUT_MS = 20_000;
 export const UPLOAD_TIMEOUT_MS = 60_000;
-export const TIMEOUT_ERROR_MESSAGE = 'Yatri did not answer in time. Check your internet connection and try again.';
+export const TIMEOUT_ERROR_MESSAGE =
+  'Yatri did not answer in time. Check your internet connection and try again.';
 
 /**
  * The one place a request leaves the device. It also keeps what the app knows about its connection (every answer, even
  * an error answer, proves the network works; a failure to reach the server is recorded) and the server's clock (from
  * the response `Date`), and turns "fetch threw" into a plain ApiError with code NETWORK_ERROR.
  */
-async function send(url: string, init: RequestInit, timeoutMs: number = REQUEST_TIMEOUT_MS): Promise<Response> {
+async function send(
+  url: string,
+  init: RequestInit,
+  timeoutMs: number = REQUEST_TIMEOUT_MS,
+): Promise<Response> {
   const sentAt = Date.now();
   let response: Response;
   // A request that gets no answer must end: on a stalled connection a screen would otherwise wait for ever. The caller's own
@@ -45,7 +50,11 @@ async function send(url: string, init: RequestInit, timeoutMs: number = REQUEST_
     if (caller?.aborted) throw err; // the caller cancelled; that is not a network problem
     connectivity.reportUnreachable();
     // Same code as a dropped connection (an action sent with an idempotency key is safely sent again), plainer words.
-    throw new ApiError(0, 'NETWORK_ERROR', timedOut ? TIMEOUT_ERROR_MESSAGE : NETWORK_ERROR_MESSAGE);
+    throw new ApiError(
+      0,
+      'NETWORK_ERROR',
+      timedOut ? TIMEOUT_ERROR_MESSAGE : NETWORK_ERROR_MESSAGE,
+    );
   } finally {
     clearTimeout(timer);
     caller?.removeEventListener('abort', onCallerAbort);
@@ -119,12 +128,16 @@ export async function requestMultipart<T>(
   accessToken: string,
   form: FormData,
 ): Promise<T> {
-  const response = await send(`${API_BASE_URL}${path}`, {
-    method: 'POST',
-    // No Content-Type here — fetch sets the multipart boundary itself.
-    headers: { Authorization: `Bearer ${accessToken}` },
-    body: form,
-  }, UPLOAD_TIMEOUT_MS);
+  const response = await send(
+    `${API_BASE_URL}${path}`,
+    {
+      method: 'POST',
+      // No Content-Type here — fetch sets the multipart boundary itself.
+      headers: { Authorization: `Bearer ${accessToken}` },
+      body: form,
+    },
+    UPLOAD_TIMEOUT_MS,
+  );
   return unwrap<T>(response);
 }
 

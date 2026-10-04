@@ -36,6 +36,8 @@ export class SandboxGateway implements PaymentGateway {
       'SELECT amount_npr FROM payment_attempts WHERE provider = $1 AND provider_ref = $2',
       [this.name, providerRef],
     );
-    return r.rows[0] ? { state: 'COMPLETED', amountNpr: r.rows[0].amount_npr } : { state: 'FAILED', amountNpr: null };
+    return r.rows[0]
+      ? { state: 'COMPLETED', amountNpr: r.rows[0].amount_npr }
+      : { state: 'FAILED', amountNpr: null };
   }
 }

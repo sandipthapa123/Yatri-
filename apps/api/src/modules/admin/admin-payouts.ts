@@ -13,7 +13,14 @@ import { z } from 'zod';
 
 import { requireParam } from '../../lib/params';
 import { HttpError } from '../../middleware/errorHandler';
-import { actOnPayout, adminDetail, adminList, prepareAll, prepareForDriver, revealAccount } from '../payouts/payouts.service';
+import {
+  actOnPayout,
+  adminDetail,
+  adminList,
+  prepareAll,
+  prepareForDriver,
+  revealAccount,
+} from '../payouts/payouts.service';
 
 /**
  * Handlers for the payouts screens. Seeing payouts needs PAYOUTS_VIEW; preparing one, seeing the account to pay and recording a
@@ -56,8 +63,18 @@ export async function preparePayoutsHandler(
 ) {
   const body = req.body as z.infer<typeof payoutPrepareSchema>;
   const id = adminId(req);
-  res.status(201).json({ success: true, data: body.driverId ? await prepareForDriver(id, body.driverId) : await prepareAll(id) });
+  res.status(201).json({
+    success: true,
+    data: body.driverId ? await prepareForDriver(id, body.driverId) : await prepareAll(id),
+  });
 }
 export async function payoutActionHandler(req: Request, res: Res<AdminPayoutRow>) {
-  res.json({ success: true, data: await actOnPayout(adminId(req), requireParam(req, 'id'), req.body as z.infer<typeof payoutActionSchema>) });
+  res.json({
+    success: true,
+    data: await actOnPayout(
+      adminId(req),
+      requireParam(req, 'id'),
+      req.body as z.infer<typeof payoutActionSchema>,
+    ),
+  });
 }

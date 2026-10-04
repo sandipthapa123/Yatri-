@@ -18,7 +18,9 @@ import {
 } from '../disabilityText';
 
 const problem = (e: unknown) =>
-  e instanceof ApiError ? e.message : 'That did not work. Please check your connection and try again.';
+  e instanceof ApiError
+    ? e.message
+    : 'That did not work. Please check your connection and try again.';
 
 /**
  * Disability benefit verification, for a rider, on one screen. It is voluntary and says so first. The server decides every
@@ -52,7 +54,11 @@ export function DisabilityBenefitCenter(props: UiProps & { onExit: () => void })
   }, [v, say]);
 
   const run = useCallback(
-    async (label: string, work: (token: string) => Promise<DisabilityVerificationView>, done?: (next: DisabilityVerificationView) => void) => {
+    async (
+      label: string,
+      work: (token: string) => Promise<DisabilityVerificationView>,
+      done?: (next: DisabilityVerificationView) => void,
+    ) => {
       setBusy(label);
       setError(null);
       try {
@@ -89,11 +95,22 @@ export function DisabilityBenefitCenter(props: UiProps & { onExit: () => void })
   };
 
   const send = () =>
-    run('submit', (t) => disabilityApi.submit(t, method === 'OFFICIAL_API' && number.trim() ? number.trim() : undefined), () => setNumber(''));
+    run(
+      'submit',
+      (t) =>
+        disabilityApi.submit(
+          t,
+          method === 'OFFICIAL_API' && number.trim() ? number.trim() : undefined,
+        ),
+      () => setNumber(''),
+    );
 
   if (state.error && !v) {
     return (
-      <Text accessibilityRole="alert" style={{ color: colors.error }}>{`Problem: ${state.error}`}</Text>
+      <Text
+        accessibilityRole="alert"
+        style={{ color: colors.error }}
+      >{`Problem: ${state.error}`}</Text>
     );
   }
   if (!v) return <Text style={{ color: colors.textSecondary }}>Loading…</Text>;
@@ -107,11 +124,20 @@ export function DisabilityBenefitCenter(props: UiProps & { onExit: () => void })
       <Announcer {...ui} polite={news} />
 
       <Card {...ui} title="Disability benefit">
-        <Text accessibilityRole="text" style={{ color: colors.textPrimary, fontSize: 18, fontWeight: '700' }}>
+        <Text
+          accessibilityRole="text"
+          style={{ color: colors.textPrimary, fontSize: 18, fontWeight: '700' }}
+        >
           {v.statusText}
         </Text>
-        <Text style={{ color: colors.textPrimary }}>{`Status: ${v.statusLabel}. ${nextStepLine(v)}`}</Text>
-        {v.message ? <Text style={{ color: colors.textPrimary }}>{`Message from the reviewer: ${v.message}`}</Text> : null}
+        <Text
+          style={{ color: colors.textPrimary }}
+        >{`Status: ${v.statusLabel}. ${nextStepLine(v)}`}</Text>
+        {v.message ? (
+          <Text
+            style={{ color: colors.textPrimary }}
+          >{`Message from the reviewer: ${v.message}`}</Text>
+        ) : null}
         {expiryText ? <Text style={{ color: colors.textPrimary }}>{expiryText}</Text> : null}
         <Text style={{ color: colors.textSecondary }}>{v.benefit.text}</Text>
         {!v.enabled ? (
@@ -125,12 +151,14 @@ export function DisabilityBenefitCenter(props: UiProps & { onExit: () => void })
       {v.enabled && v.canOptIn ? (
         <Card {...ui} title="Consent">
           <Text style={{ color: colors.textPrimary }}>
-            To check your disability identity card we need your card number, who issued it, its dates and a photo or PDF of
-            it. We keep only the last four characters of the number.
+            To check your disability identity card we need your card number, who issued it, its
+            dates and a photo or PDF of it. We keep only the last four characters of the number.
           </Text>
           <ActionButton
             {...ui}
-            label={agreed ? 'I agree (selected). Select to undo.' : CONSENT_SENTENCE(v.consent.title)}
+            label={
+              agreed ? 'I agree (selected). Select to undo.' : CONSENT_SENTENCE(v.consent.title)
+            }
             tone={agreed ? 'primary' : 'neutral'}
             onPress={() => setAgreed((a) => !a)}
           />
@@ -151,9 +179,15 @@ export function DisabilityBenefitCenter(props: UiProps & { onExit: () => void })
             busy={busy === 'optin'}
             disabled={!agreed}
             tone="primary"
-            onPress={() => void run('optin', (t) => disabilityApi.optIn(t, v.consent.version, method))}
+            onPress={() =>
+              void run('optin', (t) => disabilityApi.optIn(t, v.consent.version, method))
+            }
           />
-          {!agreed ? <Text style={{ color: colors.textSecondary }}>Select &quot;I agree&quot; to continue.</Text> : null}
+          {!agreed ? (
+            <Text style={{ color: colors.textSecondary }}>
+              Select &quot;I agree&quot; to continue.
+            </Text>
+          ) : null}
         </Card>
       ) : null}
 
@@ -176,7 +210,9 @@ export function DisabilityBenefitCenter(props: UiProps & { onExit: () => void })
                 maxLength={40}
                 style={[styles.input, { color: colors.textPrimary, borderColor: colors.border }]}
               />
-              <Text style={{ color: colors.textPrimary, fontWeight: '600' }}>Who issued the card</Text>
+              <Text style={{ color: colors.textPrimary, fontWeight: '600' }}>
+                Who issued the card
+              </Text>
               <TextInput
                 accessibilityLabel="Who issued the card"
                 value={authority}
@@ -184,7 +220,9 @@ export function DisabilityBenefitCenter(props: UiProps & { onExit: () => void })
                 maxLength={120}
                 style={[styles.input, { color: colors.textPrimary, borderColor: colors.border }]}
               />
-              <Text style={{ color: colors.textPrimary, fontWeight: '600' }}>Issue date, as year-month-day</Text>
+              <Text style={{ color: colors.textPrimary, fontWeight: '600' }}>
+                Issue date, as year-month-day
+              </Text>
               <TextInput
                 accessibilityLabel="Issue date, year, month, day"
                 value={issue}
@@ -194,7 +232,9 @@ export function DisabilityBenefitCenter(props: UiProps & { onExit: () => void })
                 maxLength={10}
                 style={[styles.input, { color: colors.textPrimary, borderColor: colors.border }]}
               />
-              <Text style={{ color: colors.textPrimary, fontWeight: '600' }}>Expiry date, as year-month-day</Text>
+              <Text style={{ color: colors.textPrimary, fontWeight: '600' }}>
+                Expiry date, as year-month-day
+              </Text>
               <TextInput
                 accessibilityLabel="Expiry date, year, month, day"
                 value={expiry}
@@ -204,10 +244,19 @@ export function DisabilityBenefitCenter(props: UiProps & { onExit: () => void })
                 maxLength={10}
                 style={[styles.input, { color: colors.textPrimary, borderColor: colors.border }]}
               />
-              <ActionButton {...ui} label="Save card details" busy={busy === 'save'} onPress={() => void saveDetails()} />
               <ActionButton
                 {...ui}
-                label={v.card.hasDocument ? 'Replace the photo or PDF of my card' : 'Add a photo or PDF of my card'}
+                label="Save card details"
+                busy={busy === 'save'}
+                onPress={() => void saveDetails()}
+              />
+              <ActionButton
+                {...ui}
+                label={
+                  v.card.hasDocument
+                    ? 'Replace the photo or PDF of my card'
+                    : 'Add a photo or PDF of my card'
+                }
                 busy={busy === 'document'}
                 onPress={() => void pickDocument()}
               />
@@ -250,11 +299,15 @@ export function DisabilityBenefitCenter(props: UiProps & { onExit: () => void })
       {v.canWithdraw ? (
         <Card {...ui} title="Stop and erase my details">
           <Text style={{ color: colors.textPrimary }}>
-            This withdraws your consent, ends any benefit, and erases your card details and document. You can apply again later.
+            This withdraws your consent, ends any benefit, and erases your card details and
+            document. You can apply again later.
           </Text>
           {confirmWithdraw ? (
             <>
-              <Text accessibilityRole="alert" style={{ color: colors.textPrimary, fontWeight: '700' }}>
+              <Text
+                accessibilityRole="alert"
+                style={{ color: colors.textPrimary, fontWeight: '700' }}
+              >
                 Are you sure? This cannot be undone.
               </Text>
               <ActionButton
@@ -262,12 +315,27 @@ export function DisabilityBenefitCenter(props: UiProps & { onExit: () => void })
                 label="Yes, withdraw my consent and erase my details"
                 tone="danger"
                 busy={busy === 'withdraw'}
-                onPress={() => void run('withdraw', (t) => disabilityApi.withdraw(t), () => setConfirmWithdraw(false))}
+                onPress={() =>
+                  void run(
+                    'withdraw',
+                    (t) => disabilityApi.withdraw(t),
+                    () => setConfirmWithdraw(false),
+                  )
+                }
               />
-              <ActionButton {...ui} label="No, keep my application" onPress={() => setConfirmWithdraw(false)} />
+              <ActionButton
+                {...ui}
+                label="No, keep my application"
+                onPress={() => setConfirmWithdraw(false)}
+              />
             </>
           ) : (
-            <ActionButton {...ui} label="Withdraw my consent and erase my details" tone="danger" onPress={() => setConfirmWithdraw(true)} />
+            <ActionButton
+              {...ui}
+              label="Withdraw my consent and erase my details"
+              tone="danger"
+              onPress={() => setConfirmWithdraw(true)}
+            />
           )}
         </Card>
       ) : null}
@@ -279,5 +347,12 @@ export function DisabilityBenefitCenter(props: UiProps & { onExit: () => void })
 
 const styles = StyleSheet.create({
   container: { gap: 14 },
-  input: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 16, minHeight: 48 },
+  input: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 16,
+    minHeight: 48,
+  },
 });

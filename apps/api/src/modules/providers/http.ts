@@ -42,7 +42,9 @@ export interface ProviderResponse<T> {
 const BASE_DELAY_MS = 200;
 const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
-export async function providerRequest<T = unknown>(r: ProviderRequest): Promise<ProviderResponse<T>> {
+export async function providerRequest<T = unknown>(
+  r: ProviderRequest,
+): Promise<ProviderResponse<T>> {
   const fetchImpl = r.fetchImpl ?? fetch;
   const sleep = r.sleep ?? wait;
   const maxRetries = r.idempotent ? (r.retries ?? 2) : 0;
@@ -60,7 +62,8 @@ export async function providerRequest<T = unknown>(r: ProviderRequest): Promise<
       return out;
     } catch (err) {
       const e = toProviderError(r.capability, r.provider, err);
-      if (!(err instanceof ProviderError)) log.warn(`Provider call failed (${r.capability}/${r.provider}/${r.operation})`);
+      if (!(err instanceof ProviderError))
+        log.warn(`Provider call failed (${r.capability}/${r.provider}/${r.operation})`);
       if (e.retryable) breakerRecord(r.capability, r.provider, false);
       await recordUsage(r.capability, r.provider, e.kind, Date.now() - started);
       if (e.retryable && attempt < maxRetries) {
@@ -80,7 +83,8 @@ async function once<T>(r: ProviderRequest, fetchImpl: typeof fetch): Promise<Pro
   } catch (err) {
     throw toProviderError(r.capability, r.provider, err);
   }
-  if (!res.ok) throw new ProviderError(r.capability, r.provider, kindOfStatus(res.status), res.status);
+  if (!res.ok)
+    throw new ProviderError(r.capability, r.provider, kindOfStatus(res.status), res.status);
   const expect = r.expect ?? 'json';
   try {
     const data =

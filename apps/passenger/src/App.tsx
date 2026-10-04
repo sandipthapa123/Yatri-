@@ -37,7 +37,9 @@ export default function App() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <ErrorBoundary
-          fallback={(error, reset) => <StartupErrorView {...BRAND} message={error.message} onRetry={reset} />}
+          fallback={(error, reset) => (
+            <StartupErrorView {...BRAND} message={error.message} onRetry={reset} />
+          )}
         >
           <AuthProvider role="PASSENGER" onBeforeLogout={unregisterPush}>
             <PreferencesProvider>

@@ -34,9 +34,13 @@ export class ExpoPushProvider implements NotificationProvider {
   }
 
   async send(payload: NotificationPayload): Promise<void> {
-    const tokens = await query<{ token: string }>('SELECT token FROM push_tokens WHERE user_id = $1', [payload.userId]);
+    const tokens = await query<{ token: string }>(
+      'SELECT token FROM push_tokens WHERE user_id = $1',
+      [payload.userId],
+    );
     if (tokens.rows.length === 0) return; // nowhere to push: the record in the app's notification list is the delivery
-    const tripId = typeof payload.metadata?.tripId === 'string' ? payload.metadata.tripId : undefined;
+    const tripId =
+      typeof payload.metadata?.tripId === 'string' ? payload.metadata.tripId : undefined;
     const messages = tokens.rows.map((t) => ({
       to: t.token,
       title: payload.title,
@@ -59,7 +63,9 @@ export class ExpoPushProvider implements NotificationProvider {
     for (let i = 0; i < tickets.length; i += 1) {
       const t = tickets[i];
       if (t?.status === 'error' && t.details?.error === 'DeviceNotRegistered') {
-        await query('DELETE FROM push_tokens WHERE token = $1', [messages[i]?.to]).catch((err) => log.warn('Could not remove a stale push token', err));
+        await query('DELETE FROM push_tokens WHERE token = $1', [messages[i]?.to]).catch((err) =>
+          log.warn('Could not remove a stale push token', err),
+        );
       }
     }
   }

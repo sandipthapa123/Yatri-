@@ -45,7 +45,10 @@ export async function pricingConfigForCityId(id: string | null): Promise<Pricing
  * The pricing rules for ONE ride: the city's, with the extra boarding time a rider who needs it was promised added to the free
  * waiting time and to the wait before a driver may cancel for a no-show. No charge is added for the extra time.
  */
-export async function pricingConfigForTrip(t: { id: string; city_id: string | null }): Promise<PricingConfig> {
+export async function pricingConfigForTrip(t: {
+  id: string;
+  city_id: string | null;
+}): Promise<PricingConfig> {
   const cfg = await pricingConfigForCityId(t.city_id);
   const extra = await extraBoardingSeconds(t.id);
   if (extra <= 0) return cfg;

@@ -38,7 +38,7 @@ const toInfo = (a: AttemptRow): DigitalPaymentInfo => ({
   status: a.status,
   amountNpr: a.amount_npr,
   paymentUrl: a.status === 'INITIATED' ? a.payment_url : null,
-  expiresAt: a.status === 'INITIATED' ? (isoOrNull(a.expires_at)) : null,
+  expiresAt: a.status === 'INITIATED' ? isoOrNull(a.expires_at) : null,
 });
 
 const unavailable = () =>
@@ -60,16 +60,20 @@ async function payableFor(tripId: string, userId: string): Promise<{ amountNpr: 
     throw new HttpError(409, 'TRIP_NOT_COMPLETED', 'You can pay online after the ride ends.');
   }
   if (payment.method === 'ORGANIZATION') {
-    throw new HttpError(409, 'BILLED_TO_ORGANIZATION', "This ride is billed to your organization.");
+    throw new HttpError(409, 'BILLED_TO_ORGANIZATION', 'This ride is billed to your organization.');
   }
-  if (payment.status === 'PAID') throw new HttpError(409, 'ALREADY_PAID', 'This ride is already paid.');
+  if (payment.status === 'PAID')
+    throw new HttpError(409, 'ALREADY_PAID', 'This ride is already paid.');
   if (payment.status !== 'PENDING') {
     throw new HttpError(409, 'PAYMENT_NOT_PENDING', 'This payment can no longer be made.');
   }
   return { amountNpr: payment.amountNpr };
 }
 
-export async function startDigitalPayment(tripId: string, userId: string): Promise<DigitalPaymentInfo> {
+export async function startDigitalPayment(
+  tripId: string,
+  userId: string,
+): Promise<DigitalPaymentInfo> {
   const gateway = getPaymentGateway();
   if (!gateway) throw unavailable();
   const { amountNpr } = await payableFor(tripId, userId);
@@ -123,7 +127,10 @@ export async function startDigitalPayment(tripId: string, userId: string): Promi
     });
     return toInfo(done.rows[0] as AttemptRow);
   } catch (err) {
-    await query(`UPDATE payment_attempts SET status = 'FAILED' WHERE id = $1 AND status = 'INITIATED'`, [attempt.id]);
+    await query(
+      `UPDATE payment_attempts SET status = 'FAILED' WHERE id = $1 AND status = 'INITIATED'`,
+      [attempt.id],
+    );
     if (err instanceof ProviderError) throw unavailable(); // the vendor's reason stays in the server's counters
     throw err;
   }
@@ -161,7 +168,10 @@ async function applyLookup(a: AttemptRow, actorId: string | null): Promise<Attem
   // COMPLETED: believed only for exactly the amount Yatri asked for.
   if (result.amountNpr !== a.amount_npr) {
     log.error('Payment amount mismatch; not marking paid');
-    await query(`UPDATE payment_attempts SET status = 'FAILED' WHERE id = $1 AND status = 'INITIATED'`, [a.id]);
+    await query(
+      `UPDATE payment_attempts SET status = 'FAILED' WHERE id = $1 AND status = 'INITIATED'`,
+      [a.id],
+    );
     await recordAudit({
       actorId,
       actorRole: actorId ? 'PASSENGER' : 'SYSTEM',
@@ -170,9 +180,18 @@ async function applyLookup(a: AttemptRow, actorId: string | null): Promise<Attem
       subjectIds: [a.trip_id],
       detail: { provider: a.provider, expectedNpr: a.amount_npr },
     });
-    throw new HttpError(409, 'PAYMENT_AMOUNT_MISMATCH', 'The payment did not match the amount due. It was not accepted.');
+    throw new HttpError(
+      409,
+      'PAYMENT_AMOUNT_MISMATCH',
+      'The payment did not match the amount due. It was not accepted.',
+    );
   }
-  await markPaidByProvider({ tripId: a.trip_id, actorId, providerRef: a.provider_ref, amountNpr: a.amount_npr });
+  await markPaidByProvider({
+    tripId: a.trip_id,
+    actorId,
+    providerRef: a.provider_ref,
+    amountNpr: a.amount_npr,
+  });
   const r = await query<AttemptRow>(
     `UPDATE payment_attempts SET status = 'COMPLETED', completed_at = COALESCE(completed_at, now())
      WHERE id = $1 AND status = 'INITIATED' RETURNING ${COLUMNS}`,
@@ -192,7 +211,10 @@ async function applyLookup(a: AttemptRow, actorId: string | null): Promise<Attem
 }
 
 /** The rider asks "did it go through?" (and the app calls this when they come back from the vendor's page). */
-export async function verifyDigitalPayment(tripId: string, userId: string): Promise<DigitalPaymentInfo> {
+export async function verifyDigitalPayment(
+  tripId: string,
+  userId: string,
+): Promise<DigitalPaymentInfo> {
   const trip = await getTrip(tripId);
   if (!trip || trip.passenger_id !== userId) {
     await requireParticipant(tripId, userId);
@@ -213,7 +235,9 @@ export async function verifyDigitalPayment(tripId: string, userId: string): Prom
  * The `payment-attempts` job: settle attempts whose rider never came back to the app (the vendor took the money, the phone
  * died), and close the ones that ran out of time. Same code path as the rider's own check, so the same guards apply.
  */
-export async function sweepPaymentAttempts(limit = 100): Promise<{ checked: number; completed: number; closed: number }> {
+export async function sweepPaymentAttempts(
+  limit = 100,
+): Promise<{ checked: number; completed: number; closed: number }> {
   const due = await query<AttemptRow>(
     `SELECT ${COLUMNS} FROM payment_attempts
      WHERE status = 'INITIATED' AND provider_ref IS NOT NULL AND created_at < now() - interval '1 minute'
@@ -228,7 +252,10 @@ export async function sweepPaymentAttempts(limit = 100): Promise<{ checked: numb
       if (after.status === 'COMPLETED') completed += 1;
       else if (after.status !== 'INITIATED') closed += 1;
     } catch (err) {
-      log.warn('Payment attempt check failed; will try again', err instanceof Error ? err.name : 'error');
+      log.warn(
+        'Payment attempt check failed; will try again',
+        err instanceof Error ? err.name : 'error',
+      );
     }
   }
   const expired = await query(

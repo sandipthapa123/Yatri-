@@ -72,7 +72,9 @@ const isConfigured = (key: string): boolean => {
 /** The vendors the platform actually uses for a need, by name (maps can be two: search and routes). */
 function vendorsFor(capability: ProviderCapability): string[] {
   const sel = selectedProviders();
-  const keys = (Object.keys(CAPABILITY_OF) as Array<keyof ProviderSelection>).filter((k) => CAPABILITY_OF[k] === capability);
+  const keys = (Object.keys(CAPABILITY_OF) as Array<keyof ProviderSelection>).filter(
+    (k) => CAPABILITY_OF[k] === capability,
+  );
   return [...new Set(keys.map((k) => sel[k]))];
 }
 
@@ -124,7 +126,8 @@ function isSimulated(capability: ProviderCapability): boolean {
   );
 }
 
-const kindOf = (err: unknown): ProviderErrorKind => (err instanceof ProviderError ? err.kind : 'UNAVAILABLE');
+const kindOf = (err: unknown): ProviderErrorKind =>
+  err instanceof ProviderError ? err.kind : 'UNAVAILABLE';
 
 /** The `provider-health` job: run every check that exists and keep the answer. Never throws for a vendor that is down. */
 export async function runProviderChecks(): Promise<{ checked: number; failing: number }> {
@@ -192,16 +195,20 @@ export function stateOf(input: {
 export async function providersOverview(): Promise<ProvidersOverview> {
   const profile = environmentProfileOf(env.NODE_ENV);
   const usage = await usageToday().catch(() => new Map());
-  const health = await query<HealthRow>('SELECT capability, provider, ok, latency_ms, failure_kind, checked_at FROM provider_health').catch(
-    () => ({ rows: [] as HealthRow[] }),
-  );
+  const health = await query<HealthRow>(
+    'SELECT capability, provider, ok, latency_ms, failure_kind, checked_at FROM provider_health',
+  ).catch(() => ({ rows: [] as HealthRow[] }));
   const sel = selectedProviders();
   const items: ProviderStatusInfo[] = PROVIDER_CAPABILITIES.map((capability) => {
     const vendors = vendorsFor(capability);
     const vendor = vendors.join(' + ');
-    const keys = (Object.keys(CAPABILITY_OF) as Array<keyof ProviderSelection>).filter((k) => CAPABILITY_OF[k] === capability);
+    const keys = (Object.keys(CAPABILITY_OF) as Array<keyof ProviderSelection>).filter(
+      (k) => CAPABILITY_OF[k] === capability,
+    );
     const simulated = isSimulated(capability);
-    const missingEnv = keys.some((k) => (PROVIDER_REQUIRED_ENV[`${k}:${sel[k]}`] ?? []).some((e) => !isConfigured(e)));
+    const missingEnv = keys.some((k) =>
+      (PROVIDER_REQUIRED_ENV[`${k}:${sel[k]}`] ?? []).some((e) => !isConfigured(e)),
+    );
     let calls = 0;
     let failures = 0;
     let lastFailureKind: ProviderErrorKind | null = null;
@@ -213,7 +220,9 @@ export async function providersOverview(): Promise<ProvidersOverview> {
         lastFailureKind = (u.lastFailureKind as ProviderErrorKind | null) ?? lastFailureKind;
       }
     }
-    const row = health.rows.find((h) => h.capability === capability && vendors.includes(h.provider));
+    const row = health.rows.find(
+      (h) => h.capability === capability && vendors.includes(h.provider),
+    );
     const state = stateOf({
       simulated,
       missingEnv,
@@ -229,7 +238,10 @@ export async function providersOverview(): Promise<ProvidersOverview> {
       provider: vendor,
       state,
       // A vendor that HAS a live check but has not been checked yet is not the same as one that has none.
-      stateText: state === 'UNVERIFIED' && checkerFor(capability) !== null ? 'Set up, not checked yet (the provider check runs every 10 minutes)' : PROVIDER_HEALTH_LABELS[state],
+      stateText:
+        state === 'UNVERIFIED' && checkerFor(capability) !== null
+          ? 'Set up, not checked yet (the provider check runs every 10 minutes)'
+          : PROVIDER_HEALTH_LABELS[state],
       checkedAt: isoOrNull(row?.checked_at),
       latencyMs: row?.latency_ms ?? null,
       callsToday: calls,
@@ -240,4 +252,3 @@ export async function providersOverview(): Promise<ProvidersOverview> {
   });
   return { environment: profile, problems: providerProblems(profile, sel, isConfigured), items };
 }
-

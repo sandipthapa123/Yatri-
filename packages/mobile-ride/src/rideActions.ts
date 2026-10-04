@@ -131,7 +131,11 @@ export function rideActions(
       }
       if (role === 'PASSENGER' && trip.onlinePaymentAvailable) {
         out.push({ id: 'payOnline', label: 'Pay online', tone: 'primary' });
-        out.push({ id: 'checkOnlinePayment', label: 'I have paid: check my payment', tone: 'neutral' });
+        out.push({
+          id: 'checkOnlinePayment',
+          label: 'I have paid: check my payment',
+          tone: 'neutral',
+        });
       }
       // Ratings open when the ride is completed; how it was paid is a separate matter.
       if (!trip.rated) {
@@ -184,7 +188,9 @@ export function paymentText(
           : `Please pay your driver${amount} in cash.`
         : `Collect${amount} in cash from the passenger, then confirm.`;
     case 'PAID':
-      return method === 'DIGITAL' ? `Payment${amount} received. Paid online.` : `Payment${amount} received. Paid in cash.`;
+      return method === 'DIGITAL'
+        ? `Payment${amount} received. Paid online.`
+        : `Payment${amount} received. Paid in cash.`;
     case 'FAILED':
       return 'The payment did not go through.';
     case 'VOID':

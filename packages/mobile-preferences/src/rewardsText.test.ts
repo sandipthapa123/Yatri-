@@ -165,7 +165,13 @@ describe('the fare breakdown before booking', () => {
     payableNpr: 164,
     pointsToEarn: 1,
     codeProblem: null,
-    breakdown: { standardFareNpr: 237, disabilityBenefitNpr: 0, loyaltyBenefitNpr: 50, otherDiscountNpr: 23, payableNpr: 164 },
+    breakdown: {
+      standardFareNpr: 237,
+      disabilityBenefitNpr: 0,
+      loyaltyBenefitNpr: 50,
+      otherDiscountNpr: 23,
+      payableNpr: 164,
+    },
     ...over,
   });
   it("lists the fare, each offer, points, what you pay and what you will earn, from the server's numbers", () => {
@@ -213,14 +219,38 @@ describe('the fare breakdown before booking', () => {
   it('lays a disability benefit out as standard fare, disability benefit, loyalty benefit, other discount and amount payable', () => {
     const q = quote({
       offers: [
-        { campaignId: 'd', name: 'Disability benefit 20%', type: 'PERCENT_OFF', discountNpr: 47, bonusPoints: 0, pointsMultiplier: 1, description: '20% off your fare', disabilityBenefit: true },
-        { campaignId: 'o', name: 'Weekday rides', type: 'FIXED_OFF', discountNpr: 10, bonusPoints: 0, pointsMultiplier: 1, description: 'NPR 10 off your fare', disabilityBenefit: false },
+        {
+          campaignId: 'd',
+          name: 'Disability benefit 20%',
+          type: 'PERCENT_OFF',
+          discountNpr: 47,
+          bonusPoints: 0,
+          pointsMultiplier: 1,
+          description: '20% off your fare',
+          disabilityBenefit: true,
+        },
+        {
+          campaignId: 'o',
+          name: 'Weekday rides',
+          type: 'FIXED_OFF',
+          discountNpr: 10,
+          bonusPoints: 0,
+          pointsMultiplier: 1,
+          description: 'NPR 10 off your fare',
+          disabilityBenefit: false,
+        },
       ],
       discountNpr: 57,
       pointsUsed: 50,
       pointsValueNpr: 50,
       payableNpr: 130,
-      breakdown: { standardFareNpr: 237, disabilityBenefitNpr: 47, loyaltyBenefitNpr: 50, otherDiscountNpr: 10, payableNpr: 130 },
+      breakdown: {
+        standardFareNpr: 237,
+        disabilityBenefitNpr: 47,
+        loyaltyBenefitNpr: 50,
+        otherDiscountNpr: 10,
+        payableNpr: 130,
+      },
     });
     const lines = quoteLines(q);
     expect(lines.map((l) => l.label)).toEqual([
@@ -235,7 +265,9 @@ describe('the fare breakdown before booking', () => {
     expect(lines.find((l) => l.label === 'Amount payable')?.value).toBe('NPR 130');
     // the server's own five figures add up
     const b = q.breakdown;
-    expect(b.standardFareNpr - b.disabilityBenefitNpr - b.loyaltyBenefitNpr - b.otherDiscountNpr).toBe(b.payableNpr);
+    expect(
+      b.standardFareNpr - b.disabilityBenefitNpr - b.loyaltyBenefitNpr - b.otherDiscountNpr,
+    ).toBe(b.payableNpr);
     expect(quoteSentence(q)).toContain('Disability benefit: minus NPR 47');
   });
 });

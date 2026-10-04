@@ -22,7 +22,6 @@ interface PageProps {
 const pct = (n: number | null) => (n === null ? 'No rides ended yet' : `${n}%`);
 const num = (n: number | null) => (n === null ? '—' : String(n));
 
-
 /**
  * Analytics for a chosen period, computed by the API from the live records (no separate analytics
  * store). Everything is shown as words and tables, so nothing depends on seeing a chart. The
@@ -172,7 +171,8 @@ export default async function AnalyticsPage({ searchParams }: PageProps) {
             also what drivers earned.
           </li>
           <li>
-            Payments confirmed is what was received, in cash (confirmed by the driver) or online (confirmed by the payment provider); the rest is not yet confirmed.
+            Payments confirmed is what was received, in cash (confirmed by the driver) or online
+            (confirmed by the payment provider); the rest is not yet confirmed.
           </li>
         </ul>
       </section>

@@ -17,12 +17,20 @@ const PAGE = 25;
  * then sent by staff, then confirmed paid by someone else with the bank or wallet reference. The account to pay is never in
  * this list. Filters and paging are links, so they work with a keyboard and without a script.
  */
-export default async function PayoutsPage({ searchParams }: { searchParams: Promise<{ status?: string; offset?: string }> }) {
+export default async function PayoutsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ status?: string; offset?: string }>;
+}) {
   const q = await searchParams;
-  const status = (PAYOUT_STATUSES as readonly string[]).includes(q.status ?? '') ? (q.status as PayoutStatus) : undefined;
+  const status = (PAYOUT_STATUSES as readonly string[]).includes(q.status ?? '')
+    ? (q.status as PayoutStatus)
+    : undefined;
   const offset = Math.max(0, Number(q.offset) || 0);
   const token = await requireAdminAccessToken();
-  const { data, denied } = await loadOrDenied(() => listPayoutsApi(token, { status, limit: PAGE, offset }));
+  const { data, denied } = await loadOrDenied(() =>
+    listPayoutsApi(token, { status, limit: PAGE, offset }),
+  );
   if (denied || !data) return <NoAccess what="driver payouts" />;
   const link = (over: Record<string, string | undefined>) => {
     const p = new URLSearchParams();
@@ -38,10 +46,12 @@ export default async function PayoutsPage({ searchParams }: { searchParams: Prom
         </Link>
       </div>
       <p style={{ margin: 0 }}>
-        Money Yatri holds for drivers because riders paid online. Cash rides are not here: the driver was handed that cash.
+        Money Yatri holds for drivers because riders paid online. Cash rides are not here: the
+        driver was handed that cash.
       </p>
       <p role="status" style={{ margin: 0, fontWeight: 600 }}>
-        NPR {data.readyNpr} is ready for {data.readyDrivers} {data.readyDrivers === 1 ? 'driver' : 'drivers'}. {data.total}{' '}
+        NPR {data.readyNpr} is ready for {data.readyDrivers}{' '}
+        {data.readyDrivers === 1 ? 'driver' : 'drivers'}. {data.total}{' '}
         {data.total === 1 ? 'payout matches' : 'payouts match'} this view.
       </p>
       <section aria-labelledby="prep-h" style={styles.section}>
@@ -65,7 +75,9 @@ export default async function PayoutsPage({ searchParams }: { searchParams: Prom
         <p>No payouts match.</p>
       ) : (
         <table style={styles.table}>
-          <caption style={{ textAlign: 'left', position: 'absolute', left: -9999 }}>Driver payouts</caption>
+          <caption style={{ textAlign: 'left', position: 'absolute', left: -9999 }}>
+            Driver payouts
+          </caption>
           <thead>
             <tr>
               {['Driver', 'Amount (NPR)', 'Rides', 'State', 'Prepared', 'Paid'].map((h) => (
@@ -92,8 +104,12 @@ export default async function PayoutsPage({ searchParams }: { searchParams: Prom
         </table>
       )}
       <nav aria-label="Pages" style={{ display: 'flex', gap: 12 }}>
-        {offset > 0 ? <Link href={link({ offset: String(Math.max(0, offset - PAGE)) })}>Previous page</Link> : null}
-        {offset + PAGE < data.total ? <Link href={link({ offset: String(offset + PAGE) })}>Next page</Link> : null}
+        {offset > 0 ? (
+          <Link href={link({ offset: String(Math.max(0, offset - PAGE)) })}>Previous page</Link>
+        ) : null}
+        {offset + PAGE < data.total ? (
+          <Link href={link({ offset: String(offset + PAGE) })}>Next page</Link>
+        ) : null}
       </nav>
     </div>
   );

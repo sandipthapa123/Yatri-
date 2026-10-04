@@ -19,21 +19,22 @@ import { SupportScreen, type SupportRoute } from '@yatri/mobile-support';
 import { SIGN_IN } from '../brand';
 
 // The sign-in steps are the shared ones (@yatri/mobile-auth), with their shared routes.
-export type RootStackParamList = SignInRoutes & SupportRoute & {
-  Business: undefined;
-  Settings: undefined;
-  Rewards: undefined;
-  DisabilityBenefit: undefined;
-  ProfileSetup: undefined;
-  Home: undefined;
-  Profile: undefined;
-  PickLocation: { purpose: 'pickup' | 'destination' };
-  SavedPlaces: undefined;
-  TripTracking: { tripId: string };
-  RequestRide: undefined;
-  RideHistory: undefined;
-  EmergencyContacts: undefined;
-};
+export type RootStackParamList = SignInRoutes &
+  SupportRoute & {
+    Business: undefined;
+    Settings: undefined;
+    Rewards: undefined;
+    DisabilityBenefit: undefined;
+    ProfileSetup: undefined;
+    Home: undefined;
+    Profile: undefined;
+    PickLocation: { purpose: 'pickup' | 'destination' };
+    SavedPlaces: undefined;
+    TripTracking: { tripId: string };
+    RequestRide: undefined;
+    RideHistory: undefined;
+    EmergencyContacts: undefined;
+  };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const { WelcomeScreen, PhoneEntryScreen, OtpVerificationScreen } = createSignInScreens(SIGN_IN);

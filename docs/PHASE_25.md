@@ -5,18 +5,18 @@ never names a vendor; which vendor is used is server configuration.
 
 ## What is a "need" and who fills it
 
-| Need | Interface (the only thing business code sees) | Vendors | Stand-ins (development only) |
-|---|---|---|---|
-| Sign-in codes | `SmsProvider` (`modules/auth/sms`) | `twilio`, `http` (a local gateway) | `console` |
-| Push | `NotificationProvider` (`lib/notifications`) | `expo` | `console` |
-| Maps: search | `LocationProvider` (`modules/location/providers`) | `mapbox`, `nominatim` | `static`, `none` |
-| Maps: routes | `RouteProvider` (same folder) | `mapbox` (live traffic), `osrm`, `graphhopper`, `valhalla` | `haversine` |
-| Digital payments | `PaymentGateway` (`modules/payments`) | `khalti` | `sandbox`, `none` |
-| Files | `StorageProvider` (`lib/storage`) | `s3` (Amazon S3, MinIO, R2, Spaces) | `local` |
-| Calls | `CallProvider` (`modules/calls`) | `twilio` (managed relay) | `webrtc` (our own relay) |
-| Live updates | the Redis bus (`modules/realtime`) | `redis` | none |
-| Email | `EmailProvider` (`lib/email`) | `resend` | `console` |
-| Error reporting | `ErrorReporter` (`lib/monitoring`) | `sentry` | `none` |
+| Need             | Interface (the only thing business code sees)     | Vendors                                                    | Stand-ins (development only) |
+| ---------------- | ------------------------------------------------- | ---------------------------------------------------------- | ---------------------------- |
+| Sign-in codes    | `SmsProvider` (`modules/auth/sms`)                | `twilio`, `http` (a local gateway)                         | `console`                    |
+| Push             | `NotificationProvider` (`lib/notifications`)      | `expo`                                                     | `console`                    |
+| Maps: search     | `LocationProvider` (`modules/location/providers`) | `mapbox`, `nominatim`                                      | `static`, `none`             |
+| Maps: routes     | `RouteProvider` (same folder)                     | `mapbox` (live traffic), `osrm`, `graphhopper`, `valhalla` | `haversine`                  |
+| Digital payments | `PaymentGateway` (`modules/payments`)             | `khalti`                                                   | `sandbox`, `none`            |
+| Files            | `StorageProvider` (`lib/storage`)                 | `s3` (Amazon S3, MinIO, R2, Spaces)                        | `local`                      |
+| Calls            | `CallProvider` (`modules/calls`)                  | `twilio` (managed relay)                                   | `webrtc` (our own relay)     |
+| Live updates     | the Redis bus (`modules/realtime`)                | `redis`                                                    | none                         |
+| Email            | `EmailProvider` (`lib/email`)                     | `resend`                                                   | `console`                    |
+| Error reporting  | `ErrorReporter` (`lib/monitoring`)                | `sentry`                                                   | `none`                       |
 
 The vendor lists, the variable that picks each one, what each needs configured, which are stand-ins, and what a person is told
 when one fails are all in `packages/types/src/providers.ts`. The API configuration (`config/env.ts`) builds its enums from

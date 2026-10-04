@@ -17,7 +17,11 @@ interface State {
 const states = new Map<string, State>();
 const key = (c: ProviderCapability, p: string) => `${c}:${p}`;
 
-export function breakerAllows(capability: ProviderCapability, provider: string, now = Date.now()): boolean {
+export function breakerAllows(
+  capability: ProviderCapability,
+  provider: string,
+  now = Date.now(),
+): boolean {
   const s = states.get(key(capability, provider));
   if (!s || s.openedAt === null) return true;
   if (now - s.openedAt >= BREAKER_OPEN_MS) {
@@ -29,7 +33,12 @@ export function breakerAllows(capability: ProviderCapability, provider: string, 
   return false;
 }
 
-export function breakerRecord(capability: ProviderCapability, provider: string, ok: boolean, now = Date.now()): void {
+export function breakerRecord(
+  capability: ProviderCapability,
+  provider: string,
+  ok: boolean,
+  now = Date.now(),
+): void {
   const k = key(capability, provider);
   const s = states.get(k) ?? { failures: 0, openedAt: null };
   if (ok) {

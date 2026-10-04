@@ -14,7 +14,10 @@ let provider: NotificationProvider | undefined;
 export function getProvider(): NotificationProvider {
   provider ??=
     env.PUSH_PROVIDER === 'expo'
-      ? new ExpoPushProvider({ ...(env.EXPO_ACCESS_TOKEN ? { accessToken: env.EXPO_ACCESS_TOKEN } : {}), timeoutMs: env.PROVIDER_TIMEOUT_MS })
+      ? new ExpoPushProvider({
+          ...(env.EXPO_ACCESS_TOKEN ? { accessToken: env.EXPO_ACCESS_TOKEN } : {}),
+          timeoutMs: env.PROVIDER_TIMEOUT_MS,
+        })
       : new ConsoleNotificationProvider();
   return provider;
 }

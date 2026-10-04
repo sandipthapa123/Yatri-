@@ -1,5 +1,10 @@
 import { env } from '../../config/env';
-import { ConsoleEmailProvider, ResendEmailProvider, type EmailMessage, type EmailProvider } from './email-provider';
+import {
+  ConsoleEmailProvider,
+  ResendEmailProvider,
+  type EmailMessage,
+  type EmailProvider,
+} from './email-provider';
 
 let provider: EmailProvider | undefined;
 
@@ -7,7 +12,11 @@ let provider: EmailProvider | undefined;
 export function getEmailProvider(): EmailProvider {
   provider ??=
     env.EMAIL_PROVIDER === 'resend'
-      ? new ResendEmailProvider({ apiKey: env.RESEND_API_KEY ?? '', from: env.EMAIL_FROM ?? '', timeoutMs: env.PROVIDER_TIMEOUT_MS })
+      ? new ResendEmailProvider({
+          apiKey: env.RESEND_API_KEY ?? '',
+          from: env.EMAIL_FROM ?? '',
+          timeoutMs: env.PROVIDER_TIMEOUT_MS,
+        })
       : new ConsoleEmailProvider();
   return provider;
 }

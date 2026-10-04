@@ -70,7 +70,9 @@ export interface MatchCandidate {
 export function searchRadius(offersSoFar: number, accessible = false): number {
   // A ride that needs a vehicle feature (wheelchair access) is the priority request: such vehicles are few, so it looks farther
   // from the first offer on (and may go farther at the limit). The percentage is a platform setting.
-  const priority = accessible ? 1 + settingNumber('ACCESSIBLE_SEARCH_RADIUS_BONUS_PERCENT') / 100 : 1;
+  const priority = accessible
+    ? 1 + settingNumber('ACCESSIBLE_SEARCH_RADIUS_BONUS_PERCENT') / 100
+    : 1;
   const base = env.DISPATCH_RADIUS_METERS * priority;
   const widened =
     base * (1 + (settingNumber('DISPATCH_RADIUS_EXPANSION_PERCENT') / 100) * offersSoFar);

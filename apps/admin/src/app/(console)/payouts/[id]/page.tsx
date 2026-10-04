@@ -27,7 +27,9 @@ export default async function PayoutPage({ params }: { params: Promise<{ id: str
   return (
     <div style={styles.page}>
       <div style={styles.headerRow}>
-        <h1 style={styles.title}>Payout of NPR {p.amountNpr} to {p.driverName ?? 'a driver'}</h1>
+        <h1 style={styles.title}>
+          Payout of NPR {p.amountNpr} to {p.driverName ?? 'a driver'}
+        </h1>
         <Link href="/payouts" style={styles.backLink}>
           ← Payouts
         </Link>
@@ -38,10 +40,21 @@ export default async function PayoutPage({ params }: { params: Promise<{ id: str
         </h2>
         <ul>
           <li>State: {p.statusLabel}</li>
-          <li>Amount: NPR {p.amountNpr} for {p.rides} {p.rides === 1 ? 'ride' : 'rides'}</li>
-          <li>Pay to: {PAYOUT_ACCOUNT_LABELS[p.accountKind].label}, {p.accountHolder}, {maskedAccount(p.accountLast4)}</li>
-          <li>Prepared: {when(p.createdAt)} by {p.createdByName ?? 'an administrator'}</li>
-          {p.paidAt ? <li>Paid: {when(p.paidAt)}, reference {p.reference ?? 'not recorded'}</li> : null}
+          <li>
+            Amount: NPR {p.amountNpr} for {p.rides} {p.rides === 1 ? 'ride' : 'rides'}
+          </li>
+          <li>
+            Pay to: {PAYOUT_ACCOUNT_LABELS[p.accountKind].label}, {p.accountHolder},{' '}
+            {maskedAccount(p.accountLast4)}
+          </li>
+          <li>
+            Prepared: {when(p.createdAt)} by {p.createdByName ?? 'an administrator'}
+          </li>
+          {p.paidAt ? (
+            <li>
+              Paid: {when(p.paidAt)}, reference {p.reference ?? 'not recorded'}
+            </li>
+          ) : null}
           {p.failedReason ? <li>Last problem: {p.failedReason}</li> : null}
         </ul>
       </section>
@@ -60,7 +73,17 @@ export default async function PayoutPage({ params }: { params: Promise<{ id: str
         ) : (
           p.allowedNext.map((to) => (
             <details key={to} style={{ marginBottom: 8 }}>
-              <summary>{{ PENDING: 'Prepare', PROCESSING: 'Mark as being sent', PAID: 'Record as paid', FAILED: 'Record as failed', CANCELLED: 'Cancel the payout' }[to]}</summary>
+              <summary>
+                {
+                  {
+                    PENDING: 'Prepare',
+                    PROCESSING: 'Mark as being sent',
+                    PAID: 'Record as paid',
+                    FAILED: 'Record as failed',
+                    CANCELLED: 'Cancel the payout',
+                  }[to]
+                }
+              </summary>
               <StepForm detail={p} to={to} />
             </details>
           ))

@@ -400,7 +400,10 @@ export async function actOnRefund(
     }
     // An online payment is paid back to the payer by Yatri (through the provider or by staff in its dashboard), never as
     // cash from the driver, who was never handed that money.
-    const basis = to === 'PROCESSING' || to === 'COMPLETED' ? await paymentBasis(current.trip_id, client) : null;
+    const basis =
+      to === 'PROCESSING' || to === 'COMPLETED'
+        ? await paymentBasis(current.trip_id, client)
+        : null;
     const isDigital = basis?.method === 'DIGITAL';
     if (to === 'PROCESSING' && isDigital && (body.method ?? current.method) === 'DRIVER_CASH') {
       throw new HttpError(
@@ -409,7 +412,10 @@ export async function actOnRefund(
         'This was paid online, so Yatri pays it back. The driver cannot return it in cash.',
       );
     }
-    if (to === 'PROCESSING' && !(body.method ?? current.method ?? (isDigital ? 'PLATFORM' : null))) {
+    if (
+      to === 'PROCESSING' &&
+      !(body.method ?? current.method ?? (isDigital ? 'PLATFORM' : null))
+    ) {
       throw new HttpError(
         400,
         'VALIDATION_ERROR',
@@ -496,7 +502,9 @@ export async function actOnRefund(
   }
   // Paid online and the provider can return money through its API: send it now (and the sweep finishes it if this is cut short).
   if (row.status === 'PROCESSING' && digital) {
-    await settleOnlineRefund(row.id).catch((err) => log.error('Online refund could not be settled yet', err));
+    await settleOnlineRefund(row.id).catch((err) =>
+      log.error('Online refund could not be settled yet', err),
+    );
     const fresh = await query<RefundRow>(`SELECT ${COLS} FROM refunds r WHERE r.id = $1`, [row.id]);
     return toInfo(fresh.rows[0] ?? row);
   }
@@ -510,8 +518,15 @@ export async function actOnRefund(
  * vendor's text) or not yet known (it stays PROCESSING and is asked about again). A provider that cannot refund through its
  * API leaves the refund for staff, who return it in the provider's dashboard and record its reference.
  */
-export async function settleOnlineRefund(refundId: string): Promise<'COMPLETED' | 'FAILED' | 'PENDING' | 'MANUAL'> {
-  const found = await query<{ status: RefundStatus; amount_npr: number; provider_ref: string | null; method: string }>(
+export async function settleOnlineRefund(
+  refundId: string,
+): Promise<'COMPLETED' | 'FAILED' | 'PENDING' | 'MANUAL'> {
+  const found = await query<{
+    status: RefundStatus;
+    amount_npr: number;
+    provider_ref: string | null;
+    method: string;
+  }>(
     `SELECT r.status, r.amount_npr, p.provider_ref, p.method
      FROM refunds r JOIN trip_payments p ON p.id = r.payment_id WHERE r.id = $1`,
     [refundId],
@@ -522,10 +537,18 @@ export async function settleOnlineRefund(refundId: string): Promise<'COMPLETED' 
   if (!gateway?.supportsRefund || !gateway.refund || !r.provider_ref) return 'MANUAL';
   let result;
   try {
-    result = await gateway.refund({ providerRef: r.provider_ref, amountNpr: r.amount_npr, refundId });
+    result = await gateway.refund({
+      providerRef: r.provider_ref,
+      amountNpr: r.amount_npr,
+      refundId,
+    });
   } catch (err) {
     if (err instanceof ProviderError && !err.retryable) {
-      await actOnRefund(null, refundId, { to: 'FAILED', failedReason: 'The payment provider did not accept the refund. Check the payment with the provider.' });
+      await actOnRefund(null, refundId, {
+        to: 'FAILED',
+        failedReason:
+          'The payment provider did not accept the refund. Check the payment with the provider.',
+      });
       return 'FAILED';
     }
     return 'PENDING'; // a passing failure: asked about again by the sweep
@@ -535,15 +558,23 @@ export async function settleOnlineRefund(refundId: string): Promise<'COMPLETED' 
     return 'COMPLETED';
   }
   if (result.state === 'FAILED') {
-    await actOnRefund(null, refundId, { to: 'FAILED', failedReason: 'The payment provider could not return the money.' });
+    await actOnRefund(null, refundId, {
+      to: 'FAILED',
+      failedReason: 'The payment provider could not return the money.',
+    });
     return 'FAILED';
   }
-  await query('UPDATE refunds SET reference = COALESCE(reference, $2), updated_at = now() WHERE id = $1', [refundId, result.refundRef]);
+  await query(
+    'UPDATE refunds SET reference = COALESCE(reference, $2), updated_at = now() WHERE id = $1',
+    [refundId, result.refundRef],
+  );
   return 'PENDING';
 }
 
 /** The `refund-settle` job: finish online refunds whose provider call was cut short or not yet answered. */
-export async function sweepOnlineRefunds(limit = 50): Promise<{ checked: number; completed: number }> {
+export async function sweepOnlineRefunds(
+  limit = 50,
+): Promise<{ checked: number; completed: number }> {
   const due = await query<{ id: string }>(
     `SELECT r.id FROM refunds r JOIN trip_payments p ON p.id = r.payment_id
      WHERE r.status = 'PROCESSING' AND p.method = 'DIGITAL' AND r.updated_at < now() - interval '1 minute'

@@ -220,7 +220,12 @@ describe('the rules, once', () => {
     expect(evaluateEligibility({ maxCompletedRides: 0 }, facts).eligible).toBe(true);
     // a disability benefit is judged on the verified benefit alone
     expect(evaluateEligibility({ requiresDisabilityVerified: true }, facts).eligible).toBe(false);
-    expect(evaluateEligibility({ requiresDisabilityVerified: true }, { ...facts, disabilityVerified: true }).eligible).toBe(true);
+    expect(
+      evaluateEligibility(
+        { requiresDisabilityVerified: true },
+        { ...facts, disabilityVerified: true },
+      ).eligible,
+    ).toBe(true);
     expect(
       evaluateEligibility({ maxCompletedRides: 0 }, { ...facts, completedRides: 1 }).eligible,
     ).toBe(false);

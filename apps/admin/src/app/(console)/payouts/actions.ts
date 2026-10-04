@@ -3,7 +3,12 @@
 import { PAYOUT_STATUSES, type PayoutStatus, formatNpr } from '@yatri/types';
 import { revalidatePath } from 'next/cache';
 
-import { payoutAccountApi, payoutActionApi, payoutPrepareApi, actionFailure } from '../../../lib/apiClient';
+import {
+  payoutAccountApi,
+  payoutActionApi,
+  payoutPrepareApi,
+  actionFailure,
+} from '../../../lib/apiClient';
 import { requireAdminAccessToken } from '../../../lib/session';
 
 export interface PayoutActionState {
@@ -17,14 +22,22 @@ const text = (fd: FormData, name: string) => {
   const v = fd.get(name);
   return typeof v === 'string' ? v.trim() : '';
 };
-const fail = (e: unknown): PayoutActionState => (actionFailure(e));
+const fail = (e: unknown): PayoutActionState => actionFailure(e);
 
 /** Prepare payouts for everyone who has enough ready, or for one driver. The API refuses a ride already in a payout. */
-export async function preparePayoutsAction(_prev: PayoutActionState, fd: FormData): Promise<PayoutActionState> {
+export async function preparePayoutsAction(
+  _prev: PayoutActionState,
+  fd: FormData,
+): Promise<PayoutActionState> {
   const token = await requireAdminAccessToken();
   const driverId = text(fd, 'driverId');
   try {
-    const r = (await payoutPrepareApi(token, driverId || undefined)) as { prepared?: number; skipped?: number; totalNpr?: number; amountNpr?: number };
+    const r = (await payoutPrepareApi(token, driverId || undefined)) as {
+      prepared?: number;
+      skipped?: number;
+      totalNpr?: number;
+      amountNpr?: number;
+    };
     revalidatePath('/payouts');
     return {
       done:
@@ -38,10 +51,14 @@ export async function preparePayoutsAction(_prev: PayoutActionState, fd: FormDat
 }
 
 /** One step of a payout. The one box of words is the reference when paid, the reason when it failed. */
-export async function payoutStepAction(_prev: PayoutActionState, fd: FormData): Promise<PayoutActionState> {
+export async function payoutStepAction(
+  _prev: PayoutActionState,
+  fd: FormData,
+): Promise<PayoutActionState> {
   const id = text(fd, 'id');
   const to = text(fd, 'to') as PayoutStatus;
-  if (!id || !(PAYOUT_STATUSES as readonly string[]).includes(to)) return { error: 'That step is not recognised.' };
+  if (!id || !(PAYOUT_STATUSES as readonly string[]).includes(to))
+    return { error: 'That step is not recognised.' };
   const words = text(fd, 'reason');
   const token = await requireAdminAccessToken();
   try {
@@ -60,7 +77,10 @@ export async function payoutStepAction(_prev: PayoutActionState, fd: FormData): 
 }
 
 /** Show the account to pay. Asking is recorded by the API; the number is not kept in the page after it is shown. */
-export async function showAccountAction(_prev: PayoutActionState, fd: FormData): Promise<PayoutActionState> {
+export async function showAccountAction(
+  _prev: PayoutActionState,
+  fd: FormData,
+): Promise<PayoutActionState> {
   const token = await requireAdminAccessToken();
   try {
     const a = await payoutAccountApi(token, text(fd, 'id'));

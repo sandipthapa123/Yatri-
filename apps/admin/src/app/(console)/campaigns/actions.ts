@@ -67,9 +67,15 @@ function bodyOf(fd: FormData, kind: CampaignKind): AdminCampaignBody {
   e('vehicleCategoryCodes', list(fd, 'vehicleCategoryCodes'));
   e('minFareNpr', num(fd, 'minFareNpr'));
   // A disability benefit is always for riders with a verified benefit; any other campaign may also be limited to them.
-  e('requiresDisabilityVerified', kind === 'DISABILITY_BENEFIT' || fd.get('requiresDisabilityVerified') === 'on' ? true : undefined);
+  e(
+    'requiresDisabilityVerified',
+    kind === 'DISABILITY_BENEFIT' || fd.get('requiresDisabilityVerified') === 'on'
+      ? true
+      : undefined,
+  );
   // Whether it still applies when a companion rides along: only the "no" is stored (yes is the default).
-  if (fd.get('companionField') === '1' && fd.get('companionAllowed') !== 'on') e('companionAllowed', false);
+  if (fd.get('companionField') === '1' && fd.get('companionAllowed') !== 'on')
+    e('companionAllowed', false);
 
   const offerType = text(fd, 'offerType') as OfferType | '';
   let offer: CampaignOffer | null = null;

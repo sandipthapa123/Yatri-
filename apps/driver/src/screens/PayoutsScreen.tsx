@@ -17,7 +17,11 @@ export function PayoutsScreen({ navigation }: Props) {
         <Text accessibilityRole="header" style={[styles.h, { color: theme.colors.textPrimary }]}>
           Earnings and payouts
         </Text>
-        <PayoutsCenter colors={theme.colors} minTouchTarget={theme.minTouchTarget} onExit={() => navigation.goBack()} />
+        <PayoutsCenter
+          colors={theme.colors}
+          minTouchTarget={theme.minTouchTarget}
+          onExit={() => navigation.goBack()}
+        />
       </ScrollView>
     </SafeAreaView>
   );

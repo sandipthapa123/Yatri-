@@ -269,13 +269,7 @@ export class OsrmRouteProvider extends HttpRouteProvider {
           }>;
         }>;
       }>;
-    }>(
-      this.fetchImpl,
-      this.routeUrl(coords, qs),
-      {},
-      this.config.timeoutMs,
-      this.name,
-    );
+    }>(this.fetchImpl, this.routeUrl(coords, qs), {}, this.config.timeoutMs, this.name);
     const route = body?.routes?.[0];
     if (body?.code !== 'Ok' || !route) {
       throw new LocationProviderError('BAD_RESPONSE', 'osrm: no usable route');

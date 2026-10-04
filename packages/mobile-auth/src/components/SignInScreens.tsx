@@ -65,13 +65,21 @@ function PrimaryButton(props: {
 
 // ---------------------------------------------------------------- welcome
 
-export function WelcomeView({ identity, onGetStarted }: { identity: SignInIdentity; onGetStarted: () => void }) {
+export function WelcomeView({
+  identity,
+  onGetStarted,
+}: {
+  identity: SignInIdentity;
+  onGetStarted: () => void;
+}) {
   const theme = useTheme();
   return (
     <SafeAreaView style={[styles.welcome, { backgroundColor: theme.colors.background }]}>
       <View style={styles.welcomeHeader}>
         <Wordmark label={identity.label} tone={identity.tone} size="lg" />
-        <Text style={[styles.tagline, { color: theme.colors.textSecondary }]}>{identity.tagline}</Text>
+        <Text style={[styles.tagline, { color: theme.colors.textSecondary }]}>
+          {identity.tagline}
+        </Text>
       </View>
       <View style={styles.stretch}>
         <PrimaryButton
@@ -138,7 +146,10 @@ export function PhoneEntryView({
     <SafeAreaView style={[styles.form, { backgroundColor: theme.colors.background }]}>
       <View style={styles.formHeader}>
         <Wordmark label={identity.label} tone={identity.tone} />
-        <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]} accessibilityRole="text">
+        <Text
+          style={[styles.subtitle, { color: theme.colors.textSecondary }]}
+          accessibilityRole="text"
+        >
           {identity.phonePrompt}
         </Text>
       </View>
@@ -198,7 +209,9 @@ export function OtpVerificationView({
   useEffect(() => {
     if (announcedOnMount.current) return;
     announcedOnMount.current = true;
-    AccessibilityInfo.announceForAccessibility(`A ${codeLength} digit code was sent to your phone.`);
+    AccessibilityInfo.announceForAccessibility(
+      `A ${codeLength} digit code was sent to your phone.`,
+    );
   }, [codeLength]);
 
   useEffect(() => {
@@ -244,7 +257,10 @@ export function OtpVerificationView({
     <SafeAreaView style={[styles.form, { backgroundColor: theme.colors.background }]}>
       <View style={styles.formHeader}>
         <Wordmark label={identity.label} tone={identity.tone} />
-        <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]} accessibilityRole="text">
+        <Text
+          style={[styles.subtitle, { color: theme.colors.textSecondary }]}
+          accessibilityRole="text"
+        >
           Enter the {codeLength} digit code we sent to {phoneNumber}.
         </Text>
         {devOtp ? (
@@ -275,7 +291,9 @@ export function OtpVerificationView({
         onPress={handleResend}
         disabled={cooldown > 0 || resending}
         accessibilityRole="button"
-        accessibilityLabel={cooldown > 0 ? `Resend code available in ${cooldown} seconds` : 'Resend code'}
+        accessibilityLabel={
+          cooldown > 0 ? `Resend code available in ${cooldown} seconds` : 'Resend code'
+        }
         accessibilityState={{ disabled: cooldown > 0 || resending }}
         style={[styles.resendButton, { minHeight: theme.minTouchTarget }]}
       >
@@ -328,17 +346,25 @@ interface Navigates {
  */
 export function createSignInScreens(identity: SignInIdentity) {
   function WelcomeScreen({ navigation }: { navigation: Navigates }) {
-    return <WelcomeView identity={identity} onGetStarted={() => navigation.navigate('PhoneEntry')} />;
+    return (
+      <WelcomeView identity={identity} onGetStarted={() => navigation.navigate('PhoneEntry')} />
+    );
   }
   function PhoneEntryScreen({ navigation }: { navigation: Navigates }) {
     return (
       <PhoneEntryView
         identity={identity}
-        onCodeSent={(phoneNumber, codeLength) => navigation.navigate('OtpVerification', { phoneNumber, codeLength })}
+        onCodeSent={(phoneNumber, codeLength) =>
+          navigation.navigate('OtpVerification', { phoneNumber, codeLength })
+        }
       />
     );
   }
-  function OtpVerificationScreen({ route }: { route: { params: SignInRoutes['OtpVerification'] } }) {
+  function OtpVerificationScreen({
+    route,
+  }: {
+    route: { params: SignInRoutes['OtpVerification'] };
+  }) {
     return <OtpVerificationView identity={identity} {...route.params} />;
   }
   return { WelcomeScreen, PhoneEntryScreen, OtpVerificationScreen };

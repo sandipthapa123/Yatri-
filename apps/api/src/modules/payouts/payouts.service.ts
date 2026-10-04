@@ -85,7 +85,11 @@ const OWED_SQL = `
     AND NOT EXISTS (SELECT 1 FROM driver_payout_items i WHERE i.trip_id = t.id)`;
 
 const payable = (r: OwedRow) =>
-  driverPayableForRide({ fareNpr: r.fare, refundedNpr: r.refunded, driverSharePercent: rules().driverSharePercent });
+  driverPayableForRide({
+    fareNpr: r.fare,
+    refundedNpr: r.refunded,
+    driverSharePercent: rules().driverSharePercent,
+  });
 
 async function owedFor(driverId: string, client?: PoolClient): Promise<OwedRow[]> {
   const sql = `${OWED_SQL} AND t.driver_id = $2`;
@@ -174,17 +178,38 @@ export async function driverSummary(driverId: string): Promise<DriverPayoutSumma
     'SELECT kind, holder_name, account_last4 FROM driver_payout_accounts WHERE driver_id = $1',
     [driverId],
   );
-  const account = acc.rows[0] ? { kind: acc.rows[0].kind, holderName: acc.rows[0].holder_name, last4: acc.rows[0].account_last4 } : null;
-  const base = { readyNpr: ready, holdingNpr: holding, inPayoutNpr: t.inPayout, paidNpr: t.paid, minPayoutNpr: r.minNpr, holdHours: r.holdHours, account };
+  const account = acc.rows[0]
+    ? {
+        kind: acc.rows[0].kind,
+        holderName: acc.rows[0].holder_name,
+        last4: acc.rows[0].account_last4,
+      }
+    : null;
+  const base = {
+    readyNpr: ready,
+    holdingNpr: holding,
+    inPayoutNpr: t.inPayout,
+    paidNpr: t.paid,
+    minPayoutNpr: r.minNpr,
+    holdHours: r.holdHours,
+    account,
+  };
   const list = await query<PayoutRow & { rides: number }>(
     `SELECT ${COLS}, (SELECT count(*)::int FROM driver_payout_items i WHERE i.payout_id = driver_payouts.id) AS rides
      FROM driver_payouts WHERE driver_id = $1 ORDER BY created_at DESC LIMIT 30`,
     [driverId],
   );
-  return { ...base, sentences: driverPayoutSentences(base), payouts: list.rows.map((p) => toInfo(p, p.rides)) };
+  return {
+    ...base,
+    sentences: driverPayoutSentences(base),
+    payouts: list.rows.map((p) => toInfo(p, p.rides)),
+  };
 }
 
-export async function saveAccount(driverId: string, body: PayoutAccountBody): Promise<DriverPayoutSummary> {
+export async function saveAccount(
+  driverId: string,
+  body: PayoutAccountBody,
+): Promise<DriverPayoutSummary> {
   const problem = payoutAccountProblem(body);
   if (problem) throw new HttpError(400, 'VALIDATION_ERROR', problem);
   const number = normalizeAccountNumber(body.accountNumber);
@@ -192,9 +217,22 @@ export async function saveAccount(driverId: string, body: PayoutAccountBody): Pr
     `INSERT INTO driver_payout_accounts (driver_id, kind, holder_name, account_cipher, account_last4)
      VALUES ($1, $2, $3, $4, $5)
      ON CONFLICT (driver_id) DO UPDATE SET kind = $2, holder_name = $3, account_cipher = $4, account_last4 = $5, updated_at = now()`,
-    [driverId, body.kind, body.holderName.trim(), encryptField(number, secret(), PURPOSE), number.slice(-4)],
+    [
+      driverId,
+      body.kind,
+      body.holderName.trim(),
+      encryptField(number, secret(), PURPOSE),
+      number.slice(-4),
+    ],
   );
-  await recordAudit({ actorId: driverId, actorRole: 'DRIVER', action: 'PAYOUT_ACCOUNT_SAVED', subjectType: 'user', subjectIds: [driverId], detail: { kind: body.kind } });
+  await recordAudit({
+    actorId: driverId,
+    actorRole: 'DRIVER',
+    action: 'PAYOUT_ACCOUNT_SAVED',
+    subjectType: 'user',
+    subjectIds: [driverId],
+    detail: { kind: body.kind },
+  });
   return driverSummary(driverId);
 }
 
@@ -207,26 +245,53 @@ export async function saveAccount(driverId: string, body: PayoutAccountBody): Pr
 export async function prepareForDriver(adminId: string, driverId: string): Promise<PayoutInfo> {
   const made = await withTransaction(async (client) => {
     await client.query(`SELECT pg_advisory_xact_lock(hashtext($1))`, [`payout:${driverId}`]);
-    const acc = await client.query<{ kind: PayoutAccountKind; holder_name: string; account_cipher: string; account_last4: string }>(
+    const acc = await client.query<{
+      kind: PayoutAccountKind;
+      holder_name: string;
+      account_cipher: string;
+      account_last4: string;
+    }>(
       'SELECT kind, holder_name, account_cipher, account_last4 FROM driver_payout_accounts WHERE driver_id = $1',
       [driverId],
     );
     const account = acc.rows[0];
-    if (!account) throw new HttpError(409, 'NO_PAYOUT_ACCOUNT', 'This driver has not said where to send payouts.');
+    if (!account)
+      throw new HttpError(
+        409,
+        'NO_PAYOUT_ACCOUNT',
+        'This driver has not said where to send payouts.',
+      );
     const ready = (await owedFor(driverId, client)).filter((r) => r.ready);
-    const items = ready.map((r) => ({ tripId: r.trip_id, amount: payable(r) })).filter((i) => i.amount > 0);
+    const items = ready
+      .map((r) => ({ tripId: r.trip_id, amount: payable(r) }))
+      .filter((i) => i.amount > 0);
     const total = items.reduce((s, i) => s + i.amount, 0);
     if (total <= 0 || total < rules().minNpr) {
-      throw new HttpError(409, 'BELOW_MINIMUM', `Less than NPR ${rules().minNpr} is ready for this driver.`);
+      throw new HttpError(
+        409,
+        'BELOW_MINIMUM',
+        `Less than NPR ${rules().minNpr} is ready for this driver.`,
+      );
     }
     const p = await client.query<PayoutRow>(
       `INSERT INTO driver_payouts (driver_id, amount_npr, account_kind, account_holder, account_cipher, account_last4, created_by)
        VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING ${COLS}`,
-      [driverId, total, account.kind, account.holder_name, account.account_cipher, account.account_last4, adminId],
+      [
+        driverId,
+        total,
+        account.kind,
+        account.holder_name,
+        account.account_cipher,
+        account.account_last4,
+        adminId,
+      ],
     );
     const payout = p.rows[0] as PayoutRow;
     for (const i of items) {
-      await client.query('INSERT INTO driver_payout_items (payout_id, trip_id, amount_npr) VALUES ($1, $2, $3)', [payout.id, i.tripId, i.amount]);
+      await client.query(
+        'INSERT INTO driver_payout_items (payout_id, trip_id, amount_npr) VALUES ($1, $2, $3)',
+        [payout.id, i.tripId, i.amount],
+      );
     }
     return { payout, rides: items.length };
   });
@@ -242,8 +307,13 @@ export async function prepareForDriver(adminId: string, driverId: string): Promi
 }
 
 /** Prepare a payout for every driver who has enough ready. Drivers without an account, or below the minimum, are skipped and counted. */
-export async function prepareAll(adminId: string): Promise<{ prepared: number; skipped: number; totalNpr: number }> {
-  const drivers = await query<{ driver_id: string }>(`SELECT DISTINCT driver_id FROM (${OWED_SQL}) o WHERE o.ready`, [rules().holdHours]);
+export async function prepareAll(
+  adminId: string,
+): Promise<{ prepared: number; skipped: number; totalNpr: number }> {
+  const drivers = await query<{ driver_id: string }>(
+    `SELECT DISTINCT driver_id FROM (${OWED_SQL}) o WHERE o.ready`,
+    [rules().holdHours],
+  );
   let prepared = 0;
   let skipped = 0;
   let totalNpr = 0;
@@ -262,9 +332,16 @@ export async function prepareAll(adminId: string): Promise<{ prepared: number; s
 
 // ---------------------------------------------------------------- moving a payout along
 
-export async function actOnPayout(adminId: string, payoutId: string, body: AdminPayoutActionBody): Promise<AdminPayoutRow> {
+export async function actOnPayout(
+  adminId: string,
+  payoutId: string,
+  body: AdminPayoutActionBody,
+): Promise<AdminPayoutRow> {
   const out = await withTransaction(async (client) => {
-    const cur = await client.query<PayoutRow>(`SELECT ${COLS} FROM driver_payouts WHERE id = $1 FOR UPDATE`, [payoutId]);
+    const cur = await client.query<PayoutRow>(
+      `SELECT ${COLS} FROM driver_payouts WHERE id = $1 FOR UPDATE`,
+      [payoutId],
+    );
     const p = cur.rows[0];
     if (!p) throw new HttpError(404, 'NOT_FOUND', 'Payout not found.');
     if (!canPayoutTransition(p.status, body.to)) {
@@ -278,21 +355,38 @@ export async function actOnPayout(adminId: string, payoutId: string, body: Admin
       );
     }
     if (body.to === 'PAID') {
-      if (p.created_by === adminId) throw new HttpError(403, 'FOUR_EYES', 'Someone else must confirm a payout you prepared.');
-      if (!body.reference?.trim()) throw new HttpError(400, 'VALIDATION_ERROR', 'Enter the bank or wallet reference of the payment you sent.');
+      if (p.created_by === adminId)
+        throw new HttpError(403, 'FOUR_EYES', 'Someone else must confirm a payout you prepared.');
+      if (!body.reference?.trim())
+        throw new HttpError(
+          400,
+          'VALIDATION_ERROR',
+          'Enter the bank or wallet reference of the payment you sent.',
+        );
     }
-    if (body.to === 'FAILED' && !body.failedReason?.trim()) throw new HttpError(400, 'VALIDATION_ERROR', 'Say what went wrong.');
+    if (body.to === 'FAILED' && !body.failedReason?.trim())
+      throw new HttpError(400, 'VALIDATION_ERROR', 'Say what went wrong.');
     const upd = await client.query<PayoutRow>(
       `UPDATE driver_payouts SET status = $2, updated_at = now(), decided_by = $3,
          reference = COALESCE($4, reference),
          failed_reason = CASE WHEN $2 = 'FAILED' THEN $5 WHEN $2 = 'PROCESSING' THEN NULL ELSE failed_reason END,
          paid_at = CASE WHEN $2 = 'PAID' THEN now() ELSE paid_at END
        WHERE id = $1 RETURNING ${COLS}`,
-      [payoutId, body.to, adminId, body.reference?.trim() || null, body.failedReason?.trim() || null],
+      [
+        payoutId,
+        body.to,
+        adminId,
+        body.reference?.trim() || null,
+        body.failedReason?.trim() || null,
+      ],
     );
     // A cancelled payout lets go of its rides, so a later payout can pay them.
-    if (body.to === 'CANCELLED') await client.query('DELETE FROM driver_payout_items WHERE payout_id = $1', [payoutId]);
-    const rides = await client.query<{ n: number }>('SELECT count(*)::int AS n FROM driver_payout_items WHERE payout_id = $1', [payoutId]);
+    if (body.to === 'CANCELLED')
+      await client.query('DELETE FROM driver_payout_items WHERE payout_id = $1', [payoutId]);
+    const rides = await client.query<{ n: number }>(
+      'SELECT count(*)::int AS n FROM driver_payout_items WHERE payout_id = $1',
+      [payoutId],
+    );
     return { row: upd.rows[0] as PayoutRow, from: p.status, rides: rides.rows[0]?.n ?? 0 };
   });
   await recordAudit({
@@ -301,12 +395,20 @@ export async function actOnPayout(adminId: string, payoutId: string, body: Admin
     action: 'PAYOUT_STATUS_CHANGED',
     subjectType: 'driver_payout',
     subjectIds: [payoutId],
-    detail: { from: out.from, to: out.row.status, amountNpr: out.row.amount_npr, hasReference: !!body.reference },
+    detail: {
+      from: out.from,
+      to: out.row.status,
+      amountNpr: out.row.amount_npr,
+      hasReference: !!body.reference,
+    },
   });
   if (out.row.status === 'PAID' || out.row.status === 'FAILED') {
     await notify({
       userId: out.row.driver_id,
-      type: out.row.status === 'PAID' ? PAYOUT_NOTIFICATION_TYPES.PAYMENT_PAYOUT_SENT : PAYOUT_NOTIFICATION_TYPES.PAYMENT_PAYOUT_FAILED,
+      type:
+        out.row.status === 'PAID'
+          ? PAYOUT_NOTIFICATION_TYPES.PAYMENT_PAYOUT_SENT
+          : PAYOUT_NOTIFICATION_TYPES.PAYMENT_PAYOUT_FAILED,
       title: out.row.status === 'PAID' ? 'Payout sent' : 'Payout could not be sent',
       body: statusSentence(out.row),
       metadata: { payoutId },
@@ -331,16 +433,25 @@ const toRow = (p: PayoutRow, rides: number, driverName: string | null): AdminPay
   paidAt: isoOrNull(p.paid_at),
 });
 
-export async function adminList(f: { status?: PayoutStatus | undefined; limit: number; offset: number }): Promise<AdminPayoutList> {
+export async function adminList(f: {
+  status?: PayoutStatus | undefined;
+  limit: number;
+  offset: number;
+}): Promise<AdminPayoutList> {
   const where = `($1::text IS NULL OR p.status = $1)`;
   const rows = await query<PayoutRow & { rides: number; full_name: string | null }>(
-    `SELECT ${COLS.split(', ').map((c) => `p.${c.trim()}`).join(', ')}, u.full_name,
+    `SELECT ${COLS.split(', ')
+      .map((c) => `p.${c.trim()}`)
+      .join(', ')}, u.full_name,
             (SELECT count(*)::int FROM driver_payout_items i WHERE i.payout_id = p.id) AS rides
      FROM driver_payouts p JOIN users u ON u.id = p.driver_id WHERE ${where}
      ORDER BY (p.status IN ('PENDING', 'PROCESSING', 'FAILED')) DESC, p.created_at DESC LIMIT $2 OFFSET $3`,
     [f.status ?? null, f.limit, f.offset],
   );
-  const total = await query<{ n: number }>(`SELECT count(*)::int AS n FROM driver_payouts p WHERE ${where}`, [f.status ?? null]);
+  const total = await query<{ n: number }>(
+    `SELECT count(*)::int AS n FROM driver_payouts p WHERE ${where}`,
+    [f.status ?? null],
+  );
   const owed = await query<OwedRow & { driver_id: string }>(OWED_SQL, [rules().holdHours]);
   const ready = owed.rows.filter((r) => r.ready);
   return {
@@ -354,15 +465,22 @@ export async function adminList(f: { status?: PayoutStatus | undefined; limit: n
 }
 
 export async function adminDetail(payoutId: string): Promise<AdminPayoutDetail> {
-  const r = await query<PayoutRow & { full_name: string | null; creator: string | null; decider: string | null }>(
-    `SELECT ${COLS.split(', ').map((c) => `p.${c.trim()}`).join(', ')}, u.full_name, c.full_name AS creator, d.full_name AS decider
+  const r = await query<
+    PayoutRow & { full_name: string | null; creator: string | null; decider: string | null }
+  >(
+    `SELECT ${COLS.split(', ')
+      .map((c) => `p.${c.trim()}`)
+      .join(', ')}, u.full_name, c.full_name AS creator, d.full_name AS decider
      FROM driver_payouts p JOIN users u ON u.id = p.driver_id
      LEFT JOIN users c ON c.id = p.created_by LEFT JOIN users d ON d.id = p.decided_by WHERE p.id = $1`,
     [payoutId],
   );
   const p = r.rows[0];
   if (!p) throw new HttpError(404, 'NOT_FOUND', 'Payout not found.');
-  const items = await query<{ trip_id: string; amount_npr: number }>('SELECT trip_id, amount_npr FROM driver_payout_items WHERE payout_id = $1 ORDER BY trip_id', [payoutId]);
+  const items = await query<{ trip_id: string; amount_npr: number }>(
+    'SELECT trip_id, amount_npr FROM driver_payout_items WHERE payout_id = $1 ORDER BY trip_id',
+    [payoutId],
+  );
   return {
     ...toRow(p, items.rows.length, p.full_name),
     accountHolder: p.account_holder,
@@ -377,10 +495,25 @@ export async function adminDetail(payoutId: string): Promise<AdminPayoutDetail> 
 }
 
 /** The account to pay, in full, for staff who manage payouts. Each opening is audited. */
-export async function revealAccount(adminId: string, payoutId: string): Promise<{ kind: PayoutAccountKind; kindLabel: string; holder: string; number: string }> {
+export async function revealAccount(
+  adminId: string,
+  payoutId: string,
+): Promise<{ kind: PayoutAccountKind; kindLabel: string; holder: string; number: string }> {
   const r = await query<PayoutRow>(`SELECT ${COLS} FROM driver_payouts WHERE id = $1`, [payoutId]);
   const p = r.rows[0];
   if (!p) throw new HttpError(404, 'NOT_FOUND', 'Payout not found.');
-  await recordAudit({ actorId: adminId, actorRole: 'ADMIN', action: 'PAYOUT_ACCOUNT_VIEWED', subjectType: 'driver_payout', subjectIds: [payoutId], detail: {} });
-  return { kind: p.account_kind, kindLabel: PAYOUT_ACCOUNT_LABELS[p.account_kind].label, holder: p.account_holder, number: openAccount(p.account_cipher) };
+  await recordAudit({
+    actorId: adminId,
+    actorRole: 'ADMIN',
+    action: 'PAYOUT_ACCOUNT_VIEWED',
+    subjectType: 'driver_payout',
+    subjectIds: [payoutId],
+    detail: {},
+  });
+  return {
+    kind: p.account_kind,
+    kindLabel: PAYOUT_ACCOUNT_LABELS[p.account_kind].label,
+    holder: p.account_holder,
+    number: openAccount(p.account_cipher),
+  };
 }

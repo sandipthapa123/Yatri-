@@ -30,16 +30,25 @@ export function DecisionForm({
   const words = DISABILITY_ADMIN_ACTION_LABELS[action];
   const shown = words.needs === 'none' ? '' : ' What you write below is shown to the rider.';
   return (
-    <form action={run} style={column} aria-label={`${words.label}: ${detail.userName ?? 'this rider'}`}>
+    <form
+      action={run}
+      style={column}
+      aria-label={`${words.label}: ${detail.userName ?? 'this rider'}`}
+    >
       <input type="hidden" name="id" value={detail.id} />
       <input type="hidden" name="action" value={action} />
       {action === 'approve' && detail.duplicateCount > 0 ? (
         <label>
-          <input type="checkbox" name="acknowledgeDuplicate" /> I have looked at the {detail.duplicateCount} other{' '}
-          {detail.duplicateCount === 1 ? 'account' : 'accounts'} with this card number
+          <input type="checkbox" name="acknowledgeDuplicate" /> I have looked at the{' '}
+          {detail.duplicateCount} other {detail.duplicateCount === 1 ? 'account' : 'accounts'} with
+          this card number
         </label>
       ) : null}
-      <Confirmed pending={pending} label={words.label} consequence={`${words.consequence}${shown}`} />
+      <Confirmed
+        pending={pending}
+        label={words.label}
+        consequence={`${words.consequence}${shown}`}
+      />
       <Feedback state={state} />
     </form>
   );

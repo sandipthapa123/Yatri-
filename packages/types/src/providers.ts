@@ -22,14 +22,26 @@ export const PROVIDER_CAPABILITIES = [
 ] as const;
 export type ProviderCapability = (typeof PROVIDER_CAPABILITIES)[number];
 
-export const PROVIDER_CAPABILITY_LABELS: Record<ProviderCapability, { label: string; help: string }> = {
+export const PROVIDER_CAPABILITY_LABELS: Record<
+  ProviderCapability,
+  { label: string; help: string }
+> = {
   OTP: { label: 'Sign-in codes (SMS)', help: 'Sends the one-time code a person signs in with.' },
   PUSH: { label: 'Push notifications', help: 'Delivers notifications to phones.' },
-  MAPS: { label: 'Maps, search and routes', help: 'Finds places, names a spot, and plans routes and arrival times.' },
-  PAYMENTS: { label: 'Digital payments', help: 'Takes payment by an online provider. Cash does not need one.' },
+  MAPS: {
+    label: 'Maps, search and routes',
+    help: 'Finds places, names a spot, and plans routes and arrival times.',
+  },
+  PAYMENTS: {
+    label: 'Digital payments',
+    help: 'Takes payment by an online provider. Cash does not need one.',
+  },
   STORAGE: { label: 'File storage', help: 'Keeps uploaded documents and files, privately.' },
   CALLS: { label: 'Voice and video calls', help: 'Connects calls between a rider and a driver.' },
-  REALTIME: { label: 'Live updates', help: 'Carries live ride, chat and call messages between servers and phones.' },
+  REALTIME: {
+    label: 'Live updates',
+    help: 'Carries live ride, chat and call messages between servers and phones.',
+  },
   EMAIL: { label: 'Email', help: 'Sends email where a message has to be email.' },
   MONITORING: { label: 'Error reporting', help: 'Tells the team when the service has a problem.' },
 };
@@ -39,7 +51,11 @@ export type EnvironmentProfile = (typeof ENVIRONMENT_PROFILES)[number];
 
 /** NODE_ENV is the one switch: "test" and "development" are DEVELOPMENT. */
 export function environmentProfileOf(nodeEnv: string): EnvironmentProfile {
-  return nodeEnv === 'production' ? 'PRODUCTION' : nodeEnv === 'staging' ? 'STAGING' : 'DEVELOPMENT';
+  return nodeEnv === 'production'
+    ? 'PRODUCTION'
+    : nodeEnv === 'staging'
+      ? 'STAGING'
+      : 'DEVELOPMENT';
 }
 
 /**
@@ -77,7 +93,9 @@ export const PROVIDER_ENV_KEY: Record<keyof typeof PROVIDER_CHOICES, string> = {
  * Vendors that are not real services: they log, store on one disk, or draw a straight line. They are fine on a developer's
  * machine and wrong anywhere people depend on them. The rule per environment is `providerProblems`.
  */
-export const SIMULATED_PROVIDERS: Partial<Record<keyof typeof PROVIDER_CHOICES, readonly string[]>> = {
+export const SIMULATED_PROVIDERS: Partial<
+  Record<keyof typeof PROVIDER_CHOICES, readonly string[]>
+> = {
   OTP: ['console'],
   PUSH: ['console'],
   // A straight-line route ("haversine") and "no search" are honest modes, not stand-ins, so they are allowed anywhere.
@@ -148,10 +166,13 @@ export function providerProblems(
   for (const need of Object.keys(PROVIDER_CHOICES) as Array<keyof typeof PROVIDER_CHOICES>) {
     const vendor = chosen[need];
     if (env !== 'DEVELOPMENT' && SIMULATED_PROVIDERS[need]?.includes(vendor)) {
-      out.push(`${PROVIDER_ENV_KEY[need]}=${vendor} is only for development; ${env.toLowerCase()} needs a real provider.`);
+      out.push(
+        `${PROVIDER_ENV_KEY[need]}=${vendor} is only for development; ${env.toLowerCase()} needs a real provider.`,
+      );
     }
     for (const key of PROVIDER_REQUIRED_ENV[`${need}:${vendor}`] ?? []) {
-      if (!configured(key)) out.push(`${key} is required when ${PROVIDER_ENV_KEY[need]}=${vendor}.`);
+      if (!configured(key))
+        out.push(`${key} is required when ${PROVIDER_ENV_KEY[need]}=${vendor}.`);
     }
   }
   if (env === 'PRODUCTION' && chosen.MONITORING === 'none') {
@@ -191,17 +212,26 @@ export const PROVIDER_PUBLIC_MESSAGES: Record<ProviderCapability, string> = {
   OTP: 'We could not send your code right now. Please try again in a moment.',
   PUSH: 'We could not send that notification right now.',
   MAPS: 'The map service is not available right now. Please try again, or pick a saved place.',
-  PAYMENTS: 'The payment service is not available right now. You can pay the driver in cash instead.',
+  PAYMENTS:
+    'The payment service is not available right now. You can pay the driver in cash instead.',
   STORAGE: 'We could not reach file storage right now. Please try again in a moment.',
   CALLS: 'Calls are not available right now. You can still send messages.',
-  REALTIME: 'Live updates are not available right now. Your screen will refresh when they are back.',
+  REALTIME:
+    'Live updates are not available right now. Your screen will refresh when they are back.',
   EMAIL: 'We could not send that email right now.',
   MONITORING: 'Error reporting is not available.',
 };
 
 // ---------------------------------------------------------------- health, for administrators
 
-export const PROVIDER_HEALTH_STATES = ['UP', 'DEGRADED', 'DOWN', 'UNVERIFIED', 'SIMULATED', 'NOT_CONFIGURED'] as const;
+export const PROVIDER_HEALTH_STATES = [
+  'UP',
+  'DEGRADED',
+  'DOWN',
+  'UNVERIFIED',
+  'SIMULATED',
+  'NOT_CONFIGURED',
+] as const;
 export type ProviderHealthState = (typeof PROVIDER_HEALTH_STATES)[number];
 export const PROVIDER_HEALTH_LABELS: Record<ProviderHealthState, string> = {
   UP: 'Working',

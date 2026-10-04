@@ -20,4 +20,3 @@ export function mapsUrl(
     ? `http://maps.apple.com/?daddr=${latitude},${longitude}&dirflg=d`
     : `geo:0,0?q=${latitude},${longitude}(${encodeURIComponent(label)})`;
 }
-

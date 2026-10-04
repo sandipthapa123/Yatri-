@@ -7,7 +7,6 @@ import { useActionState, useId } from 'react';
 import { styles } from '../drivers/styles';
 import { cancelRideAction } from './actions';
 
-
 /** Cancel a live ride as an operator. Needs a written reason, which both people are shown. */
 export function CancelRideForm({ tripId }: { tripId: string }) {
   const [state, action, pending] = useActionState(cancelRideAction, {});

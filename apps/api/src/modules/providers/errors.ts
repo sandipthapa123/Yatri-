@@ -39,9 +39,14 @@ export function kindOfStatus(status: number): ProviderErrorKind {
 }
 
 /** Whatever was thrown, as a ProviderError. A network failure or a timeout is a kind; a bug is not hidden, it is wrapped as UNAVAILABLE and logged by the caller. */
-export function toProviderError(capability: ProviderCapability, provider: string, err: unknown): ProviderError {
+export function toProviderError(
+  capability: ProviderCapability,
+  provider: string,
+  err: unknown,
+): ProviderError {
   if (err instanceof ProviderError) return err;
   const name = err instanceof Error ? err.name : '';
-  if (name === 'TimeoutError' || name === 'AbortError') return new ProviderError(capability, provider, 'TIMEOUT');
+  if (name === 'TimeoutError' || name === 'AbortError')
+    return new ProviderError(capability, provider, 'TIMEOUT');
   return new ProviderError(capability, provider, 'UNAVAILABLE');
 }

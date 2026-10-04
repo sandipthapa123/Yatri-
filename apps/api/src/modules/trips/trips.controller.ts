@@ -233,11 +233,17 @@ export async function confirmPaymentHandler(req: Request, res: Response<ApiRespo
   res.json({ success: true, data: await settlePayment(idParam(req), uid(req)) });
 }
 
-export async function startDigitalPaymentHandler(req: Request, res: Response<ApiResponse<DigitalPaymentInfo>>) {
+export async function startDigitalPaymentHandler(
+  req: Request,
+  res: Response<ApiResponse<DigitalPaymentInfo>>,
+) {
   res.json({ success: true, data: await startDigitalPayment(idParam(req), uid(req)) });
 }
 
-export async function verifyDigitalPaymentHandler(req: Request, res: Response<ApiResponse<DigitalPaymentInfo>>) {
+export async function verifyDigitalPaymentHandler(
+  req: Request,
+  res: Response<ApiResponse<DigitalPaymentInfo>>,
+) {
   res.json({ success: true, data: await verifyDigitalPayment(idParam(req), uid(req)) });
 }
 

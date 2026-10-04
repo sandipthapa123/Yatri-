@@ -80,7 +80,10 @@ export const JOBS: readonly JobDef[] = [
     label: 'Reward points expiry',
     help: 'Writes off reward points that have expired and warns riders whose points are about to, and gives back offers still held for rides that did not happen.',
     everySeconds: 3600,
-    run: async () => ({ ...(await expirePoints()), reservationsReleased: await voidStaleReservations() }),
+    run: async () => ({
+      ...(await expirePoints()),
+      reservationsReleased: await voidStaleReservations(),
+    }),
   },
   {
     name: 'disability-expiry',

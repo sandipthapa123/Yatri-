@@ -168,9 +168,7 @@ export default async function RiskPage({ searchParams }: PageProps) {
                   <td style={styles.td}>{levelText(u.level)}</td>
                   <td style={styles.td}>{u.score}</td>
                   <td style={styles.td}>{u.openEvents}</td>
-                  <td style={styles.td}>
-                    {u.lastEventAt ? formatWhen(u.lastEventAt) : '—'}
-                  </td>
+                  <td style={styles.td}>{u.lastEventAt ? formatWhen(u.lastEventAt) : '—'}</td>
                 </tr>
               ))}
             </tbody>

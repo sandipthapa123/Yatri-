@@ -13,10 +13,26 @@ const column = { display: 'flex', flexDirection: 'column', gap: 8 } as const;
 
 const STEP_WORDS: Record<PayoutStatus, { label: string; consequence: string }> = {
   PENDING: { label: 'Prepare', consequence: '' },
-  PROCESSING: { label: 'Mark as being sent', consequence: 'The payout is marked as being sent. Send the money to the account shown, then record it as paid.' },
-  PAID: { label: 'Record as paid', consequence: 'The payout is marked paid with the reference you enter below, and the driver is told. This cannot be undone. Someone other than the person who prepared it must do this.' },
-  FAILED: { label: 'Record as failed', consequence: 'The payout is marked failed with your reason, and the driver is told. It can be tried again or cancelled.' },
-  CANCELLED: { label: 'Cancel the payout', consequence: 'The payout is cancelled and its rides go back to the driver’s balance, to be paid in a later payout.' },
+  PROCESSING: {
+    label: 'Mark as being sent',
+    consequence:
+      'The payout is marked as being sent. Send the money to the account shown, then record it as paid.',
+  },
+  PAID: {
+    label: 'Record as paid',
+    consequence:
+      'The payout is marked paid with the reference you enter below, and the driver is told. This cannot be undone. Someone other than the person who prepared it must do this.',
+  },
+  FAILED: {
+    label: 'Record as failed',
+    consequence:
+      'The payout is marked failed with your reason, and the driver is told. It can be tried again or cancelled.',
+  },
+  CANCELLED: {
+    label: 'Cancel the payout',
+    consequence:
+      'The payout is cancelled and its rides go back to the driver’s balance, to be paid in a later payout.',
+  },
 };
 
 /** Prepare payouts for every driver who is ready (through the shared two-step confirmation), and say what happened. */
@@ -38,12 +54,25 @@ export function PrepareForm() {
 export function StepForm({ detail, to }: { detail: AdminPayoutDetail; to: PayoutStatus }) {
   const [state, run, pending] = useActionState(payoutStepAction, {});
   const words = STEP_WORDS[to];
-  const extra = to === 'PAID' ? ' What you write below is the bank or wallet reference of the payment you sent.' : to === 'FAILED' ? ' What you write below is the reason.' : '';
+  const extra =
+    to === 'PAID'
+      ? ' What you write below is the bank or wallet reference of the payment you sent.'
+      : to === 'FAILED'
+        ? ' What you write below is the reason.'
+        : '';
   return (
-    <form action={run} style={column} aria-label={`${words.label}: payout of ${formatNpr(detail.amountNpr)}`}>
+    <form
+      action={run}
+      style={column}
+      aria-label={`${words.label}: payout of ${formatNpr(detail.amountNpr)}`}
+    >
       <input type="hidden" name="id" value={detail.id} />
       <input type="hidden" name="to" value={to} />
-      <Confirmed pending={pending} label={words.label} consequence={`${words.consequence}${extra}`} />
+      <Confirmed
+        pending={pending}
+        label={words.label}
+        consequence={`${words.consequence}${extra}`}
+      />
       <Feedback state={state} />
     </form>
   );
@@ -76,4 +105,3 @@ export function ShowAccountForm({ id }: { id: string }) {
     </form>
   );
 }
-

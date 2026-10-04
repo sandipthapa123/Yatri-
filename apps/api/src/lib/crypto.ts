@@ -41,7 +41,12 @@ export function encryptField(plain: string, secret: string, purpose: string): st
   const nonce = randomBytes(12);
   const cipher = createCipheriv('aes-256-gcm', key, nonce);
   const data = Buffer.concat([cipher.update(plain, 'utf8'), cipher.final()]);
-  return ['v1', nonce.toString('base64url'), cipher.getAuthTag().toString('base64url'), data.toString('base64url')].join('.');
+  return [
+    'v1',
+    nonce.toString('base64url'),
+    cipher.getAuthTag().toString('base64url'),
+    data.toString('base64url'),
+  ].join('.');
 }
 
 /** The inverse. Throws if the value was changed, or the secret or purpose is not the one it was encrypted with. */
@@ -51,5 +56,8 @@ export function decryptField(sealed: string, secret: string, purpose: string): s
   const key = createHmac('sha256', secret).update(`yatri:field:${purpose}:v1`).digest();
   const decipher = createDecipheriv('aes-256-gcm', key, Buffer.from(nonce, 'base64url'));
   decipher.setAuthTag(Buffer.from(tag, 'base64url'));
-  return Buffer.concat([decipher.update(Buffer.from(data, 'base64url')), decipher.final()]).toString('utf8');
+  return Buffer.concat([
+    decipher.update(Buffer.from(data, 'base64url')),
+    decipher.final(),
+  ]).toString('utf8');
 }

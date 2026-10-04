@@ -29,8 +29,15 @@ export class TwilioSmsProvider implements SmsProvider {
       url: `https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(this.c.accountSid)}/Messages.json`,
       init: {
         method: 'POST',
-        headers: { Authorization: this.auth(), 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({ To: message.toPhoneNumber, From: this.c.from, Body: message.body }).toString(),
+        headers: {
+          Authorization: this.auth(),
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          To: message.toPhoneNumber,
+          From: this.c.from,
+          Body: message.body,
+        }).toString(),
       },
       timeoutMs: this.c.timeoutMs,
       idempotent: false,

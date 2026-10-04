@@ -11,12 +11,7 @@ import {
 import { useActionState, useId, useState } from 'react';
 
 import { styles } from '../drivers/styles';
-import {
-  incidentNoteAction,
-  incidentStatusAction,
-  moveSosAction,
-} from './actions';
-
+import { incidentNoteAction, incidentStatusAction, moveSosAction } from './actions';
 
 const column = { display: 'flex', flexDirection: 'column', gap: 8 } as const;
 

@@ -14,7 +14,9 @@ import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { payoutsApi } from '../payoutsApi';
 
 const problem = (e: unknown) =>
-  e instanceof ApiError ? e.message : 'That did not work. Please check your connection and try again.';
+  e instanceof ApiError
+    ? e.message
+    : 'That did not work. Please check your connection and try again.';
 
 /**
  * What a driver is owed for rides paid online, the payouts made, and where payouts go. Every sentence and figure comes from the
@@ -37,7 +39,11 @@ export function PayoutsCenter(props: UiProps & { onExit: () => void }) {
     setBusy(true);
     setError(null);
     try {
-      await payoutsApi.saveAccount(await getAccessToken(), { kind, holderName: holder.trim(), accountNumber: number.trim() });
+      await payoutsApi.saveAccount(await getAccessToken(), {
+        kind,
+        holderName: holder.trim(),
+        accountNumber: number.trim(),
+      });
       setNumber('');
       say('Saved. Payouts will go to this account.');
       void state.reload();
@@ -51,7 +57,12 @@ export function PayoutsCenter(props: UiProps & { onExit: () => void }) {
 
   const s = state.data;
   if (state.error && !s) {
-    return <Text accessibilityRole="alert" style={{ color: colors.error }}>{`Problem: ${state.error}`}</Text>;
+    return (
+      <Text
+        accessibilityRole="alert"
+        style={{ color: colors.error }}
+      >{`Problem: ${state.error}`}</Text>
+    );
   }
   if (!s) return <Text style={{ color: colors.textSecondary }}>Loading…</Text>;
 
@@ -75,7 +86,9 @@ export function PayoutsCenter(props: UiProps & { onExit: () => void }) {
         ) : (
           <Text style={{ color: colors.textPrimary }}>No account saved yet.</Text>
         )}
-        <Text style={{ color: colors.textPrimary, fontWeight: '600' }}>Where should payouts go?</Text>
+        <Text style={{ color: colors.textPrimary, fontWeight: '600' }}>
+          Where should payouts go?
+        </Text>
         {PAYOUT_ACCOUNT_KINDS.map((k) => (
           <ActionButton
             key={k}
@@ -93,7 +106,9 @@ export function PayoutsCenter(props: UiProps & { onExit: () => void }) {
           maxLength={80}
           style={[styles.input, { color: colors.textPrimary, borderColor: colors.border }]}
         />
-        <Text style={{ color: colors.textPrimary, fontWeight: '600' }}>{PAYOUT_ACCOUNT_LABELS[kind].numberLabel}</Text>
+        <Text style={{ color: colors.textPrimary, fontWeight: '600' }}>
+          {PAYOUT_ACCOUNT_LABELS[kind].numberLabel}
+        </Text>
         <TextInput
           accessibilityLabel={PAYOUT_ACCOUNT_LABELS[kind].numberLabel}
           value={number}
@@ -103,7 +118,14 @@ export function PayoutsCenter(props: UiProps & { onExit: () => void }) {
           maxLength={40}
           style={[styles.input, { color: colors.textPrimary, borderColor: colors.border }]}
         />
-        <ActionButton {...ui} label="Save this account" busy={busy} tone="primary" disabled={!holder.trim() || !number.trim()} onPress={() => void save()} />
+        <ActionButton
+          {...ui}
+          label="Save this account"
+          busy={busy}
+          tone="primary"
+          disabled={!holder.trim() || !number.trim()}
+          onPress={() => void save()}
+        />
         {error ? (
           <Text accessibilityRole="alert" style={{ color: colors.error }}>
             {`Problem: ${error}`}
@@ -130,5 +152,12 @@ export function PayoutsCenter(props: UiProps & { onExit: () => void }) {
 
 const styles = StyleSheet.create({
   container: { gap: 14 },
-  input: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 16, minHeight: 48 },
+  input: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 16,
+    minHeight: 48,
+  },
 });

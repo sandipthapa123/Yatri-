@@ -10,7 +10,11 @@ let provider: SmsProvider | undefined;
 function build(kind: 'console' | 'http' | 'twilio'): SmsProvider {
   switch (kind) {
     case 'http':
-      return new HttpSmsProvider(env.SMS_HTTP_ENDPOINT ?? '', env.SMS_HTTP_API_KEY, env.PROVIDER_TIMEOUT_MS);
+      return new HttpSmsProvider(
+        env.SMS_HTTP_ENDPOINT ?? '',
+        env.SMS_HTTP_API_KEY,
+        env.PROVIDER_TIMEOUT_MS,
+      );
     case 'twilio':
       return new TwilioSmsProvider({
         accountSid: env.TWILIO_ACCOUNT_SID ?? '',
@@ -27,7 +31,10 @@ function build(kind: 'console' | 'http' | 'twilio'): SmsProvider {
 export function getSmsProvider(): SmsProvider {
   if (!provider) {
     const primary = build(env.SMS_PROVIDER);
-    provider = env.SMS_FALLBACK_PROVIDER === 'none' ? primary : new FallbackSmsProvider(primary, build(env.SMS_FALLBACK_PROVIDER));
+    provider =
+      env.SMS_FALLBACK_PROVIDER === 'none'
+        ? primary
+        : new FallbackSmsProvider(primary, build(env.SMS_FALLBACK_PROVIDER));
   }
   return provider;
 }

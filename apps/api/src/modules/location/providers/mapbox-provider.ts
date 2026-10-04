@@ -39,7 +39,10 @@ export class MapboxGeocodingProvider implements LocationProvider {
     const params = this.params();
     params.set('limit', String(Math.min(options.limit, 10)));
     if (options.near) params.set('proximity', `${options.near.longitude},${options.near.latitude}`);
-    const body = await this.get(`/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json`, params);
+    const body = await this.get(
+      `/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json`,
+      params,
+    );
     const seen = new Set<string>();
     const out: PlaceSummary[] = [];
     for (const f of body.features) {
@@ -61,11 +64,18 @@ export class MapboxGeocodingProvider implements LocationProvider {
   async reverseGeocode(point: Coordinate): Promise<ReverseGeocodeResult | null> {
     const params = this.params();
     params.set('limit', '1');
-    const body = await this.get(`/geocoding/v5/mapbox.places/${point.longitude},${point.latitude}.json`, params);
+    const body = await this.get(
+      `/geocoding/v5/mapbox.places/${point.longitude},${point.latitude}.json`,
+      params,
+    );
     const f = body.features[0];
     const place = f ? this.toPlace(f, point) : null;
     if (!place || !f) return null; // nothing known there: a valid answer, not a failure
-    return { ...place, formattedAddress: f.place_name ?? [place.name, place.city, place.country].filter(Boolean).join(', ') };
+    return {
+      ...place,
+      formattedAddress:
+        f.place_name ?? [place.name, place.city, place.country].filter(Boolean).join(', '),
+    };
   }
 
   private params(): URLSearchParams {
@@ -82,23 +92,31 @@ export class MapboxGeocodingProvider implements LocationProvider {
       this.c.timeoutMs,
       'mapbox',
     );
-    if (!body || !Array.isArray(body.features)) throw new LocationProviderError('BAD_RESPONSE', 'mapbox: no features');
+    if (!body || !Array.isArray(body.features))
+      throw new LocationProviderError('BAD_RESPONSE', 'mapbox: no features');
     return { features: body.features };
   }
 
   private toPlace(f: MapboxFeature, fallback?: Coordinate): PlaceSummary | null {
     const [lng, lat] = f.center ?? [fallback?.longitude, fallback?.latitude];
     if (
-      typeof lat !== 'number' || typeof lng !== 'number' ||
-      !Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180
-    ) return null;
+      typeof lat !== 'number' ||
+      typeof lng !== 'number' ||
+      !Number.isFinite(lat) ||
+      !Number.isFinite(lng) ||
+      Math.abs(lat) > 90 ||
+      Math.abs(lng) > 180
+    )
+      return null;
     const city = contextOf(f, 'place') ?? contextOf(f, 'locality') ?? contextOf(f, 'district');
     const province = contextOf(f, 'region');
     const country = contextOf(f, 'country');
     const name = f.text?.trim() || city;
     if (!name) return null;
     const local = contextOf(f, 'neighborhood');
-    const secondary = [local, city, province].filter((p, i, a): p is string => !!p && p !== name && a.indexOf(p) === i);
+    const secondary = [local, city, province].filter(
+      (p, i, a): p is string => !!p && p !== name && a.indexOf(p) === i,
+    );
     return {
       name,
       address: secondary.join(', ') || country || '',

@@ -41,7 +41,8 @@ export async function fetchJson<T>(
     });
     return res.data;
   } catch (err) {
-    if (err instanceof ProviderError) throw new LocationProviderError(KIND[err.kind], `${label} ${err.kind}`);
+    if (err instanceof ProviderError)
+      throw new LocationProviderError(KIND[err.kind], `${label} ${err.kind}`);
     throw new LocationProviderError('UNAVAILABLE', `${label} request failed`);
   }
 }

@@ -13,7 +13,12 @@ export interface TwilioIceConfig {
 }
 
 interface TwilioToken {
-  ice_servers?: Array<{ url?: string; urls?: string | string[]; username?: string; credential?: string }>;
+  ice_servers?: Array<{
+    url?: string;
+    urls?: string | string[];
+    username?: string;
+    credential?: string;
+  }>;
   ttl?: string | number;
 }
 
@@ -40,7 +45,10 @@ export class TwilioIceProvider implements CallProvider {
       url: `https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(this.c.accountSid)}/Tokens.json`,
       init: {
         method: 'POST',
-        headers: { Authorization: this.auth(), 'Content-Type': 'application/x-www-form-urlencoded' },
+        headers: {
+          Authorization: this.auth(),
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
         body: new URLSearchParams({ Ttl: String(this.c.ttlSeconds) }).toString(),
       },
       timeoutMs: this.c.timeoutMs,
@@ -51,7 +59,13 @@ export class TwilioIceProvider implements CallProvider {
     const servers: IceServer[] = (res.data.ice_servers ?? []).flatMap((s) => {
       const urls = s.urls ?? s.url;
       if (!urls) return [];
-      return [{ urls, ...(s.username ? { username: s.username } : {}), ...(s.credential ? { credential: s.credential } : {}) } as IceServer];
+      return [
+        {
+          urls,
+          ...(s.username ? { username: s.username } : {}),
+          ...(s.credential ? { credential: s.credential } : {}),
+        } as IceServer,
+      ];
     });
     return { iceServers: servers, ttlSeconds: Number(res.data.ttl ?? this.c.ttlSeconds) };
   }

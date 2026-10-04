@@ -11,14 +11,9 @@ import {
 import { useActionState, useId, useState } from 'react';
 
 import { styles } from '../drivers/styles';
-import {
-  dataRequestAction,
-  publishPolicyAction,
-  retentionAction,
-} from './actions';
+import { dataRequestAction, publishPolicyAction, retentionAction } from './actions';
 
 const column = { display: 'flex', flexDirection: 'column', gap: 8 } as const;
-
 
 /** Publish the next version of a policy. The words live at the address; only the version is recorded. */
 export function PublishPolicyForm({ policy }: { policy: PolicyInfo }) {

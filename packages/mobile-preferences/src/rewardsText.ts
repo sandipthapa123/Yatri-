@@ -89,13 +89,19 @@ export function quoteLines(q: PromotionQuote): Array<{ label: string; value: str
   const hasBenefit = q.offers.some((o) => o.disabilityBenefit);
   const lines = [{ label: hasBenefit ? 'Standard fare' : 'Fare', value: formatNpr(q.fareNpr) }];
   for (const o of q.offers) {
-    const label = o.disabilityBenefit ? 'Disability benefit' : hasBenefit ? `Other discount: ${o.name}` : `Offer: ${o.name}`;
+    const label = o.disabilityBenefit
+      ? 'Disability benefit'
+      : hasBenefit
+        ? `Other discount: ${o.name}`
+        : `Offer: ${o.name}`;
     if (o.discountNpr > 0) lines.push({ label, value: `minus ${formatNpr(o.discountNpr)}` });
     else lines.push({ label, value: o.description });
   }
   if (q.pointsUsed > 0) {
     lines.push({
-      label: hasBenefit ? `Loyalty benefit (${q.pointsUsed} points)` : `Reward points (${q.pointsUsed} points)`,
+      label: hasBenefit
+        ? `Loyalty benefit (${q.pointsUsed} points)`
+        : `Reward points (${q.pointsUsed} points)`,
       value: `minus ${formatNpr(q.pointsValueNpr)}`,
     });
   }

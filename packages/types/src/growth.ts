@@ -168,7 +168,12 @@ export interface EligibilityFacts {
   /** Whether this person has a verified, unexpired disability benefit with consent in force. */
   disabilityVerified: boolean;
   /** The ride being priced; null when judging a person with no ride (a push audience, a grant). */
-  ride: { categoryCode: string | null; cityId: string | null; fareNpr: number; withCompanion?: boolean } | null;
+  ride: {
+    categoryCode: string | null;
+    cityId: string | null;
+    fareNpr: number;
+    withCompanion?: boolean;
+  } | null;
 }
 
 export interface EligibilityVerdict {
@@ -393,7 +398,8 @@ export function describeConditions(
     out.push(`Vehicle types: ${e.vehicleCategoryCodes.join(', ')}.`);
   if (e.minFareNpr !== undefined) out.push(`For fares of at least NPR ${e.minFareNpr}.`);
   if (e.requiresDisabilityVerified) out.push('For riders with a verified disability benefit.');
-  if (e.requiresDisabilityVerified && e.companionAllowed === false) out.push('Does not apply when a companion rides along.');
+  if (e.requiresDisabilityVerified && e.companionAllowed === false)
+    out.push('Does not apply when a companion rides along.');
   if (limits.perUser !== null)
     out.push(limits.perUser === 1 ? 'Can be used once.' : `Can be used ${limits.perUser} times.`);
   return out;

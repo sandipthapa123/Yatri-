@@ -37,19 +37,42 @@ interface Line {
   note: string;
 }
 const lines: Line[] = [];
-const arg = (name: string) => process.argv.find((a) => a === `--${name}` || a.startsWith(`--${name}=`));
+const arg = (name: string) =>
+  process.argv.find((a) => a === `--${name}` || a.startsWith(`--${name}=`));
 const argValue = (name: string) => arg(name)?.split('=')[1];
 
-async function step(need: string, vendor: string, name: string, run: () => Promise<string | void>): Promise<void> {
+async function step(
+  need: string,
+  vendor: string,
+  name: string,
+  run: () => Promise<string | void>,
+): Promise<void> {
   const started = performance.now();
   try {
     const note = (await run()) ?? '';
-    lines.push({ need, vendor, step: name, ok: true, ms: Math.round(performance.now() - started), note });
+    lines.push({
+      need,
+      vendor,
+      step: name,
+      ok: true,
+      ms: Math.round(performance.now() - started),
+      note,
+    });
   } catch (err) {
     // Only a kind or one of this script's own codes is ever printed: never the vendor's words, an address or a key.
     const own = err instanceof Error && /^[A-Z][A-Za-z]+$/.test(err.message) ? err.message : null;
-    const kind = err instanceof ProviderError ? err.kind : (own ?? (err instanceof Error ? err.name : 'ERROR'));
-    lines.push({ need, vendor, step: name, ok: false, ms: Math.round(performance.now() - started), note: `failed (${kind})` });
+    const kind =
+      err instanceof ProviderError
+        ? err.kind
+        : (own ?? (err instanceof Error ? err.name : 'ERROR'));
+    lines.push({
+      need,
+      vendor,
+      step: name,
+      ok: false,
+      ms: Math.round(performance.now() - started),
+      note: `failed (${kind})`,
+    });
   }
 }
 const skipped = (need: string, vendor: string, name: string, why: string) =>
@@ -66,13 +89,47 @@ async function main() {
     const v = (env as Record<string, unknown>)[k];
     return typeof v === 'string' ? v.length > 0 : v !== undefined && v !== null;
   });
-  console.log(problems.length === 0 ? 'Configuration: no problems.' : `Configuration problems:\n  - ${problems.join('\n  - ')}`);
+  console.log(
+    problems.length === 0
+      ? 'Configuration: no problems.'
+      : `Configuration problems:\n  - ${problems.join('\n  - ')}`,
+  );
 
   // 1. Every provider's own live check (a call that sends nothing and costs nothing).
-  for (const capability of ['OTP', 'PUSH', 'PAYMENTS', 'STORAGE', 'CALLS', 'EMAIL', 'MONITORING', 'REALTIME'] as const) {
+  for (const capability of [
+    'OTP',
+    'PUSH',
+    'PAYMENTS',
+    'STORAGE',
+    'CALLS',
+    'EMAIL',
+    'MONITORING',
+    'REALTIME',
+  ] as const) {
     const check = checkerFor(capability);
-    const vendor = capability === 'OTP' ? sel.OTP : capability === 'PUSH' ? sel.PUSH : capability === 'PAYMENTS' ? sel.PAYMENTS : capability === 'STORAGE' ? sel.STORAGE : capability === 'CALLS' ? sel.CALLS : capability === 'EMAIL' ? sel.EMAIL : capability === 'MONITORING' ? sel.MONITORING : sel.REALTIME;
-    if (!check) skipped(capability, vendor, 'live check', 'this vendor has no check that is free and sends nothing');
+    const vendor =
+      capability === 'OTP'
+        ? sel.OTP
+        : capability === 'PUSH'
+          ? sel.PUSH
+          : capability === 'PAYMENTS'
+            ? sel.PAYMENTS
+            : capability === 'STORAGE'
+              ? sel.STORAGE
+              : capability === 'CALLS'
+                ? sel.CALLS
+                : capability === 'EMAIL'
+                  ? sel.EMAIL
+                  : capability === 'MONITORING'
+                    ? sel.MONITORING
+                    : sel.REALTIME;
+    if (!check)
+      skipped(
+        capability,
+        vendor,
+        'live check',
+        'this vendor has no check that is free and sends nothing',
+      );
     else await step(capability, vendor, 'live check', async () => void (await check()));
   }
 
@@ -83,8 +140,12 @@ async function main() {
     await step('MAPS', sel.MAPS_GEOCODING, 'find a place', async () => {
       const p = await geocoder.geocode('Thamel, Kathmandu');
       if (!p) throw new Error('NoResult');
-      const near = Math.abs(p.latitude - THAMEL.latitude) < 0.1 && Math.abs(p.longitude - THAMEL.longitude) < 0.1;
-      return near ? 'found Thamel' : 'found a place, but not near Thamel (check the country filter)';
+      const near =
+        Math.abs(p.latitude - THAMEL.latitude) < 0.1 &&
+        Math.abs(p.longitude - THAMEL.longitude) < 0.1;
+      return near
+        ? 'found Thamel'
+        : 'found a place, but not near Thamel (check the country filter)';
     });
     await step('MAPS', sel.MAPS_GEOCODING, 'name a spot', async () => {
       const r = await geocoder.reverseGeocode(THAMEL);
@@ -92,7 +153,10 @@ async function main() {
     });
   }
   await step('MAPS', sel.MAPS_ROUTING, 'plan a route with steps', async () => {
-    const r = await getRouteProvider().calculateRoute(THAMEL, PATAN, { steps: true, geometry: true });
+    const r = await getRouteProvider().calculateRoute(THAMEL, PATAN, {
+      steps: true,
+      geometry: true,
+    });
     if (r.method !== 'route') return 'straight-line estimate only (no road routing configured)';
     const km = r.distanceMeters / 1000;
     if (km < 1 || km > 20) throw new Error('ImplausibleRoute');
@@ -110,7 +174,8 @@ async function main() {
       if (!back.equals(body)) throw new Error('ContentMismatch');
       const url = await storage.createTemporaryAccessUrl(key, 60);
       // A link into the store itself (S3) is fetched here. A local link is served by the running API, so it is only made.
-      if (!url.startsWith('http')) return 'stored and linked (a local link is served by the running API, so it was not fetched); the file was removed';
+      if (!url.startsWith('http'))
+        return 'stored and linked (a local link is served by the running API, so it was not fetched); the file was removed';
       const res = await fetch(url);
       const fetched = Buffer.from(await res.arrayBuffer());
       if (!res.ok || !fetched.equals(body)) throw new Error('LinkDidNotServeTheFile');
@@ -123,26 +188,62 @@ async function main() {
   // 4. Things that reach a person or open a payment, only when asked.
   const smsTo = argValue('sms-to');
   if (!smsTo) skipped('OTP', sel.OTP, 'send one text', 'pass --sms-to=<your number>');
-  else await step('OTP', sel.OTP, 'send one text', async () => { await getSmsProvider().send({ toPhoneNumber: smsTo, body: 'Yatri provider check: this text confirms sign-in codes can be sent.' }); return 'sent'; });
+  else
+    await step('OTP', sel.OTP, 'send one text', async () => {
+      await getSmsProvider().send({
+        toPhoneNumber: smsTo,
+        body: 'Yatri provider check: this text confirms sign-in codes can be sent.',
+      });
+      return 'sent';
+    });
 
   const emailTo = argValue('email-to');
   if (!emailTo) skipped('EMAIL', sel.EMAIL, 'send one email', 'pass --email-to=<your address>');
-  else await step('EMAIL', sel.EMAIL, 'send one email', async () => { await sendEmail({ to: emailTo, subject: 'Yatri provider check', text: 'This email confirms Yatri can send email.' }); return 'sent'; });
+  else
+    await step('EMAIL', sel.EMAIL, 'send one email', async () => {
+      await sendEmail({
+        to: emailTo,
+        subject: 'Yatri provider check',
+        text: 'This email confirms Yatri can send email.',
+      });
+      return 'sent';
+    });
 
   const gateway = getPaymentGateway();
-  if (!arg('initiate-payment')) skipped('PAYMENTS', sel.PAYMENTS, 'open a test payment', 'pass --initiate-payment (use the provider\'s TEST key)');
-  else if (!gateway) skipped('PAYMENTS', sel.PAYMENTS, 'open a test payment', 'online payment is switched off');
+  if (!arg('initiate-payment'))
+    skipped(
+      'PAYMENTS',
+      sel.PAYMENTS,
+      'open a test payment',
+      "pass --initiate-payment (use the provider's TEST key)",
+    );
+  else if (!gateway)
+    skipped('PAYMENTS', sel.PAYMENTS, 'open a test payment', 'online payment is switched off');
   else {
     await step('PAYMENTS', sel.PAYMENTS, 'open a payment and ask about it', async () => {
-      const opened = await gateway.initiate({ attemptId: randomUUID(), tripId: randomUUID(), amountNpr: 10, description: 'Yatri provider check' });
+      const opened = await gateway.initiate({
+        attemptId: randomUUID(),
+        tripId: randomUUID(),
+        amountNpr: 10,
+        description: 'Yatri provider check',
+      });
       const looked = await gateway.lookup(opened.providerRef);
       if (looked.state === 'COMPLETED') throw new Error('UnexpectedlyCompleted');
-      return `opened (${new URL(opened.paymentUrl).hostname}), provider says: ${looked.state.toLowerCase()}; refund through the API: ${gateway.supportsRefund ? 'yes' : 'no (staff refund in the provider\'s dashboard)'}`;
+      return `opened (${new URL(opened.paymentUrl).hostname}), provider says: ${looked.state.toLowerCase()}; refund through the API: ${gateway.supportsRefund ? 'yes' : "no (staff refund in the provider's dashboard)"}`;
     });
   }
 
-  if (!arg('sentry-event')) skipped('MONITORING', sel.MONITORING, 'send one test error', 'pass --sentry-event');
-  else await step('MONITORING', sel.MONITORING, 'send one test error', async () => { await getErrorReporter().capture(scrubbedEvent(new Error('Yatri provider check (not a real error)'), { where: 'script:providers-check' })); return 'sent; look for it in the error reporting project'; });
+  if (!arg('sentry-event'))
+    skipped('MONITORING', sel.MONITORING, 'send one test error', 'pass --sentry-event');
+  else
+    await step('MONITORING', sel.MONITORING, 'send one test error', async () => {
+      await getErrorReporter().capture(
+        scrubbedEvent(new Error('Yatri provider check (not a real error)'), {
+          where: 'script:providers-check',
+        }),
+      );
+      return 'sent; look for it in the error reporting project';
+    });
 
   // The report.
   const width = (f: (l: Line) => string) => Math.max(...lines.map((l) => f(l).length));
@@ -150,9 +251,14 @@ async function main() {
   const wv = width((l) => l.vendor);
   const ws = width((l) => l.step);
   console.log('');
-  for (const l of lines) console.log(`${l.ok ? 'OK  ' : 'FAIL'}  ${l.need.padEnd(wn)}  ${l.vendor.padEnd(wv)}  ${l.step.padEnd(ws)}  ${String(l.ms).padStart(5)} ms  ${l.note}`);
+  for (const l of lines)
+    console.log(
+      `${l.ok ? 'OK  ' : 'FAIL'}  ${l.need.padEnd(wn)}  ${l.vendor.padEnd(wv)}  ${l.step.padEnd(ws)}  ${String(l.ms).padStart(5)} ms  ${l.note}`,
+    );
   const failed = lines.filter((l) => !l.ok).length;
-  console.log(`\n${failed === 0 ? 'Every step that ran worked.' : `${failed} step${failed === 1 ? '' : 's'} failed.`} Nothing above contains a key, a token or the vendor's own words.`);
+  console.log(
+    `\n${failed === 0 ? 'Every step that ran worked.' : `${failed} step${failed === 1 ? '' : 's'} failed.`} Nothing above contains a key, a token or the vendor's own words.`,
+  );
   process.exit(failed === 0 && problems.length === 0 ? 0 : 1);
 }
 

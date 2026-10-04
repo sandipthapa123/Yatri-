@@ -16,8 +16,12 @@ export default async function ProvidersPage() {
   const token = await requireAdminAccessToken();
   const { data, denied } = await loadOrDenied(() => providersApi(token));
   if (denied || !data) return <NoAccess what="service provider status" />;
-  const trouble = data.items.filter((i) => i.state === 'DOWN' || i.state === 'DEGRADED' || i.state === 'NOT_CONFIGURED').length;
-  const unchecked = data.items.filter((i) => i.state === 'SIMULATED' || i.state === 'UNVERIFIED').length;
+  const trouble = data.items.filter(
+    (i) => i.state === 'DOWN' || i.state === 'DEGRADED' || i.state === 'NOT_CONFIGURED',
+  ).length;
+  const unchecked = data.items.filter(
+    (i) => i.state === 'SIMULATED' || i.state === 'UNVERIFIED',
+  ).length;
   return (
     <div style={styles.page}>
       <div style={styles.headerRow}>
@@ -27,8 +31,9 @@ export default async function ProvidersPage() {
         </Link>
       </div>
       <p style={{ margin: 0 }}>
-        Environment: <strong>{data.environment.toLowerCase()}</strong>. Which service fills each need is set by the server&apos;s configuration,
-        not here. This page only shows how they are doing.
+        Environment: <strong>{data.environment.toLowerCase()}</strong>. Which service fills each
+        need is set by the server&apos;s configuration, not here. This page only shows how they are
+        doing.
       </p>
       <p role="status" style={{ margin: 0, fontWeight: 600 }}>
         {data.problems.length === 0 && trouble === 0
@@ -48,10 +53,20 @@ export default async function ProvidersPage() {
         </section>
       )}
       <table style={styles.table}>
-        <caption style={{ textAlign: 'left', position: 'absolute', left: -9999 }}>Service providers</caption>
+        <caption style={{ textAlign: 'left', position: 'absolute', left: -9999 }}>
+          Service providers
+        </caption>
         <thead>
           <tr>
-            {['Service', 'Provider', 'State', 'Last checked', 'Calls today', 'Failed today', 'Last problem'].map((h) => (
+            {[
+              'Service',
+              'Provider',
+              'State',
+              'Last checked',
+              'Calls today',
+              'Failed today',
+              'Last problem',
+            ].map((h) => (
               <th key={h} scope="col" style={styles.th}>
                 {h}
               </th>
@@ -67,7 +82,11 @@ export default async function ProvidersPage() {
               </th>
               <td style={styles.td}>{i.provider}</td>
               <td style={styles.td}>
-                {i.state === 'UP' ? 'OK: ' : i.state === 'SIMULATED' || i.state === 'UNVERIFIED' ? 'Note: ' : 'Needs attention: '}
+                {i.state === 'UP'
+                  ? 'OK: '
+                  : i.state === 'SIMULATED' || i.state === 'UNVERIFIED'
+                    ? 'Note: '
+                    : 'Needs attention: '}
                 {i.stateText}
               </td>
               <td style={styles.td}>
@@ -76,7 +95,9 @@ export default async function ProvidersPage() {
               </td>
               <td style={styles.td}>{i.callsToday}</td>
               <td style={styles.td}>{i.failuresToday}</td>
-              <td style={styles.td}>{i.lastFailureKind ? i.lastFailureKind.toLowerCase().replace(/_/g, ' ') : 'None'}</td>
+              <td style={styles.td}>
+                {i.lastFailureKind ? i.lastFailureKind.toLowerCase().replace(/_/g, ' ') : 'None'}
+              </td>
             </tr>
           ))}
         </tbody>

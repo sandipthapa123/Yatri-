@@ -18,20 +18,21 @@ import { VehicleAccessibilityScreen } from '../screens/VehicleAccessibilityScree
 import { SIGN_IN } from '../brand';
 
 // The sign-in steps are the shared ones (@yatri/mobile-auth), with their shared routes.
-export type RootStackParamList = SignInRoutes & SupportRoute & {
-  Settings: undefined;
-  VehicleAccessibility: undefined;
-  Incentives: undefined;
-  Payouts: undefined;
-  DriverProfileSetup: undefined;
-  Onboarding: undefined;
-  VerificationPending: undefined;
-  DriverLocation: undefined;
-  DriverTrip: { tripId: string };
-  DriverRideHistory: undefined;
-  DriverEmergencyContacts: undefined;
-  DriverHome: undefined;
-};
+export type RootStackParamList = SignInRoutes &
+  SupportRoute & {
+    Settings: undefined;
+    VehicleAccessibility: undefined;
+    Incentives: undefined;
+    Payouts: undefined;
+    DriverProfileSetup: undefined;
+    Onboarding: undefined;
+    VerificationPending: undefined;
+    DriverLocation: undefined;
+    DriverTrip: { tripId: string };
+    DriverRideHistory: undefined;
+    DriverEmergencyContacts: undefined;
+    DriverHome: undefined;
+  };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const { WelcomeScreen, PhoneEntryScreen, OtpVerificationScreen } = createSignInScreens(SIGN_IN);

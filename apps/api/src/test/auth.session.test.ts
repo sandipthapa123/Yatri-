@@ -88,12 +88,16 @@ describe('Authentication sessions', () => {
 
   it('lets only one of several simultaneous refreshes with the same token win, and the winner keeps a working session', async () => {
     const { refreshToken } = await onboardUser('PASSENGER');
-    const results = await Promise.all([1, 2, 3, 4].map(() => api.post('/api/v1/auth/refresh').send({ refreshToken })));
+    const results = await Promise.all(
+      [1, 2, 3, 4].map(() => api.post('/api/v1/auth/refresh').send({ refreshToken })),
+    );
     const won = results.filter((r) => r.status === 200);
     expect(won).toHaveLength(1);
     expect(results.filter((r) => r.status === 401)).toHaveLength(3);
     // the winner's new refresh token was not overwritten by a loser: it still works, and rotates again
-    const next = await api.post('/api/v1/auth/refresh').send({ refreshToken: won[0]?.body.data.refreshToken });
+    const next = await api
+      .post('/api/v1/auth/refresh')
+      .send({ refreshToken: won[0]?.body.data.refreshToken });
     expect(next.status).toBe(200);
     expect(next.body.data.refreshToken).not.toBe(won[0]?.body.data.refreshToken);
   });

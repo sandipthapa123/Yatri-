@@ -1,4 +1,8 @@
-import { DISABILITY_PASSENGER_WORDS, maskedCard, type DisabilityVerificationView } from '@yatri/types';
+import {
+  DISABILITY_PASSENGER_WORDS,
+  maskedCard,
+  type DisabilityVerificationView,
+} from '@yatri/types';
 
 /**
  * The words of the disability benefit screen. The status sentences, who may do what and what is missing all come from the
@@ -20,7 +24,11 @@ export function cardLines(v: DisabilityVerificationView): string[] {
   if (v.card.issuingAuthority) out.push(`Issued by: ${v.card.issuingAuthority}.`);
   if (v.card.issueDate) out.push(`Issue date: ${v.card.issueDate}.`);
   if (v.card.expiryDate) out.push(`Expiry date: ${v.card.expiryDate}.`);
-  out.push(v.card.hasDocument ? `Document added: ${v.card.documentName ?? 'card document'}.` : 'No document added yet.');
+  out.push(
+    v.card.hasDocument
+      ? `Document added: ${v.card.documentName ?? 'card document'}.`
+      : 'No document added yet.',
+  );
   return out;
 }
 
@@ -31,7 +39,8 @@ export function expiryLine(v: DisabilityVerificationView): string | null {
   return `Your verification is valid until ${v.validUntil}. It runs out ${when}${v.expiry.state === 'EXPIRING_SOON' ? ', so please apply again with a valid card soon' : ''}.`;
 }
 
-export const nextStepLine = (v: DisabilityVerificationView): string => DISABILITY_PASSENGER_WORDS[v.status].next;
+export const nextStepLine = (v: DisabilityVerificationView): string =>
+  DISABILITY_PASSENGER_WORDS[v.status].next;
 
 export function driverSharingLine(v: DisabilityVerificationView): string {
   return v.driverSharing

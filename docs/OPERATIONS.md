@@ -431,6 +431,13 @@ The controls and their evidence are in `docs/SECURITY.md`. What operators must d
 - **Settings**: `PAYOUT_HOLD_HOURS`, `PAYOUT_MIN_NPR`, `ONLINE_REFUND_DRIVER_SHARE_PERCENT` (Settings > Online payments, refunds and payouts).
 - **Push needs an EAS project, once per app, before the first build.** Neither app has one yet (`expo.extra.eas.projectId` is unset
   in both `app.json` files), and without it a phone gets no push address, so registration is skipped and no notification is ever
-  pushed. Nothing fails loudly: people still see everything in the in-app notification list. In `apps/passenger` and in
-  `apps/driver` run `eas init` (it writes the project id into `app.json`), then `eas credentials` to give Expo the Android (FCM) and
-  iOS (APNs) keys. Check by signing in on a real phone: a row appears in `push_tokens` for that sign-in.
+  pushed. Nothing fails loudly: people still see everything in the in-app notification list. Each app already has its package
+  name (`app.yatri.passenger`, `app.yatri.driver`) and build profiles (`eas.json`: `preview` for testers, `production` for the
+  stores). Once, signed in to the Expo account that will own the apps:
+  1. `npx eas-cli login`
+  2. In `apps/passenger`, then in `apps/driver`: `npx eas-cli init` (creates the project and writes its id into `app.json`;
+     commit that change).
+  3. In each app: `npx eas-cli credentials`, choose Android, then _push notifications (FCM V1)_ and upload the Google service
+     account key from the Firebase project; for iOS, let EAS create the APNs key with the Apple Developer account.
+  4. In each app: `npx eas-cli build --profile preview --platform android`, install the APK on a phone, sign in, and check that
+     a row appears in `push_tokens` for that sign-in and that a ride notification arrives with the app closed.

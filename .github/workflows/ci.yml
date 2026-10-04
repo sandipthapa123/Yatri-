@@ -185,28 +185,39 @@ jobs:
           context: .
           file: deploy/Dockerfile.admin
           push: false
+          load: true
+          tags: yatri-admin:ci
           cache-from: type=gha,scope=admin
           cache-to: type=gha,scope=admin,mode=max
-      # Run what was built: the migration image against an empty database, then the API image, which must answer its
-      # readiness check (database and Redis reachable). Catches a file missing from the runtime image, a broken compiled
-      # import or a failing migration, none of which a build alone would show. Development mode, because production
-      # rules require real vendors; the secrets are CI-only values.
-      - name: Smoke test the API images
+      # Run what was built: the migration image against an empty database, the API image (its readiness check must pass:
+      # database and Redis reachable), then the admin image against that API (its sign-in page must load). Catches a file
+      # missing from an image, a broken compiled import or a failing migration, none of which a build alone would show.
+      # Development mode for the API, because production rules require real vendors; the secrets are CI-only values.
+      - name: Smoke test the images
         env:
           DATABASE_URL: postgresql://yatri:yatri@localhost:5432/yatri
+          JWT_ACCESS_SECRET: ci-smoke-signing-value-not-a-real-one-0000000
         run: |
+          wait_for() { # url, container, label
+            for i in $(seq 1 30); do
+              if curl -fsS -o /dev/null "$1"; then echo "$3 is ready"; return 0; fi
+              sleep 2
+            done
+            echo "::error::$3 did not become ready within 60 seconds"
+            docker logs "$2"
+            exit 1
+          }
           docker run --rm --network host -e DATABASE_URL="$DATABASE_URL" yatri-api-migrate:ci
           docker run -d --name yatri-api --network host \
             -e NODE_ENV=development -e PORT=4000 \
             -e DATABASE_URL="$DATABASE_URL" -e REDIS_URL=redis://localhost:6379 \
-            -e JWT_ACCESS_SECRET=ci-smoke-signing-value-not-a-real-one-0000000 \
+            -e JWT_ACCESS_SECRET="$JWT_ACCESS_SECRET" \
             -e STORAGE_SIGNING_SECRET=ci-smoke-link-value-not-a-real-one-00000000 \
             -e FIELD_ENCRYPTION_SECRET=ci-smoke-field-value-not-a-real-one-0000000 \
             yatri-api:ci
-          for i in $(seq 1 30); do
-            if curl -fsS http://127.0.0.1:4000/api/v1/health/ready; then echo; echo "API image is ready"; exit 0; fi
-            sleep 2
-          done
-          echo "::error::The API image did not become ready within 60 seconds"
-          docker logs yatri-api
-          exit 1
+          wait_for http://127.0.0.1:4000/api/v1/health/ready yatri-api "The API image"
+          docker run -d --name yatri-admin --network host \
+            -e API_BASE_URL=http://127.0.0.1:4000/api/v1 \
+            -e JWT_ACCESS_SECRET="$JWT_ACCESS_SECRET" \
+            yatri-admin:ci
+          wait_for http://127.0.0.1:3000/login yatri-admin "The admin image"

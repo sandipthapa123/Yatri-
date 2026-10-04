@@ -429,3 +429,8 @@ The controls and their evidence are in `docs/SECURITY.md`. What operators must d
 - **Online refunds**: a provider without a refund API (Khalti) needs the refund made in its dashboard and the reference recorded.
   The `refund-settle` job finishes provider refunds that were cut short.
 - **Settings**: `PAYOUT_HOLD_HOURS`, `PAYOUT_MIN_NPR`, `ONLINE_REFUND_DRIVER_SHARE_PERCENT` (Settings > Online payments, refunds and payouts).
+- **Push needs an EAS project, once per app, before the first build.** Neither app has one yet (`expo.extra.eas.projectId` is unset
+  in both `app.json` files), and without it a phone gets no push address, so registration is skipped and no notification is ever
+  pushed. Nothing fails loudly: people still see everything in the in-app notification list. In `apps/passenger` and in
+  `apps/driver` run `eas init` (it writes the project id into `app.json`), then `eas credentials` to give Expo the Android (FCM) and
+  iOS (APNs) keys. Check by signing in on a real phone: a row appears in `push_tokens` for that sign-in.

@@ -112,3 +112,28 @@ clock.
 Testing note: on the day of this pass the test machine had become about 2.5 times slower than before. Clearing a test's data
 (`TRUNCATE users CASCADE` on an empty database) took 2.3 seconds, the same on the previous commit, which caused timeouts under the
 default 15-second limit. The suite was run with 60-second limits for that reason.
+
+## Dependency audit (2026-10-04)
+
+`pnpm audit --prod` reports three advisories, none in the API or the admin site (`pnpm --filter @yatri/api why <pkg> --prod` finds none):
+
+| Package | Severity | Reaches the code through | Fix available |
+|---|---|---|---|
+| node-forge (signature check) | High | Expo's command-line tool (development certificates) | No |
+| braces (deeply nested patterns) | High | The bundler's file matching | No |
+| uuid (buffer bounds, v3/v5/v6 with a buffer) | Moderate | Expo config plugins (`xcode`) | Yes, but only through an Expo upgrade |
+
+All three are build tools that run on a developer's machine and are not part of the app bundles, so the risk is to the build machine,
+not to riders, drivers or the servers. Re-run the audit after the next Expo upgrade.
+
+## Verification after the deduplication pass (2026-10-04)
+
+- Whole API suite, `--maxWorkers=2`, nothing else running: **56 files, 999 tests, all passing** (24 minutes). Earlier runs with 4
+  workers timed out on a machine with under 1 GB of free memory; the same tests pass with 2.
+- Mobile package tests: 277 of 277. Type-check and lint clean across the repository. Admin production build: 45 pages.
+- Both apps bundle for Android (`expo export`).
+- Admin pages scanned with axe-core (WCAG 2.2 A/AA and best practice) after the change: 16 pages, no violations. Times on the
+  audit page are in Nepal time (an event at 05:11 UTC shows 10:56).
+- The two new migrations roll back and re-apply cleanly.
+- Found while checking the app configurations: neither app has an EAS project id, so push cannot work on any build until one is
+  set (now a step in OPERATIONS.md).

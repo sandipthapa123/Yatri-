@@ -201,3 +201,13 @@ Once failures were raised as public annotations, the two intermittent test failu
 
 Every other test that reads the database right after a realtime message was checked: each one reads data written before the
 message (or after an HTTP answer that waits for the write), so none can race. CI green on runs 46, 48 and 51.
+
+### Hardening after CI was green (runs 48 to 55)
+
+- **Node.js 24** in `.nvmrc`, both images and `engines` (Node 20 reached end of life in April 2026).
+- **Every GitHub Action on its current major version** (checkout v7, setup-node v7, pnpm/action-setup v6, the Docker actions),
+  checked first for new required inputs; the Node 20 deprecation warnings are gone.
+- **The images are run, not only built**: CI migrates an empty database with the migration image, starts the API image (its
+  readiness check must pass) and the admin image against it (its sign-in page must load).
+- **Releases** start only on a commit whose CI is green, and the API image carries the release tag as `APP_VERSION`.
+- The admin image no longer keeps a placeholder secret in an `ENV` line. Run 55: every job green and no warnings.

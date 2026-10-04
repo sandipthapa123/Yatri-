@@ -126,6 +126,7 @@ describe('which providers an environment may use (one rule)', () => {
       DATABASE_URL: 'postgresql://u:p@db.internal:5432/yatri',
       JWT_ACCESS_SECRET: 'k'.repeat(24) + 'A1b2C3d4E5f6G7h8',
       STORAGE_SIGNING_SECRET: 'q'.repeat(24) + 'Z9y8X7w6V5u4T3s2',
+      FIELD_ENCRYPTION_SECRET: 'f'.repeat(24) + 'M1n2B3v4C5x6Z7l8',
       NODE_ENV: 'production',
       CORS_ORIGINS: 'https://admin.example.org',
       PUBLIC_BASE_URL: 'https://api.example.org',
@@ -151,6 +152,10 @@ describe('which providers an environment may use (one rule)', () => {
       envIssues({ ...base, ...over } as NodeJS.ProcessEnv).join(' | ');
     expect(problems({})).toBe('');
     expect(problems({ SMS_PROVIDER: 'console' })).toContain('SMS_PROVIDER');
+    // payout details have their own secret: reusing the link-signing secret is refused
+    expect(problems({ FIELD_ENCRYPTION_SECRET: base.STORAGE_SIGNING_SECRET })).toContain(
+      'FIELD_ENCRYPTION_SECRET',
+    );
     expect(problems({ STORAGE_PROVIDER: 'local' })).toContain('STORAGE_PROVIDER');
     expect(problems({ MONITORING_PROVIDER: 'none' })).toContain('MONITORING_PROVIDER');
     expect(problems({ S3_SECRET_ACCESS_KEY: '' })).toContain('S3_SECRET_ACCESS_KEY');

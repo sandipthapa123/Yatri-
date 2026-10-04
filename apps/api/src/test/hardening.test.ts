@@ -349,6 +349,7 @@ describe('environment validation', () => {
     DATABASE_URL: 'postgresql://u:p@db.internal:5432/yatri',
     JWT_ACCESS_SECRET: 'k'.repeat(24) + 'A1b2C3d4E5f6G7h8',
     STORAGE_SIGNING_SECRET: 'q'.repeat(24) + 'Z9y8X7w6V5u4T3s2',
+    FIELD_ENCRYPTION_SECRET: 'f'.repeat(24) + 'M1n2B3v4C5x6Z7l8',
   };
   const production = {
     ...base,
@@ -396,6 +397,12 @@ describe('environment validation', () => {
       expect(at({ STORAGE_SIGNING_SECRET: base.JWT_ACCESS_SECRET })).toContain(
         'STORAGE_SIGNING_SECRET',
       );
+      expect(at({ FIELD_ENCRYPTION_SECRET: base.JWT_ACCESS_SECRET })).toContain(
+        'FIELD_ENCRYPTION_SECRET',
+      );
+      expect(at({ FIELD_ENCRYPTION_SECRET: base.STORAGE_SIGNING_SECRET })).toContain(
+        'FIELD_ENCRYPTION_SECRET',
+      );
     }
   });
 
@@ -409,6 +416,12 @@ describe('environment validation', () => {
     expect(problems({ ...production, STORAGE_SIGNING_SECRET: '' }).join()).toContain(
       'STORAGE_SIGNING_SECRET',
     );
+    expect(problems({ ...production, FIELD_ENCRYPTION_SECRET: '' }).join()).toContain(
+      'FIELD_ENCRYPTION_SECRET',
+    );
+    expect(
+      problems({ ...production, FIELD_ENCRYPTION_SECRET: 'test-' + 'x'.repeat(40) }).join(),
+    ).toContain('FIELD_ENCRYPTION_SECRET');
     expect(problems({ ...production, DATABASE_URL: '' }).join()).toContain('DATABASE_URL');
   });
 

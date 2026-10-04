@@ -77,7 +77,22 @@ jobs:
           cp .env.test.example .env.test
           pnpm migrate:test:up
       - name: Tests (API, realtime, mobile packages)
-        run: pnpm -r --if-present test
+        run: |
+          set -o pipefail
+          pnpm -r --if-present test 2>&1 | tee "$RUNNER_TEMP/test-output.txt"
+      # The full log needs repository admin rights; the job summary is shown on the public run page. On a failure,
+      # put the failing lines and the end of the test output there, so the cause can be read by anyone.
+      - name: Summarize test failures
+        if: failure()
+        run: |
+          {
+            echo '## Test failures'
+            echo '```'
+            grep -aE "FAIL|×|✗|Error|Unhandled|ERR_|failed" "$RUNNER_TEMP/test-output.txt" | grep -v "MaxListeners" | head -150
+            echo '--- last lines ---'
+            tail -n 80 "$RUNNER_TEMP/test-output.txt"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
   admin:
     name: Admin console build

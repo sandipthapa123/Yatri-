@@ -37,6 +37,26 @@ describe('Security', () => {
     expect(listRes.body.data).toHaveLength(0);
   });
 
+  it('refuses a null character anywhere in a request with 400, never a database error', async () => {
+    const { accessToken } = await onboardUser('PASSENGER');
+    const inBody = await api
+      .patch('/api/v1/users/me')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ fullName: 'A\u0000B' });
+    expect(inBody.status).toBe(400);
+    expect(inBody.body.error.code).toBe('VALIDATION_ERROR');
+    const inQuery = await api
+      .get('/api/v1/trips/history?page=1%00')
+      .set('Authorization', `Bearer ${accessToken}`);
+    expect(inQuery.status).toBe(400);
+    // ordinary text with newlines and other scripts still goes through to the field's own rules
+    const fine = await api
+      .patch('/api/v1/users/me')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ fullName: 'सन्दीप थापा' });
+    expect(fine.status).toBe(200);
+  });
+
   it('returns 400 (not a raw database error) for a malformed id', async () => {
     const admin = await loginTestAdmin(
       `sec-badid-${Date.now()}@yatri.local`,

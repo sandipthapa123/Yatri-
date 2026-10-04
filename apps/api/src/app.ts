@@ -5,6 +5,7 @@ import helmet from 'helmet';
 import { env } from './config/env';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { ipRateLimit } from './middleware/rateLimit';
+import { rejectNulText } from './middleware/rejectNulText';
 import { requestContext } from './middleware/requestContext';
 import { ensureSettingsFresh } from './modules/settings/settings.service';
 import { shareRouter } from './modules/sharing/share.routes';
@@ -30,6 +31,8 @@ export function createApp(): Express {
     }),
   );
   app.use(express.json({ limit: '32kb' }));
+  // A NUL character can never be stored (PostgreSQL text); refuse it once, here, instead of as a server error later.
+  app.use(rejectNulText);
 
   // A generous ceiling per client address for the whole API. Routes that matter have their own,
   // much stricter limits (OTP, login, SOS, uploads, chat); this only stops raw flooding. Health probes

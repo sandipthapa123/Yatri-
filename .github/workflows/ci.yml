@@ -80,19 +80,18 @@ jobs:
         run: |
           set -o pipefail
           pnpm -r --if-present test 2>&1 | tee "$RUNNER_TEMP/test-output.txt"
-      # The full log needs repository admin rights; the job summary is shown on the public run page. On a failure,
-      # put the failing lines and the end of the test output there, so the cause can be read by anyone.
-      - name: Summarize test failures
+      # The full log and the job summary need a signed-in account; annotations are public. On a failure, raise the
+      # failing lines and the end of the test output as error annotations (newlines encoded as %0A), so the cause can be
+      # read by anyone, including through the API: /repos/<owner>/<repo>/check-runs/<job id>/annotations.
+      - name: Report test failures as annotations
         if: failure()
         run: |
-          {
-            echo '## Test failures'
-            echo '```'
-            grep -aE "FAIL|×|✗|Error|Unhandled|ERR_|failed" "$RUNNER_TEMP/test-output.txt" | grep -v "MaxListeners" | head -150
-            echo '--- last lines ---'
-            tail -n 80 "$RUNNER_TEMP/test-output.txt"
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
+          out="$RUNNER_TEMP/test-output.txt"
+          enc() { sed -e 's/%/%25/g' | awk 'BEGIN{ORS="%0A"} {print}' | head -c 30000; }
+          fails=$(grep -aE "FAIL |×|✗|Unhandled|Error:|ERR_|failed" "$out" | grep -v MaxListeners | head -60 | enc)
+          tail_=$(tail -n 60 "$out" | enc)
+          echo "::error title=Failing test lines::${fails}"
+          echo "::error title=End of the test output::${tail_}"
 
   admin:
     name: Admin console build

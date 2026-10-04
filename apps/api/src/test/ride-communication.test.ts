@@ -3,7 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { pool } from '../config/database';
 import { activeCallProvider, webrtcProvider } from '../modules/calls/call-provider';
-import { api } from './helpers';
+import { api, eventually } from './helpers';
 import { arriveAtPickup, auth, rideWorld } from './rides';
 import { login, startTestServer, type Msg } from './wsClient';
 
@@ -60,7 +60,11 @@ describe('notifications for communication go through the one notification system
     await dc.waitFor((m) => m.type === 'availability');
     pc.send({ type: 'call_start', tripId: w.tripId, kind: 'AUDIO' });
     await dc.waitFor((m) => m.type === 'call_state' && m.call.state === 'RINGING');
-    const forDriver = await notes(w.driverId, 'CALL_INCOMING');
+    // The ring reaches an open app first; the durable notification is written just after it.
+    const forDriver = await eventually(
+      () => notes(w.driverId, 'CALL_INCOMING'),
+      (rows) => rows.length > 0,
+    );
     expect(forDriver).toHaveLength(1);
     expect(forDriver[0]?.body).toBe(describeIncomingCall('DRIVER', 'AUDIO'));
     expect(forDriver[0]?.body).toBe('Incoming audio call from the passenger.');

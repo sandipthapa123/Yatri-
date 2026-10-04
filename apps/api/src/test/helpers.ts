@@ -240,3 +240,22 @@ export async function createVerifiedDriver(): Promise<{
   if (verify.status !== 200) throw new Error(`verify failed: ${JSON.stringify(verify.body)}`);
   return { driver, adminToken };
 }
+
+/**
+ * Wait for something the system does just after it answers (a notification written after the realtime message that
+ * announced it, for example): read it again until `done` says so, for up to `timeoutMs`. Returns the last value read, so
+ * the test's own assertions explain any failure.
+ */
+export async function eventually<T>(
+  read: () => Promise<T>,
+  done: (value: T) => boolean,
+  timeoutMs = 5000,
+): Promise<T> {
+  const deadline = Date.now() + timeoutMs;
+  let value = await read();
+  while (!done(value) && Date.now() < deadline) {
+    await new Promise((r) => setTimeout(r, 50));
+    value = await read();
+  }
+  return value;
+}

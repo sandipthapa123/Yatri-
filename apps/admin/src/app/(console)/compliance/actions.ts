@@ -9,10 +9,10 @@ import {
 import { revalidatePath } from 'next/cache';
 
 import {
-  ApiError,
   actOnDataRequestById,
   publishPolicy,
   updateRetentionRule,
+  actionFailure,
 } from '../../../lib/apiClient';
 import { requireAdminAccessToken } from '../../../lib/session';
 
@@ -21,9 +21,6 @@ export interface ComplianceActionState {
   done?: string;
 }
 
-const fail = (err: unknown): ComplianceActionState => ({
-  error: err instanceof ApiError ? err.message : 'Something went wrong. Please try again.',
-});
 const field = (fd: FormData, name: string) => {
   const v = fd.get(name);
   return typeof v === 'string' ? v.trim() : '';
@@ -49,7 +46,7 @@ export async function publishPolicyAction(
       ...(url ? { contentUrl: url } : {}),
     });
   } catch (e) {
-    return fail(e);
+    return actionFailure(e);
   }
   revalidatePath('/compliance');
   return { done: `Version ${version} is published. People will be asked to accept it.` };
@@ -67,7 +64,7 @@ export async function dataRequestAction(
   try {
     await actOnDataRequestById(token, id, { to, ...(note ? { note } : {}) });
   } catch (e) {
-    return fail(e);
+    return actionFailure(e);
   }
   revalidatePath('/compliance');
   return {
@@ -92,7 +89,7 @@ export async function retentionAction(
   try {
     await updateRetentionRule(token, type, { retainDays: Number(days), reason });
   } catch (e) {
-    return fail(e);
+    return actionFailure(e);
   }
   revalidatePath('/compliance');
   return { done: 'Retention period changed. The next hourly clean-up applies it.' };

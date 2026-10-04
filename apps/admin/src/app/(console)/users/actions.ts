@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 
-import { ApiError, setAdminUserStatus } from '../../../lib/apiClient';
+import { setAdminUserStatus, actionFailure } from '../../../lib/apiClient';
 import { requireAdminAccessToken } from '../../../lib/session';
 import type { ConfirmState } from '../ui/ConfirmAction';
 
@@ -25,7 +25,7 @@ export async function userStatusAction(
   try {
     await setAdminUserStatus(token, id, to, reason);
   } catch (e) {
-    return { error: e instanceof ApiError ? e.message : 'Something went wrong. Please try again.' };
+    return actionFailure(e);
   }
   revalidatePath(`/users/${id}`);
   revalidatePath('/users');

@@ -8,7 +8,7 @@ import {
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 
-import { ApiError, disabilityActionApi, disabilityDocumentApi } from '../../../lib/apiClient';
+import { disabilityActionApi, disabilityDocumentApi, actionFailure } from '../../../lib/apiClient';
 import { apiOrigin } from '../../../lib/env';
 import { requireAdminAccessToken } from '../../../lib/session';
 
@@ -47,7 +47,7 @@ export async function disabilityDecisionAction(
       ...(fd.get('acknowledgeDuplicate') === 'on' ? { acknowledgeDuplicate: true } : {}),
     });
   } catch (e) {
-    return { error: e instanceof ApiError ? e.message : 'Something went wrong. Please try again.' };
+    return actionFailure(e);
   }
   revalidatePath(`/disability/${id}`);
   revalidatePath('/disability');

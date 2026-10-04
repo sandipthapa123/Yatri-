@@ -146,3 +146,5 @@ Yatri-specific reminders:
 - In the apps, a label-and-value line is `Fact` and a form's error line is `Problem` (`@yatri/mobile-ui`; `Fact` follows the
   person's text size). In the admin site, an action's result is `Feedback` (`ui/FormParts.tsx`) and a list of facts is `Facts`
   (`ui/Facts.tsx`). A screen or package never defines its own.
+- An admin action that failed answers `actionFailure(err)` (`lib/apiClient.ts`): the API's own words, or `SOMETHING_WENT_WRONG`. No
+  action file writes its own `fail` or fallback sentence.

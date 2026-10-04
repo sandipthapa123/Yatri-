@@ -4,13 +4,13 @@ import { RISK_EVENT_STATUSES, type RiskEventStatus } from '@yatri/types';
 import { revalidatePath } from 'next/cache';
 
 import {
-  ApiError,
   addRiskNote,
   liftRiskRestriction,
   restrictRiskUser,
   reviewRiskEvent,
   runRiskSweepApi,
   saveRiskRule,
+  actionFailure,
 } from '../../../lib/apiClient';
 import { requireAdminAccessToken } from '../../../lib/session';
 
@@ -37,7 +37,7 @@ async function run(
   try {
     await work(token);
   } catch (e) {
-    return { error: e instanceof ApiError ? e.message : 'Something went wrong. Please try again.' };
+    return actionFailure(e);
   }
   for (const p of paths) revalidatePath(p);
   return { done };
@@ -115,6 +115,6 @@ export async function sweepAction(_p: RiskActionState): Promise<RiskActionState>
       done: `Checked. ${r.eventsCreated} new signal${r.eventsCreated === 1 ? '' : 's'}, ${r.restricted} automatic restriction${r.restricted === 1 ? '' : 's'}, ${r.lifted} restriction${r.lifted === 1 ? '' : 's'} ended.`,
     };
   } catch (e) {
-    return { error: e instanceof ApiError ? e.message : 'Something went wrong. Please try again.' };
+    return actionFailure(e);
   }
 }

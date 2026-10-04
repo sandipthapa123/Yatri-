@@ -13,6 +13,7 @@ import {
   rejectVehicle,
   suspendDriver,
   verifyDriver,
+  SOMETHING_WENT_WRONG,
 } from '../../../../lib/apiClient';
 import { apiOrigin } from '../../../../lib/env';
 import { requireAdminAccessToken } from '../../../../lib/session';
@@ -30,7 +31,7 @@ function friendlyError(err: unknown): ActionState {
       missingRequirements: Array.isArray(missing) ? (missing as string[]) : undefined,
     };
   }
-  return { error: 'Something went wrong. Please try again.' };
+  return { error: SOMETHING_WENT_WRONG };
 }
 
 function requireField(formData: FormData, name: string): string {

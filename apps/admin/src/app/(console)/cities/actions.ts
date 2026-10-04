@@ -10,7 +10,7 @@ import {
 } from '@yatri/types';
 import { revalidatePath } from 'next/cache';
 
-import { ApiError, createCityApi, putCityApi } from '../../../lib/apiClient';
+import { createCityApi, putCityApi, actionFailure } from '../../../lib/apiClient';
 import { requireAdminAccessToken } from '../../../lib/session';
 
 export interface CityActionState {
@@ -39,7 +39,7 @@ async function run<T>(
   try {
     await work(token);
   } catch (e) {
-    return { error: e instanceof ApiError ? e.message : 'Something went wrong. Please try again.' };
+    return actionFailure(e);
   }
   for (const p of paths) revalidatePath(p);
   return { done };
@@ -78,7 +78,7 @@ export async function createCityAction(
     revalidatePath('/cities');
     return { done: `${c.name} was added. Give it a service area, then open it.`, createdId: c.id };
   } catch (e) {
-    return { error: e instanceof ApiError ? e.message : 'Something went wrong. Please try again.' };
+    return actionFailure(e);
   }
 }
 

@@ -4,11 +4,11 @@ import { settingDef } from '@yatri/types';
 import { revalidatePath } from 'next/cache';
 
 import {
-  ApiError,
   updatePlatformSetting,
   updateSupportCategory,
   updateSupportPriority,
   updateVehicleCategory,
+  actionFailure,
 } from '../../../lib/apiClient';
 import { requireAdminAccessToken } from '../../../lib/session';
 import type { ConfirmState } from '../ui/ConfirmAction';
@@ -17,9 +17,6 @@ const field = (fd: FormData, name: string) => {
   const v = fd.get(name);
   return typeof v === 'string' ? v.trim() : '';
 };
-const fail = (e: unknown): ConfirmState => ({
-  error: e instanceof ApiError ? e.message : 'Something went wrong. Please try again.',
-});
 
 /**
  * Change one platform setting (or put it back to the default). The value is checked by the API with
@@ -44,7 +41,7 @@ export async function updateSettingAction(
     await updatePlatformSetting(token, key, { value, expectedVersion, reason });
   } catch (e) {
     revalidatePath('/settings');
-    return fail(e);
+    return actionFailure(e);
   }
   revalidatePath('/settings');
   return { done: reset ? `${def.label} is back to its default.` : `${def.label} changed.` };
@@ -87,7 +84,7 @@ export async function updateCategoryAction(
       reason,
     });
   } catch (e) {
-    return fail(e);
+    return actionFailure(e);
   }
   revalidatePath('/settings');
   return { done: 'Vehicle category saved. Rides already requested keep the fare they were given.' };
@@ -116,7 +113,7 @@ export async function updateSupportCategoryAction(
       reason,
     });
   } catch (e) {
-    return fail(e);
+    return actionFailure(e);
   }
   revalidatePath('/settings');
   return { done: 'Category saved.' };
@@ -141,7 +138,7 @@ export async function updateSupportPriorityAction(
       reason,
     });
   } catch (e) {
-    return fail(e);
+    return actionFailure(e);
   }
   revalidatePath('/settings');
   return { done: 'Priority saved.' };

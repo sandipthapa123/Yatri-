@@ -3,7 +3,7 @@
 import { PAYOUT_STATUSES, type PayoutStatus, formatNpr } from '@yatri/types';
 import { revalidatePath } from 'next/cache';
 
-import { ApiError, payoutAccountApi, payoutActionApi, payoutPrepareApi } from '../../../lib/apiClient';
+import { payoutAccountApi, payoutActionApi, payoutPrepareApi, actionFailure } from '../../../lib/apiClient';
 import { requireAdminAccessToken } from '../../../lib/session';
 
 export interface PayoutActionState {
@@ -17,7 +17,7 @@ const text = (fd: FormData, name: string) => {
   const v = fd.get(name);
   return typeof v === 'string' ? v.trim() : '';
 };
-const fail = (e: unknown): PayoutActionState => ({ error: e instanceof ApiError ? e.message : 'Something went wrong. Please try again.' });
+const fail = (e: unknown): PayoutActionState => (actionFailure(e));
 
 /** Prepare payouts for everyone who has enough ready, or for one driver. The API refuses a ride already in a payout. */
 export async function preparePayoutsAction(_prev: PayoutActionState, fd: FormData): Promise<PayoutActionState> {

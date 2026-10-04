@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 
-import { ApiError, adminCancelTrip } from '../../../lib/apiClient';
+import { adminCancelTrip, actionFailure } from '../../../lib/apiClient';
 import { requireAdminAccessToken } from '../../../lib/session';
 
 export interface RideActionState {
@@ -10,9 +10,6 @@ export interface RideActionState {
   done?: string;
 }
 
-const fail = (err: unknown): RideActionState => ({
-  error: err instanceof ApiError ? err.message : 'Something went wrong. Please try again.',
-});
 
 const field = (fd: FormData, name: string) => {
   const v = fd.get(name);
@@ -31,7 +28,7 @@ export async function cancelRideAction(
   try {
     await adminCancelTrip(token, tripId, reason);
   } catch (e) {
-    return fail(e);
+    return actionFailure(e);
   }
   revalidatePath(`/rides/${tripId}`);
   revalidatePath('/rides');

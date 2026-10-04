@@ -16,7 +16,6 @@ import {
 } from '@yatri/types';
 
 import {
-  ApiError,
   actOnRefundRequest,
   addTicketNote,
   assignTicket,
@@ -26,6 +25,7 @@ import {
   replyToTicket,
   setTicketPriority,
   setTicketStatus,
+  actionFailure,
 } from '../../../lib/apiClient';
 import { apiOrigin } from '../../../lib/env';
 import { requireAdminAccessToken } from '../../../lib/session';
@@ -35,9 +35,6 @@ export interface SupportActionState {
   done?: string;
 }
 
-const fail = (err: unknown): SupportActionState => ({
-  error: err instanceof ApiError ? err.message : 'Something went wrong. Please try again.',
-});
 const field = (fd: FormData, name: string) => {
   const v = fd.get(name);
   return typeof v === 'string' ? v.trim() : '';
@@ -77,7 +74,7 @@ export async function replyAction(
       });
     }
   } catch (e) {
-    return fail(e);
+    return actionFailure(e);
   }
   refresh(id);
   return { done: 'Reply sent. The person has been told.' };
@@ -94,7 +91,7 @@ export async function noteAction(
   try {
     await addTicketNote(token, id, { body });
   } catch (e) {
-    return fail(e);
+    return actionFailure(e);
   }
   refresh(id);
   return { done: 'Note added. The person cannot see it.' };
@@ -122,7 +119,7 @@ export async function statusAction(
         : {}),
     });
   } catch (e) {
-    return fail(e);
+    return actionFailure(e);
   }
   refresh(id);
   return { done: 'Status updated. The person has been told.' };
@@ -138,7 +135,7 @@ export async function assignAction(
   try {
     await assignTicket(token, id, { adminId: adminId || null });
   } catch (e) {
-    return fail(e);
+    return actionFailure(e);
   }
   refresh(id);
   return { done: adminId ? 'Assigned.' : 'Unassigned.' };
@@ -156,7 +153,7 @@ export async function priorityAction(
   try {
     await setTicketPriority(token, id, { priorityCode, reason });
   } catch (e) {
-    return fail(e);
+    return actionFailure(e);
   }
   refresh(id);
   return { done: 'Priority changed.' };
@@ -182,7 +179,7 @@ export async function raiseRefundAction(
       ...(note ? { note } : {}),
     });
   } catch (e) {
-    return fail(e);
+    return actionFailure(e);
   }
   refresh(id);
   return { done: 'Refund raised. Someone else must review and approve it.' };
@@ -209,7 +206,7 @@ export async function refundAction(
       ...(field(formData, 'failedReason') ? { failedReason: field(formData, 'failedReason') } : {}),
     });
   } catch (e) {
-    return fail(e);
+    return actionFailure(e);
   }
   refresh(ticketId);
   return { done: 'Refund updated. The person has been told where that applies.' };

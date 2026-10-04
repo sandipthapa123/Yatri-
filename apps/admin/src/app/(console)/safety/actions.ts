@@ -4,10 +4,10 @@ import { INCIDENT_STATES, type IncidentStatus } from '@yatri/types';
 import { revalidatePath } from 'next/cache';
 
 import {
-  ApiError,
   addAdminIncidentNote,
   moveAdminSos,
   setAdminIncidentStatus,
+  actionFailure,
 } from '../../../lib/apiClient';
 import { requireAdminAccessToken } from '../../../lib/session';
 
@@ -16,9 +16,6 @@ export interface SafetyActionState {
   done?: string;
 }
 
-const fail = (err: unknown): SafetyActionState => ({
-  error: err instanceof ApiError ? err.message : 'Something went wrong. Please try again.',
-});
 
 const field = (fd: FormData, name: string) => {
   const v = fd.get(name);
@@ -44,7 +41,7 @@ export async function moveSosAction(
   try {
     await moveAdminSos(token, id, to, note || undefined);
   } catch (e) {
-    return fail(e);
+    return actionFailure(e);
   }
   revalidatePath(`/safety/sos/${id}`);
   revalidatePath('/safety');
@@ -68,7 +65,7 @@ export async function incidentStatusAction(
   try {
     await setAdminIncidentStatus(token, id, status, note || undefined);
   } catch (e) {
-    return fail(e);
+    return actionFailure(e);
   }
   revalidatePath(`/safety/incidents/${id}`);
   revalidatePath('/safety');
@@ -88,7 +85,7 @@ export async function incidentNoteAction(
   try {
     await addAdminIncidentNote(token, id, kind, body);
   } catch (e) {
-    return fail(e);
+    return actionFailure(e);
   }
   revalidatePath(`/safety/incidents/${id}`);
   return { done: kind === 'ACTION' ? 'Action recorded.' : 'Note added.' };

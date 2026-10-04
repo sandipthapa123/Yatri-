@@ -4,7 +4,7 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
 
-import { adminLogin, ApiError } from '../../lib/apiClient';
+import { adminLogin, ApiError, SOMETHING_WENT_WRONG } from '../../lib/apiClient';
 import {
   ACCESS_COOKIE,
   ACCESS_COOKIE_MAX_AGE_SECONDS,
@@ -31,7 +31,7 @@ function friendlyLoginError(err: unknown): string {
     if (err.code === 'RATE_LIMITED') return 'Too many attempts. Please wait and try again.';
     if (err.code === 'VALIDATION_ERROR') return 'Enter a valid email and password.';
   }
-  return 'Something went wrong. Please try again.';
+  return SOMETHING_WENT_WRONG;
 }
 
 export async function loginAction(

@@ -4,11 +4,11 @@ import { ORG_STATUSES, isStatementPeriod, type OrgStatus } from '@yatri/types';
 import { revalidatePath } from 'next/cache';
 
 import {
-  ApiError,
   issueStatementsApi,
   markStatementPaidApi,
   moveOrganizationApi,
   voidStatementApi,
+  actionFailure,
 } from '../../../lib/apiClient';
 import { requireAdminAccessToken } from '../../../lib/session';
 
@@ -35,7 +35,7 @@ async function run(
   try {
     await work(token);
   } catch (e) {
-    return { error: e instanceof ApiError ? e.message : 'Something went wrong. Please try again.' };
+    return actionFailure(e);
   }
   for (const p of paths) revalidatePath(p);
   return { done };
@@ -65,7 +65,7 @@ export async function issueAction(_p: OrgActionState, fd: FormData): Promise<Org
       done: `Statements for ${r.periodKey}: ${r.issued} issued, ${r.skipped} already done or nothing to bill.`,
     };
   } catch (e) {
-    return { error: e instanceof ApiError ? e.message : 'Something went wrong. Please try again.' };
+    return actionFailure(e);
   }
 }
 

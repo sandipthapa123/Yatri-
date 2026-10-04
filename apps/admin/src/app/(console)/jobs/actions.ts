@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 
-import { ApiError, runJobApi } from '../../../lib/apiClient';
+import { runJobApi, actionFailure } from '../../../lib/apiClient';
 import { requireAdminAccessToken } from '../../../lib/session';
 
 export interface JobActionState {
@@ -20,6 +20,6 @@ export async function runJobAction(_p: JobActionState, fd: FormData): Promise<Jo
     revalidatePath('/jobs');
     return r.status === 'FAILED' ? { error: r.message } : { done: r.message };
   } catch (e) {
-    return { error: e instanceof ApiError ? e.message : 'Something went wrong. Please try again.' };
+    return actionFailure(e);
   }
 }

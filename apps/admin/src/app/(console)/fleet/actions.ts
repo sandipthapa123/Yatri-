@@ -26,6 +26,8 @@ import {
   setVehicleLifecycle,
   startMaintenanceApi,
   unassignVehicleApi,
+  SOMETHING_WENT_WRONG,
+  actionFailure,
 } from '../../../lib/apiClient';
 import { requireAdminAccessToken } from '../../../lib/session';
 
@@ -60,7 +62,7 @@ async function run(
         error: Array.isArray(problems) ? (problems as string[]).join(' ') : e.message,
       };
     }
-    return { error: 'Something went wrong. Please try again.' };
+    return { error: SOMETHING_WENT_WRONG };
   }
   for (const p of paths) revalidatePath(p);
   return { done };
@@ -265,6 +267,6 @@ export async function checkNowAction(_p: FleetActionState): Promise<FleetActionS
       done: `Checked. ${r.reminders} reminder${r.reminders === 1 ? '' : 's'} sent, ${r.takenOffline} driver${r.takenOffline === 1 ? '' : 's'} taken offline, ${r.lifted} restriction${r.lifted === 1 ? '' : 's'} lifted.`,
     };
   } catch (e) {
-    return { error: e instanceof ApiError ? e.message : 'Something went wrong. Please try again.' };
+    return actionFailure(e);
   }
 }

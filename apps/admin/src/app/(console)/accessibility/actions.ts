@@ -3,7 +3,7 @@
 import type { AdminAttributeBody } from '@yatri/types';
 import { revalidatePath } from 'next/cache';
 
-import { ApiError, decideCapabilityApi, saveAttributeApi } from '../../../lib/apiClient';
+import { decideCapabilityApi, saveAttributeApi, actionFailure } from '../../../lib/apiClient';
 import { requireAdminAccessToken } from '../../../lib/session';
 
 export interface AccessibilityActionState {
@@ -15,9 +15,6 @@ const field = (fd: FormData, name: string) => {
   const v = fd.get(name);
   return typeof v === 'string' ? v.trim() : '';
 };
-const fail = (e: unknown): AccessibilityActionState => ({
-  error: e instanceof ApiError ? e.message : 'Something went wrong. Please try again.',
-});
 
 /** Approve or reject a driver's claim. The API checks the permission, keeps the reason and tells the driver. */
 export async function decideAction(
@@ -42,7 +39,7 @@ export async function decideAction(
           : 'Not approved. The driver has been told.',
     };
   } catch (e) {
-    return fail(e);
+    return actionFailure(e);
   }
 }
 
@@ -68,6 +65,6 @@ export async function saveAttributeAction(
     revalidatePath('/accessibility');
     return { done: code ? 'Saved.' : 'Feature added.' };
   } catch (e) {
-    return fail(e);
+    return actionFailure(e);
   }
 }

@@ -14,11 +14,11 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 
 import {
-  ApiError,
   adjustRewardsApi,
   campaignStatusApi,
   createCampaignApi,
   updateCampaignApi,
+  actionFailure,
 } from '../../../lib/apiClient';
 import { requireAdminAccessToken } from '../../../lib/session';
 
@@ -53,9 +53,6 @@ const when = (fd: FormData, name: string): string | null => {
   const d = new Date(v);
   return Number.isNaN(d.getTime()) ? null : d.toISOString();
 };
-const fail = (e: unknown): CampaignActionState => ({
-  error: e instanceof ApiError ? e.message : 'Something went wrong. Please try again.',
-});
 
 /** Reads the form into the one body shape. The API validates it (the same rules as the form's hints) and decides. */
 function bodyOf(fd: FormData, kind: CampaignKind): AdminCampaignBody {
@@ -124,7 +121,7 @@ export async function createCampaignAction(
   try {
     id = (await createCampaignApi(token, bodyOf(fd, kind))).id;
   } catch (e) {
-    return fail(e);
+    return actionFailure(e);
   }
   revalidatePath('/campaigns');
   redirect(`/campaigns/${id}`);
@@ -140,7 +137,7 @@ export async function updateCampaignAction(
   try {
     await updateCampaignApi(token, id, bodyOf(fd, kind));
   } catch (e) {
-    return fail(e);
+    return actionFailure(e);
   }
   revalidatePath(`/campaigns/${id}`);
   return { done: 'Saved.' };
@@ -160,7 +157,7 @@ export async function campaignStatusAction(
       reason: text(fd, 'reason'),
     });
   } catch (e) {
-    return fail(e);
+    return actionFailure(e);
   }
   revalidatePath(`/campaigns/${id}`);
   revalidatePath('/campaigns');
@@ -188,6 +185,6 @@ export async function adjustRewardsAction(
     revalidatePath('/campaigns/rewards');
     return { done: `Done. The rider now has ${r.balance} points.` };
   } catch (e) {
-    return fail(e);
+    return actionFailure(e);
   }
 }

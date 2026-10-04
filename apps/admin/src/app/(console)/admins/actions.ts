@@ -3,7 +3,7 @@
 import { ADMIN_PERMISSIONS, type AdminPermission } from '@yatri/types';
 import { revalidatePath } from 'next/cache';
 
-import { ApiError, setAdminPermissions } from '../../../lib/apiClient';
+import { setAdminPermissions, actionFailure } from '../../../lib/apiClient';
 import { requireAdminAccessToken } from '../../../lib/session';
 import type { ConfirmState } from '../ui/ConfirmAction';
 
@@ -23,7 +23,7 @@ export async function setPermissionsAction(
   try {
     await setAdminPermissions(token, id, { permissions, reason });
   } catch (e) {
-    return { error: e instanceof ApiError ? e.message : 'Something went wrong. Please try again.' };
+    return actionFailure(e);
   }
   revalidatePath('/admins');
   return { done: 'Permissions saved.' };

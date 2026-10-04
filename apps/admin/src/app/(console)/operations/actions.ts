@@ -15,7 +15,7 @@ import {
 } from '@yatri/types';
 import { revalidatePath } from 'next/cache';
 
-import { ApiError, saveIncentiveRule, savePricingRule, saveZone } from '../../../lib/apiClient';
+import { saveIncentiveRule, savePricingRule, saveZone, actionFailure } from '../../../lib/apiClient';
 import { requireAdminAccessToken } from '../../../lib/session';
 
 export interface OpsActionState {
@@ -23,9 +23,6 @@ export interface OpsActionState {
   done?: string;
 }
 
-const fail = (err: unknown): OpsActionState => ({
-  error: err instanceof ApiError ? err.message : 'Something went wrong. Please try again.',
-});
 const field = (fd: FormData, name: string) => {
   const v = fd.get(name);
   return typeof v === 'string' ? v.trim() : '';
@@ -77,7 +74,7 @@ export async function zoneAction(_prev: OpsActionState, fd: FormData): Promise<O
   try {
     await saveZone(token, orNull(field(fd, 'id')), body);
   } catch (e) {
-    return fail(e);
+    return actionFailure(e);
   }
   revalidatePath('/operations/zones');
   revalidatePath('/operations');
@@ -105,7 +102,7 @@ export async function pricingRuleAction(
   try {
     await savePricingRule(token, orNull(field(fd, 'id')), body);
   } catch (e) {
-    return fail(e);
+    return actionFailure(e);
   }
   revalidatePath('/operations/pricing');
   revalidatePath('/operations');
@@ -135,7 +132,7 @@ export async function incentiveAction(
   try {
     await saveIncentiveRule(token, orNull(field(fd, 'id')), body);
   } catch (e) {
-    return fail(e);
+    return actionFailure(e);
   }
   revalidatePath('/operations/incentives');
   return { done: 'Bonus rule saved.' };

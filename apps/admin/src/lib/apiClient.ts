@@ -144,6 +144,19 @@ import { env } from './env';
 import { ApiError } from '@yatri/shared';
 export { ApiError };
 
+/** What the admin site says when something failed for a reason the API did not explain. One sentence, everywhere. */
+export const SOMETHING_WENT_WRONG = 'Something went wrong. Please try again.';
+
+/** The words for a failed call: the API's own message, or the one fallback sentence. */
+export function errorMessage(err: unknown): string {
+  return err instanceof ApiError ? err.message : SOMETHING_WENT_WRONG;
+}
+
+/** A form action's failed state, for any action state that carries `error`. */
+export function actionFailure(err: unknown): { error: string } {
+  return { error: errorMessage(err) };
+}
+
 /** How long the admin site waits for the API before giving up, so a stuck API shows an error instead of a page that never loads. */
 export const API_TIMEOUT_MS = 15_000;
 

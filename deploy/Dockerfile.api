@@ -37,7 +37,10 @@ RUN pnpm install --frozen-lockfile --prod --filter @yatri/api...
 
 # ---- runtime
 FROM node:24-alpine AS runtime
-ENV NODE_ENV=production
+# The release this image is (the Release workflow passes its tag), so /health and the logs say which release is running.
+# An APP_VERSION set in the environment at run time still wins.
+ARG APP_VERSION
+ENV NODE_ENV=production APP_VERSION=${APP_VERSION}
 WORKDIR /repo
 COPY --from=prod-deps /repo/node_modules ./node_modules
 COPY --from=prod-deps /repo/packages/types ./packages/types

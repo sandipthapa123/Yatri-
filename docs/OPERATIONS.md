@@ -123,7 +123,7 @@ checksum first).
    `SHUTDOWN_TIMEOUT_MS`. Connected apps reconnect and resynchronise from server state on their own.
 6. Roll out the admin console.
 7. Watch section 6 for 15 minutes: error rate, readiness, and one real ride end to end on staging first.
-8. Set `APP_VERSION` to the tag so logs and `/health` say which release each instance is.
+8. `APP_VERSION` is set from the release tag inside the API image, so logs and `/health` say which release each instance is. Set it in the environment only to override that.
 9. Mobile apps release separately through their stores; an API release must stay compatible with the
    previous app version for as long as that version is in use (add fields, do not remove or rename).
 

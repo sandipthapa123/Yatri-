@@ -125,10 +125,10 @@ only as long as a ride needs it; nothing secret or personal is written to a log 
 `pnpm audit --prod --audit-level=high` runs in CI. Two high advisories are acknowledged in the root `package.json`
 (`pnpm.auditConfig.ignoreGhsas`) because they have no fixed version and do not reach anything people use:
 
-| Advisory | Package | Where it is | Why it is acknowledged |
-|---|---|---|---|
-| GHSA-86w9-cpqp-85rv | node-forge (signature check) | Expo's command-line tool (development certificates) | Build machine only; not in the API, the admin site or the app bundles; no fix released |
-| GHSA-vfj7-8cjw-p6xm | braces (deeply nested patterns) | The bundler's file matching | Build machine only; same; no fix released |
+| Advisory            | Package                         | Where it is                                         | Why it is acknowledged                                                                 |
+| ------------------- | ------------------------------- | --------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| GHSA-86w9-cpqp-85rv | node-forge (signature check)    | Expo's command-line tool (development certificates) | Build machine only; not in the API, the admin site or the app bundles; no fix released |
+| GHSA-vfj7-8cjw-p6xm | braces (deeply nested patterns) | The bundler's file matching                         | Build machine only; same; no fix released                                              |
 
 The audit still lists them ("2 ignored"), so they stay visible. Remove an entry as soon as a fixed version exists (after an Expo
 upgrade, run `pnpm audit --prod` and drop any advisory that no longer appears). Never acknowledge an advisory that reaches the API,

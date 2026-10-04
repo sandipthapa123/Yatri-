@@ -14,10 +14,36 @@ permissions:
   contents: read
 
 jobs:
-  verify:
-    name: Lint, types, tests, builds
+  # Three jobs that run side by side, so a push waits only as long as the slowest of them (the tests) instead of the sum.
+  checks:
+    name: Formatting, lint, types, API build, audit
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'pnpm'
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Formatting
+        run: pnpm format:check
+      - name: Lint
+        run: pnpm lint
+      - name: Typecheck
+        run: pnpm typecheck
+      - name: Build shared package and API (catches runtime-import breakage)
+        run: pnpm --filter @yatri/types build && pnpm --filter @yatri/api build
+      - name: Dependency audit (runtime dependencies, high severity and above)
+        run: pnpm audit --prod --audit-level=high
+
+  tests:
+    name: Tests (API, realtime, mobile packages)
+    runs-on: ubuntu-latest
+    # The whole API suite is about 1 000 tests against a real database; give it room so a slow runner is not a failure.
+    timeout-minutes: 45
     services:
       postgres:
         image: postgres:16-alpine
@@ -38,46 +64,40 @@ jobs:
           --health-retries 20
     steps:
       - uses: actions/checkout@v4
-
       - uses: pnpm/action-setup@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version-file: '.nvmrc'
           cache: 'pnpm'
-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-
-      - name: Formatting
-        run: pnpm format:check
-
-      - name: Lint
-        run: pnpm lint
-
-      - name: Typecheck
-        run: pnpm typecheck
-
-      - name: Build shared package and API (catches runtime-import breakage)
-        run: pnpm --filter @yatri/types build && pnpm --filter @yatri/api build
-
       - name: Prepare the test database
         working-directory: apps/api
         run: |
           cp .env.test.example .env.test
           pnpm migrate:test:up
-
       - name: Tests (API, realtime, mobile packages)
         run: pnpm -r --if-present test
 
+  admin:
+    name: Admin console build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'pnpm'
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
       - name: Build the admin console
         env:
           API_BASE_URL: http://localhost:4000/api/v1
           JWT_ACCESS_SECRET: ci-only-signing-value-not-a-secret-0000000000
-        run: pnpm --filter @yatri/admin build
-
-      - name: Dependency audit (runtime dependencies, high severity and above)
-        run: pnpm audit --prod --audit-level=high
+        # The admin console uses @yatri/types at run time from its compiled dist/, so build it first.
+        run: pnpm --filter @yatri/types build && pnpm --filter @yatri/admin build
 
   mobile-bundles:
     name: Mobile bundles (Android export)

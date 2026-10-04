@@ -1042,6 +1042,30 @@ describe('platform settings', () => {
     expect((await setting(a.token, 'WAITING_PER_MINUTE_NPR')).version).toBe(1);
   });
 
+  it('applies exactly one of two simultaneous first edits of a setting, every time', async () => {
+    const m = await admin(['SETTINGS_MANAGE']);
+    for (let round = 0; round < 15; round++) {
+      // a genuine first edit: no row yet, so there is nothing to lock (the case that let both edits through)
+      await pool.query("DELETE FROM platform_settings WHERE key = 'WAITING_PER_MINUTE_NPR'");
+      const both = await Promise.all(
+        [6, 8].map((value) =>
+          put(m.token, 'WAITING_PER_MINUTE_NPR', {
+            value,
+            expectedVersion: 0,
+            reason: `round ${round}`,
+          }),
+        ),
+      );
+      expect(both.map((r) => r.status).sort(), `round ${round}`).toEqual([200, 409]);
+      const row = (
+        await pool.query(
+          "SELECT version FROM platform_settings WHERE key = 'WAITING_PER_MINUTE_NPR'",
+        )
+      ).rows[0];
+      expect(row?.version, `round ${round}`).toBe(1);
+    }
+  });
+
   it('changes the cancellation fee and waiting rules where they are applied', async () => {
     const m = await admin(['SETTINGS_MANAGE']);
     await put(m.token, 'CANCEL_FEE_NPR', {

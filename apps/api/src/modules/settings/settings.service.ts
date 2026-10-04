@@ -154,14 +154,30 @@ export async function updateSetting(
       ).withDetails({ currentVersion });
     }
     before = row && row.value !== null ? row.value : settingDefault(def.key as SettingKey);
-    await client.query(
+    if (row) {
+      // The row is locked above, so this edit is the only one in flight.
+      await client.query(
+        `UPDATE platform_settings SET value = $2::jsonb, version = version + 1, updated_by = $3, updated_at = now()
+         WHERE key = $1`,
+        [key, JSON.stringify(next), actorId],
+      );
+      return;
+    }
+    // Never edited before: there was no row to lock, so two first edits can both get here. The unique key decides: the
+    // second insert waits for the first, finds its row and inserts nothing, and that edit is refused like any stale one.
+    const created = await client.query(
       `INSERT INTO platform_settings (key, value, version, updated_by, updated_at)
        VALUES ($1, $2::jsonb, 1, $3, now())
-       ON CONFLICT (key) DO UPDATE
-         SET value = EXCLUDED.value, version = platform_settings.version + 1,
-             updated_by = EXCLUDED.updated_by, updated_at = now()`,
+       ON CONFLICT (key) DO NOTHING`,
       [key, JSON.stringify(next), actorId],
     );
+    if (!created.rowCount) {
+      throw new HttpError(
+        409,
+        'SETTING_CHANGED',
+        'Someone else changed this setting while you were editing. Reload to see the new value.',
+      ).withDetails({ currentVersion: 1 });
+    }
   });
 
   const after = next ?? settingDefault(def.key as SettingKey);

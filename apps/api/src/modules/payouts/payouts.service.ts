@@ -44,7 +44,16 @@ import { settingNumber } from '../settings/settings.service';
  * Yatri has no payout API to a bank or wallet: staff send the money and record the reference. That is stated, not hidden.
  */
 const PURPOSE = 'payout-account';
-const secret = () => env.STORAGE_SIGNING_SECRET;
+const secret = () => env.FIELD_ENCRYPTION_SECRET;
+/** Accounts saved before payout details had their own secret were sealed with the link-signing secret; they stay readable. */
+const LEGACY_SECRET = () => env.STORAGE_SIGNING_SECRET;
+function openAccount(sealed: string): string {
+  try {
+    return decryptField(sealed, secret(), PURPOSE);
+  } catch {
+    return decryptField(sealed, LEGACY_SECRET(), PURPOSE);
+  }
+}
 const ACTIVE = sqlIn(ACTIVE_REFUND_STATES);
 
 const rules = () => ({
@@ -373,5 +382,5 @@ export async function revealAccount(adminId: string, payoutId: string): Promise<
   const p = r.rows[0];
   if (!p) throw new HttpError(404, 'NOT_FOUND', 'Payout not found.');
   await recordAudit({ actorId: adminId, actorRole: 'ADMIN', action: 'PAYOUT_ACCOUNT_VIEWED', subjectType: 'driver_payout', subjectIds: [payoutId], detail: {} });
-  return { kind: p.account_kind, kindLabel: PAYOUT_ACCOUNT_LABELS[p.account_kind].label, holder: p.account_holder, number: decryptField(p.account_cipher, secret(), PURPOSE) };
+  return { kind: p.account_kind, kindLabel: PAYOUT_ACCOUNT_LABELS[p.account_kind].label, holder: p.account_holder, number: openAccount(p.account_cipher) };
 }

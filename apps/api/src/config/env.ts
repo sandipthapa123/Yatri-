@@ -124,6 +124,15 @@ const envSchema = z
         (val) => !/^(dev|test|change[-_]?me|secret)/i.test(val),
         'STORAGE_SIGNING_SECRET looks like a placeholder value',
       ),
+    // Encrypts the few stored values Yatri must read back (a payout account number). Its own secret, so rotating the
+    // link-signing secret never makes them unreadable, and one leaked secret never opens both.
+    FIELD_ENCRYPTION_SECRET: z
+      .string()
+      .min(32, 'FIELD_ENCRYPTION_SECRET must be at least 32 characters')
+      .refine(
+        (val) => !/^(dev|test|change[-_]?me|secret)/i.test(val),
+        'FIELD_ENCRYPTION_SECRET looks like a placeholder value',
+      ),
     STORAGE_SIGNED_URL_TTL_SECONDS: z.coerce.number().int().positive().default(300),
     // --- Location / maps ---
     // Provider-specific code lives in modules/location/providers; the rest
@@ -432,6 +441,15 @@ const envSchema = z
         issue(
           'STORAGE_SIGNING_SECRET',
           'STORAGE_SIGNING_SECRET must differ from JWT_ACCESS_SECRET (one leak must not open both)',
+        );
+      }
+      if (
+        data.FIELD_ENCRYPTION_SECRET === data.JWT_ACCESS_SECRET ||
+        data.FIELD_ENCRYPTION_SECRET === data.STORAGE_SIGNING_SECRET
+      ) {
+        issue(
+          'FIELD_ENCRYPTION_SECRET',
+          'FIELD_ENCRYPTION_SECRET must differ from JWT_ACCESS_SECRET and STORAGE_SIGNING_SECRET',
         );
       }
     }

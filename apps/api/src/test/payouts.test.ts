@@ -1,3 +1,4 @@
+import { env } from '../config/env';
 import {
   PAYOUT_STATUSES,
   PAYOUT_TRANSITIONS,
@@ -379,6 +380,24 @@ describe('payouts', () => {
     const reveal = await api.get(`/api/v1/admin/payouts/${id}/account`).set(auth(admin.token));
     expect(reveal.status).toBe(200);
     expect(reveal.body.data).toMatchObject({ kind: 'BANK', holder: 'Ram Bahadur Thapa', number: '012345678901' });
+  });
+
+  it('seals new accounts with their own secret, and still opens one sealed before that secret existed', async () => {
+    const w = await onlineRide();
+    await saveAccount(w.driver.accessToken);
+    const saved = (await pool.query('SELECT account_cipher FROM driver_payout_accounts WHERE driver_id = $1', [w.driverId])).rows[0];
+    expect(decryptField(saved.account_cipher, env.FIELD_ENCRYPTION_SECRET, 'payout-account')).toBe('012345678901');
+    expect(() => decryptField(saved.account_cipher, env.STORAGE_SIGNING_SECRET, 'payout-account')).toThrow();
+    const admin = await payoutStaff();
+    const id = (await prepare(admin.token, w.driverId)).body.data.id as string;
+    // as it was stored before payout details had their own secret
+    await pool.query('UPDATE driver_payouts SET account_cipher = $2 WHERE id = $1', [
+      id,
+      encryptField('012345678901', env.STORAGE_SIGNING_SECRET, 'payout-account'),
+    ]);
+    const reveal = await api.get(`/api/v1/admin/payouts/${id}/account`).set(auth(admin.token));
+    expect(reveal.status).toBe(200);
+    expect(reveal.body.data.number).toBe('012345678901');
   });
 });
 

@@ -58,7 +58,7 @@ yatri/
 
 ## Prerequisites
 
-- Node.js 20+ (see `.nvmrc`)
+- Node.js 24+ (see `.nvmrc`; Node 20 reached end of life in April 2026)
 - [pnpm](https://pnpm.io) 9+ — `corepack enable` will pick up the pinned version automatically
 - PostgreSQL 15+ and Redis 6+ (for `apps/api` — Redis backs OTP rate limiting/cooldowns)
 - For mobile apps: the [Expo Go](https://expo.dev/go) app, or Xcode/Android Studio for a

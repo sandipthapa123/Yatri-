@@ -5,7 +5,7 @@
 # Runtime configuration (API_BASE_URL, JWT_ACCESS_SECRET) comes from the environment when the
 # container starts; nothing secret is baked in. JWT_ACCESS_SECRET must equal the API's.
 
-FROM node:20-alpine AS base
+FROM node:24-alpine AS base
 RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
 WORKDIR /repo
 
@@ -28,7 +28,7 @@ RUN pnpm --filter @yatri/types build && \
     JWT_ACCESS_SECRET=build-time-placeholder-not-used-at-run-time-0000 \
     pnpm --filter @yatri/admin build
 
-FROM node:20-alpine AS runtime
+FROM node:24-alpine AS runtime
 ENV NODE_ENV=production PORT=3000 HOSTNAME=0.0.0.0
 WORKDIR /app
 # Next's standalone output contains only what the server needs, laid out from the repository root.

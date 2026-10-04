@@ -189,3 +189,15 @@ Not settled: run 45 failed its tests with code identical to run 46, which then p
 be named yet; if it fails again, the job summary will show which one.
 
 Lesson recorded: after every push, read the CI result for that commit (the public run page works without signing in).
+
+### The intermittent CI failures, named and fixed
+
+Once failures were raised as public annotations, the two intermittent test failures named themselves:
+
+| Run | Test                                                       | Cause                                                                                                                                                                           | Fix                                                                                                                                         |
+| --- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| 49  | `ride-communication`: notifies the person being called     | Test timing. A call starts over the realtime socket; the ring is sent first and the notification written just after (the right order for an open app). The test read too early. | The test waits for it (`eventually`, a shared helper)                                                                                       |
+| 50  | `admin-ops`: of two simultaneous edits applies exactly one | **A real bug.** A setting never edited before has no row, so `FOR UPDATE` locked nothing; two first edits both passed and the second silently overwrote the first.              | A first edit inserts with `ON CONFLICT DO NOTHING`; the loser gets 409. A test repeats the race 15 times (the old code fails it in round 1) |
+
+Every other test that reads the database right after a realtime message was checked: each one reads data written before the
+message (or after an HTTP answer that waits for the write), so none can race. CI green on runs 46, 48 and 51.

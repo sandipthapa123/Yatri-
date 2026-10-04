@@ -137,3 +137,31 @@ not to riders, drivers or the servers. Re-run the audit after the next Expo upgr
 - The two new migrations roll back and re-apply cleanly.
 - Found while checking the app configurations: neither app has an EAS project id, so push cannot work on any build until one is
   set (now a step in OPERATIONS.md).
+
+## Load and abuse checks (2026-10-04)
+
+The first load test of the API (development server, one machine with under 1 GB free memory, database pool of 10). Bursts of
+simultaneous requests, kept under the per-minute limits so they measure the server, not the limiter.
+
+| Burst | Requests at once | p95 | Result |
+|---|---|---|---|
+| Health check | 300 | 263 ms | all 200 |
+| Profile | 100 | 413 ms | all 200 |
+| Ride history | 100 | 188 ms | all 200 |
+| Fare estimate (zones, demand pricing, offers) | 50 | 972 ms | all 200 |
+| Admin ride list | 60 | 156 ms | all 200 |
+| Admin analytics | 30 | 163 ms | all 200 |
+| Mixed | 120 | 141 ms | all 200 |
+| Realtime: connect, sign in, ping | 100 sockets (5 people x 20 devices) | 347 ms | all answered, API healthy afterwards |
+
+No server errors and no dropped connections; the API log recorded no errors.
+
+Limits under a simultaneous burst (both counters are atomic, so a burst never slips past them):
+
+- **Fare estimates**: 45 at once from one rider, limit 30 a minute: exactly 30 answered, 15 refused with `429 RATE_LIMITED` and
+  `Retry-After: 60`.
+- **Sign-in codes** (each one a paid text): 30 at once to 30 different numbers from one address with 9 of the 20-per-15-minutes left:
+  exactly 9 sent, 21 refused with `Retry-After: 900`.
+
+Not measured: sustained load over minutes, many client addresses, a production-sized database, or a real SMS/route vendor's latency.
+The scripts are not in the repository (they were one-off); the numbers above are the record.

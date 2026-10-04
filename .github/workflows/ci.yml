@@ -136,6 +136,25 @@ jobs:
     name: Container images build
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # A database and Redis for the smoke test below: the built images are run, not only built.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: yatri
+          POSTGRES_PASSWORD: yatri
+          POSTGRES_DB: yatri
+          POSTGRES_INITDB_ARGS: --encoding=UTF8 --locale=C.UTF-8
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U yatri -d yatri" --health-interval 5s
+          --health-timeout 3s --health-retries 20
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 3s
+          --health-retries 20
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
@@ -146,6 +165,8 @@ jobs:
           file: deploy/Dockerfile.api
           target: runtime
           push: false
+          load: true
+          tags: yatri-api:ci
           cache-from: type=gha,scope=api
           cache-to: type=gha,scope=api,mode=max
       - name: API (migration job)
@@ -155,6 +176,8 @@ jobs:
           file: deploy/Dockerfile.api
           target: migrate
           push: false
+          load: true
+          tags: yatri-api-migrate:ci
           cache-from: type=gha,scope=api
       - name: Admin console
         uses: docker/build-push-action@v6
@@ -164,3 +187,26 @@ jobs:
           push: false
           cache-from: type=gha,scope=admin
           cache-to: type=gha,scope=admin,mode=max
+      # Run what was built: the migration image against an empty database, then the API image, which must answer its
+      # readiness check (database and Redis reachable). Catches a file missing from the runtime image, a broken compiled
+      # import or a failing migration, none of which a build alone would show. Development mode, because production
+      # rules require real vendors; the secrets are CI-only values.
+      - name: Smoke test the API images
+        env:
+          DATABASE_URL: postgresql://yatri:yatri@localhost:5432/yatri
+        run: |
+          docker run --rm --network host -e DATABASE_URL="$DATABASE_URL" yatri-api-migrate:ci
+          docker run -d --name yatri-api --network host \
+            -e NODE_ENV=development -e PORT=4000 \
+            -e DATABASE_URL="$DATABASE_URL" -e REDIS_URL=redis://localhost:6379 \
+            -e JWT_ACCESS_SECRET=ci-smoke-signing-value-not-a-real-one-0000000 \
+            -e STORAGE_SIGNING_SECRET=ci-smoke-link-value-not-a-real-one-00000000 \
+            -e FIELD_ENCRYPTION_SECRET=ci-smoke-field-value-not-a-real-one-0000000 \
+            yatri-api:ci
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:4000/api/v1/health/ready; then echo; echo "API image is ready"; exit 0; fi
+            sleep 2
+          done
+          echo "::error::The API image did not become ready within 60 seconds"
+          docker logs yatri-api
+          exit 1

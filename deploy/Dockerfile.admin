@@ -20,11 +20,13 @@ COPY packages/config packages/config
 COPY packages/types packages/types
 COPY packages/shared packages/shared
 COPY apps/admin apps/admin
-# The build only needs to *load* the environment schema; real values are supplied at run time.
-ENV API_BASE_URL=http://localhost:4000/api/v1 \
-    JWT_ACCESS_SECRET=build-time-placeholder-not-used-at-run-time-0000
-# @yatri/types is used at run time from its compiled dist/, so it is built first (as the API image does).
-RUN pnpm --filter @yatri/types build && pnpm --filter @yatri/admin build
+# The build only needs to *load* the environment schema, so it gets placeholder values for this one command only (an ENV
+# line would keep them in the image; real values are supplied at run time). @yatri/types is used at run time from its
+# compiled dist/, so it is built first (as the API image does).
+RUN pnpm --filter @yatri/types build && \
+    API_BASE_URL=http://localhost:4000/api/v1 \
+    JWT_ACCESS_SECRET=build-time-placeholder-not-used-at-run-time-0000 \
+    pnpm --filter @yatri/admin build
 
 FROM node:20-alpine AS runtime
 ENV NODE_ENV=production PORT=3000 HOSTNAME=0.0.0.0

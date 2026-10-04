@@ -165,3 +165,27 @@ Limits under a simultaneous burst (both counters are atomic, so a burst never sl
 
 Not measured: sustained load over minutes, many client addresses, a production-sized database, or a real SMS/route vendor's latency.
 The scripts are not in the repository (they were one-off); the numbers above are the record.
+
+## CI made to work again (2026-10-04)
+
+The most important finding of this pass: **CI had failed on every push since 1 October**, while every local check passed. Because
+the formatting step failed first and stopped its job, lint, types, tests, the admin build and the audit never ran on GitHub; the
+container images could not be built at all, so the servers could not have been deployed from CI.
+
+| Cause                                                      | Effect                                                         | Fix                                                                               |
+| ---------------------------------------------------------- | -------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| 258 files not in the project's formatting                  | First step failed; every later step in the job skipped         | `pnpm format` once; `prettier --check .` before every commit                      |
+| Neither Dockerfile copied `packages/config`                | Image builds failed: `TS5083 Cannot read file .../base.json`   | Copy it in both images                                                            |
+| The admin image never compiled `@yatri/types`              | Admin image failed: "Can't resolve '@yatri/types'" (88 places) | Compile it before the admin build                                                 |
+| Two high advisories with no fix, in build tools only       | The audit step would fail                                      | Acknowledged by id with reasons (`docs/SECURITY.md`); still listed in every audit |
+| The configuration tests predated `FIELD_ENCRYPTION_SECRET` | Tests failed on GitHub                                         | Added it, with tests of its rules                                                 |
+| One job did everything in sequence under a 30-minute limit | Slow pushes; a slow runner could time out                      | Five parallel jobs; a push now takes about 9 minutes                              |
+| Failures were unreadable without admin rights              | "exit code 1" and nothing else                                 | Failing tests are annotated, and the failing lines go into the public job summary |
+| The admin image kept a placeholder secret in an `ENV` line | Docker warning; the value stayed in the image                  | Given to the build command only                                                   |
+
+**First green run: run 46, commit `fd2c966`.** Every job passed: checks, tests, admin build, container images and both app bundles.
+
+Not settled: run 45 failed its tests with code identical to run 46, which then passed, so one test is probably flaky. It cannot
+be named yet; if it fails again, the job summary will show which one.
+
+Lesson recorded: after every push, read the CI result for that commit (the public run page works without signing in).

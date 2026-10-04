@@ -19,6 +19,8 @@ COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY packages/types/package.json packages/types/
 COPY apps/api/package.json apps/api/
 RUN pnpm install --frozen-lockfile --filter @yatri/api...
+# The shared TypeScript settings every tsconfig extends (packages/config/typescript/base.json).
+COPY packages/config packages/config
 COPY packages/types packages/types
 COPY apps/api apps/api
 RUN pnpm --filter @yatri/types build && pnpm --filter @yatri/api build

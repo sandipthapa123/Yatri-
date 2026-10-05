@@ -65,3 +65,8 @@ apps/admin/CLAUDE.md
 # Local assistant logs
 .recall/
 **/.recall/
+
+# Firebase app config: holds a Firebase app key and the repository is public. Kept in each app folder locally and in
+# the EAS file variable GOOGLE_SERVICES_JSON for builds (packages/config/expo/withGoogleServices.js).
+google-services.json
+GoogleService-Info.plist

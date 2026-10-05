@@ -445,7 +445,10 @@ The controls and their evidence are in `docs/SECURITY.md`. What operators must d
      expo.dev, because an app that already has a key is left alone). Keep the key file outside the repository. For iOS, run
      `npx eas-cli credentials` in each app and let EAS create the APNs key with the Apple Developer account.
   4. Each app needs its `google-services.json` from the same Firebase project (Project settings → Add app → Android, package
-     `app.yatri.passenger`, then `app.yatri.driver`), set as `expo.android.googleServicesFile`, or an Android phone gets no
-     push address.
+     `app.yatri.passenger`, then `app.yatri.driver`), or an Android phone gets no push address. It holds a Firebase app key
+     and the repository is public, so it is git-ignored: put it in the app folder for local builds, and store it on EAS for
+     cloud builds, from the app folder:
+     `npx eas-cli env:set --name GOOGLE_SERVICES_JSON --type file --value ./google-services.json --visibility secret --environment production --environment preview --environment development --non-interactive`.
+     `packages/config/expo/withGoogleServices.js` (used by each `app.config.js`) picks whichever is there.
   5. In each app: `npx eas-cli build --profile preview --platform android`, install the APK on a phone, sign in, and check that
      a row appears in `push_tokens` for that sign-in and that a ride notification arrives with the app closed.

@@ -1,0 +1,78 @@
+name: Android test APK
+
+# An installable Android build of both apps on GitHub's runners (free for a public repository, no queue), for testing
+# on a phone without waiting for EAS Build. Not a store release: it is signed with the debug key, and the store builds
+# still go through EAS (docs/OPERATIONS.md).
+#
+# Start it either way:
+# - push the branch `apk-build` with the API address in .github/apk-build-api-url (one line, https://.../api/v1), or
+# - Actions tab → Android test APK → Run workflow, and enter the address.
+# The APKs are attached to the run as artifacts (yatri-passenger-apk, yatri-driver-apk).
+#
+# Push notifications need the Firebase config: add the repository secret GOOGLE_SERVICES_JSON (the content of
+# google-services.json). Without it the apps build and run, and push registration is skipped.
+
+on:
+  workflow_dispatch:
+    inputs:
+      api_url:
+        description: 'API address the apps use (https://.../api/v1)'
+        required: true
+  push:
+    branches: [apk-build]
+
+concurrency:
+  group: android-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  apk:
+    name: APK (${{ matrix.app }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [passenger, driver]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'pnpm'
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Choose the API address
+        env:
+          INPUT_URL: ${{ inputs.api_url }}
+        run: |
+          url="${INPUT_URL:-$(head -n 1 .github/apk-build-api-url 2>/dev/null)}"
+          case "$url" in https://*) ;; *) echo "::error::The API address must be an https address"; exit 1 ;; esac
+          echo "EXPO_PUBLIC_API_URL=$url" >> "$GITHUB_ENV"
+      - name: Firebase config (when the secret is set)
+        env:
+          GOOGLE_SERVICES: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ -z "$GOOGLE_SERVICES" ]; then echo "No GOOGLE_SERVICES_JSON secret: building without push."; exit 0; fi
+          printf '%s' "$GOOGLE_SERVICES" > "$RUNNER_TEMP/google-services.json"
+          echo "GOOGLE_SERVICES_JSON=$RUNNER_TEMP/google-services.json" >> "$GITHUB_ENV"
+      - name: Generate the Android project
+        working-directory: apps/${{ matrix.app }}
+        run: npx expo prebuild --platform android --no-install --clean
+      - name: Build the APK
+        working-directory: apps/${{ matrix.app }}/android
+        run: ./gradlew assembleRelease --no-daemon
+      - uses: actions/upload-artifact@v5
+        with:
+          name: yatri-${{ matrix.app }}-apk
+          path: apps/${{ matrix.app }}/android/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
+          retention-days: 14

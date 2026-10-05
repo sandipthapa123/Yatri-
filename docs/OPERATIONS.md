@@ -433,13 +433,19 @@ The controls and their evidence are in `docs/SECURITY.md`. What operators must d
   `@yatri.ride/yatri-driver` (`expo.owner` and `expo.extra.eas.projectId` in each `app.json`). Without a project id a phone gets
   no push address, so registration is skipped and no notification is pushed; nothing fails loudly, because people still see
   everything in the in-app notification list. Each app has its package name (`app.yatri.passenger`, `app.yatri.driver`) and
-  build profiles (`eas.json`: `preview` for testers, `production` for the stores). Steps 1 and 2 are done; the rest need the
+  build profiles (`eas.json`: `preview` for testers, `production` for the stores). Steps 1 to 3 (Android) are done; the rest need the
   Firebase and Apple accounts:
   1. `npx eas-cli login` (on Windows PowerShell with scripts disabled: `npx.cmd eas-cli login`).
   2. In `apps/passenger`, then in `apps/driver`: `npx eas-cli init`. It also writes the plugins' computed output (permissions,
      `bitcode`) into `app.json`; keep only `owner` and `extra.eas.projectId`, because the plugins are where those come from.
      Every package named in an app's `plugins` must be a dependency of that app, or the config cannot load.
-  3. In each app: `npx eas-cli credentials`, choose Android, then _push notifications (FCM V1)_ and upload the Google service
-     account key from the Firebase project; for iOS, let EAS create the APNs key with the Apple Developer account.
-  4. In each app: `npx eas-cli build --profile preview --platform android`, install the APK on a phone, sign in, and check that
+  3. Android push key (done for Firebase project `yatri-d88c2`): `node scripts/upload-fcm-key.mjs "<service account .json>"`
+     attaches a Firebase service account key to both apps in one command, with no menus (the same as `eas credentials` →
+     Android → FCM V1), and reads the result back. Run it again after creating a new key (first remove the old one on
+     expo.dev, because an app that already has a key is left alone). Keep the key file outside the repository. For iOS, run
+     `npx eas-cli credentials` in each app and let EAS create the APNs key with the Apple Developer account.
+  4. Each app needs its `google-services.json` from the same Firebase project (Project settings → Add app → Android, package
+     `app.yatri.passenger`, then `app.yatri.driver`), set as `expo.android.googleServicesFile`, or an Android phone gets no
+     push address.
+  5. In each app: `npx eas-cli build --profile preview --platform android`, install the APK on a phone, sign in, and check that
      a row appears in `push_tokens` for that sign-in and that a ride notification arrives with the app closed.

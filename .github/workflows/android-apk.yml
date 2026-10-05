@@ -69,7 +69,21 @@ jobs:
         run: npx expo prebuild --platform android --no-install --clean
       - name: Build the APK
         working-directory: apps/${{ matrix.app }}/android
-        run: ./gradlew assembleRelease --no-daemon
+        run: |
+          set -o pipefail
+          ./gradlew assembleRelease --no-daemon 2>&1 | tee "$RUNNER_TEMP/gradle.txt"
+      # Job logs need a signed-in account; annotations are public. Raise Gradle's failure summary and the error lines as
+      # annotations so the cause can be read by anyone (newlines encoded as %0A).
+      - name: Report build failures as annotations
+        if: failure()
+        run: |
+          out="$RUNNER_TEMP/gradle.txt"
+          [ -f "$out" ] || exit 0
+          enc() { sed -e 's/%/%25/g' | awk 'BEGIN{ORS="%0A"} {print}' | head -c 30000; }
+          what=$(sed -n '/What went wrong/,/Try:/p' "$out" | head -80 | enc)
+          errs=$(grep -aE "error:|ERROR|Error:|FAILED|Exception" "$out" | grep -v "^> Task" | head -60 | enc)
+          echo "::error title=What went wrong::${what}"
+          echo "::error title=Error lines::${errs}"
       - uses: actions/upload-artifact@v5
         with:
           name: yatri-${{ matrix.app }}-apk

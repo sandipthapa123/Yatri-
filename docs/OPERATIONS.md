@@ -429,14 +429,16 @@ The controls and their evidence are in `docs/SECURITY.md`. What operators must d
 - **Online refunds**: a provider without a refund API (Khalti) needs the refund made in its dashboard and the reference recorded.
   The `refund-settle` job finishes provider refunds that were cut short.
 - **Settings**: `PAYOUT_HOLD_HOURS`, `PAYOUT_MIN_NPR`, `ONLINE_REFUND_DRIVER_SHARE_PERCENT` (Settings > Online payments, refunds and payouts).
-- **Push needs an EAS project, once per app, before the first build.** Neither app has one yet (`expo.extra.eas.projectId` is unset
-  in both `app.json` files), and without it a phone gets no push address, so registration is skipped and no notification is ever
-  pushed. Nothing fails loudly: people still see everything in the in-app notification list. Each app already has its package
-  name (`app.yatri.passenger`, `app.yatri.driver`) and build profiles (`eas.json`: `preview` for testers, `production` for the
-  stores). Once, signed in to the Expo account that will own the apps:
-  1. `npx eas-cli login`
-  2. In `apps/passenger`, then in `apps/driver`: `npx eas-cli init` (creates the project and writes its id into `app.json`;
-     commit that change).
+- **Push needs an EAS project per app.** Both exist, owned by the Expo account `yatri.ride`: `@yatri.ride/yatri-passenger` and
+  `@yatri.ride/yatri-driver` (`expo.owner` and `expo.extra.eas.projectId` in each `app.json`). Without a project id a phone gets
+  no push address, so registration is skipped and no notification is pushed; nothing fails loudly, because people still see
+  everything in the in-app notification list. Each app has its package name (`app.yatri.passenger`, `app.yatri.driver`) and
+  build profiles (`eas.json`: `preview` for testers, `production` for the stores). Steps 1 and 2 are done; the rest need the
+  Firebase and Apple accounts:
+  1. `npx eas-cli login` (on Windows PowerShell with scripts disabled: `npx.cmd eas-cli login`).
+  2. In `apps/passenger`, then in `apps/driver`: `npx eas-cli init`. It also writes the plugins' computed output (permissions,
+     `bitcode`) into `app.json`; keep only `owner` and `extra.eas.projectId`, because the plugins are where those come from.
+     Every package named in an app's `plugins` must be a dependency of that app, or the config cannot load.
   3. In each app: `npx eas-cli credentials`, choose Android, then _push notifications (FCM V1)_ and upload the Google service
      account key from the Firebase project; for iOS, let EAS create the APNs key with the Apple Developer account.
   4. In each app: `npx eas-cli build --profile preview --platform android`, install the APK on a phone, sign in, and check that

@@ -50,6 +50,12 @@
           "microphonePermission": "Yatri uses the microphone only during a call with your passenger."
         }
       ]
-    ]
+    ],
+    "owner": "yatri.ride",
+    "extra": {
+      "eas": {
+        "projectId": "666f6d6b-eb4a-4170-8840-9e89091e53ff"
+      }
+    }
   }
 }

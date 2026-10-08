@@ -451,4 +451,9 @@ The controls and their evidence are in `docs/SECURITY.md`. What operators must d
      `npx eas-cli env:set --name GOOGLE_SERVICES_JSON --type file --value ./google-services.json --visibility secret --environment production --environment preview --environment development --non-interactive`.
      `packages/config/expo/withGoogleServices.js` (used by each `app.config.js`) picks whichever is there.
   5. In each app: `npx eas-cli build --profile preview --platform android`, install the APK on a phone, sign in, and check that
-     a row appears in `push_tokens` for that sign-in and that a ride notification arrives with the app closed.
+     a row appears in `push_tokens` for that sign-in and that a ride notification arrives with the app closed. The API address
+     is the preview environment's `EXPO_PUBLIC_API_URL`; EAS reads the environment when the build is **submitted**, not when
+     it starts, so change the variable first and submit after. The free EAS queue held builds for nearly two hours
+     (2026-10-05). For a phone test without that wait, the **Android test APK** workflow builds both apps on GitHub's runners
+     in about 15 minutes (push the `apk-build` branch with the address in `.github/apk-build-api-url`); it is debug-signed and
+     has push only when the `GOOGLE_SERVICES_JSON` repository secret is set.

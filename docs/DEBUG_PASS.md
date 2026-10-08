@@ -126,6 +126,17 @@ default 15-second limit. The suite was run with 60-second limits for that reason
 All three are build tools that run on a developer's machine and are not part of the app bundles, so the risk is to the build machine,
 not to riders, drivers or the servers. Re-run the audit after the next Expo upgrade.
 
+New advisories published between 5 and 8 October turned CI's audit red with no change to the code, and all three had fixes:
+
+| Package                                         | Severity | Reached the code through                        | Fix                                      |
+| ----------------------------------------------- | -------- | ----------------------------------------------- | ---------------------------------------- |
+| next (server-side request forgery, image proxy) | High     | The admin site, at run time                     | `next` `~16.3.8` in `apps/admin`         |
+| shell-quote (command injection in `quote()`)    | Critical | React Native's developer tools (build/dev only) | `pnpm.overrides`: `shell-quote` ^1.11    |
+| source-map-js (denial of service)               | High     | CSS and bundler tooling (build/dev only)        | `pnpm.overrides`: `source-map-js` ^1.2.2 |
+
+The overrides only raise a patch-compatible floor; remove them once the packages that bring them in require the fixed
+versions. `next` stays on the 16.3 line (16.4 is a feature release, a separate upgrade).
+
 ## Final full-system verification (2026-10-04)
 
 Every CI check plus the repository audits, run in one pass on the developer machine: formatting, lint, typecheck, types and API
